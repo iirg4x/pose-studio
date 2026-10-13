@@ -36,6 +36,7 @@ import {
   FoldVertical,
   Ghost,
   ZoomIn,
+  Filter,
   ZoomOut,
   Settings2,
   MoreHorizontal,
@@ -125,7 +126,7 @@ export const TimelineGrid = memo(function TimelineGrid({
     pendingKey = useRef<PendingKey | null>(null);
   const p = s.project!;
   const labels = controlLabels(p),
-    visibleIds = timelineVisibleControls(p, s.selection),
+    visibleIds = timelineVisibleControls(p, s.selection, s.timelineFilter),
     visibilityKey = visibleIds.join('|'),
     ids = useMemo(() => visibleIds, [visibilityKey]);
   const keys = useMemo(
@@ -472,6 +473,22 @@ export const TimelineGrid = memo(function TimelineGrid({
           <ListChecks size={18} />
           <span>{multiSelect ? 'Multi on' : 'Multi'}</span>
         </button>
+        {!isAndroid && (
+          <button
+            aria-label="Show only selected controls"
+            title="Show only selected controls"
+            aria-pressed={s.timelineFilter === 'selected'}
+            className={s.timelineFilter === 'selected' ? 'active' : ''}
+            onClick={() =>
+              studio.patch({
+                timelineFilter: s.timelineFilter === 'selected' ? 'animated' : 'selected',
+              })
+            }
+          >
+            <Filter size={17} />
+            <span>Selected only</span>
+          </button>
+        )}
         <span className="key-selection-count">
           {preview?.kind === 'move'
             ? preview.delta + ' frames'
@@ -620,6 +637,8 @@ export const TimelineGrid = memo(function TimelineGrid({
                   selected={!!row.control && s.selection.includes(row.control) && !row.channel}
                   onSelect={(e) => {
                     root.current!.focus();
+                    if (row.control && row.channel)
+                      tracks.selectChannel?.(row.control, row.channel);
                     if (row.control && !multiSelect)
                       studio.selectControl(row.control, e.shiftKey || s.multiSelect);
                     const rowKeys = keys.filter((k) => row.ids.includes(k.id));

@@ -1,4 +1,6 @@
 import { DisplayClock } from '../displayClock';
+import { isTouch } from '../../platform/storage';
+import type { TimelineFilter } from '../timelineChannels';
 import type { FootPivot } from '../../scene/footControls';
 import { mirrorDriver, preserveMirrorTargets } from '../liveMirror';
 import { curveLockViolation } from '../curveLocks';
@@ -28,6 +30,8 @@ export interface StudioState {
   multiSelect: boolean;
   boxSelection: null | 'replace' | 'add' | 'subtract';
   interacting: boolean;
+  /** Timeline rows: every animated control, or only the selection. */
+  timelineFilter: TimelineFilter;
   retargetMode: boolean;
   retargetRest: boolean;
   retargetCompare: boolean;
@@ -72,6 +76,7 @@ export abstract class StoreCore {
     multiSelect: false,
     boxSelection: null,
     interacting: false,
+    timelineFilter: isTouch ? 'selected' : 'animated',
     retargetMode: false,
     retargetRest: false,
     retargetCompare: false,

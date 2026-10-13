@@ -56,7 +56,7 @@ export const Timeline = memo(function Timeline({
   const [collapsed, setCollapsed] = useState(() =>
       p
         ? revealTimelineControl(
-            timelineVisibleControls(p, s.selection),
+            timelineVisibleControls(p, s.selection, s.timelineFilter),
             loadTimelineCollapsed(),
             s.selected,
           )
@@ -71,7 +71,7 @@ export const Timeline = memo(function Timeline({
     return v >= 0.2 && v <= 0.8 ? v : 0.45;
   });
   useEffect(() => setReducer(null), [s.workspace?.activeId, p?.activeLayerId, p?.editing]);
-  const visible = p ? timelineVisibleControls(p, s.selection) : [],
+  const visible = p ? timelineVisibleControls(p, s.selection, s.timelineFilter) : [],
     visibilityKey = visible.join('|'),
     ids = useMemo(() => visible, [visibilityKey]);
   useEffect(() => {
@@ -117,6 +117,12 @@ export const Timeline = memo(function Timeline({
       studio.patch({ tab: 'curves' });
       if (isAndroid && !expanded) expand?.();
     },
+    selectChannel: split
+      ? (id, axis) => {
+          studio.selectControl(id);
+          setChannel(p && channelsFor(id, p.tracks[id]).includes(axis) ? axis : 'px');
+        }
+      : undefined,
   };
   if (!p) return <div className="timeline" />;
   const grid = <TimelineGrid key={(s.workspace?.activeId ?? '') + p.editing} tracks={tracks} />;
@@ -129,6 +135,7 @@ export const Timeline = memo(function Timeline({
     />
   ) : (
     <CurveEditor
+      hideTracks={split}
       key={(s.workspace?.activeId ?? '') + s.selected + p.editing + (p.activeLayerId ?? '')}
       channel={channel}
       focusKey={curveFocus}

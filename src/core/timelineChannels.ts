@@ -14,10 +14,21 @@ export type TimelineRow = {
   children: ControlId[];
   collapsed: boolean;
 };
-/** Follow viewport selection; clearing it returns to the complete bone list. */
-export function timelineVisibleControls(p: Project, selection: readonly ControlId[]) {
+export type TimelineFilter = 'animated' | 'selected';
+const animated = (t: Track) =>
+  t.keys.length > 1 || Object.values(t.curves ?? {}).some((c) => (c?.keys.length ?? 0) > 1);
+/** 'selected' follows the viewport selection (clearing it lists every bone).
+ * 'animated' lists every control with motion plus the selection, so timing stays in view. */
+export function timelineVisibleControls(
+  p: Project,
+  selection: readonly ControlId[],
+  filter: TimelineFilter = 'selected',
+) {
   const visible = visibleControls(p.editing, p);
-  return selection.length ? visible.filter((id) => selection.includes(id)) : visible;
+  if (filter === 'selected')
+    return selection.length ? visible.filter((id) => selection.includes(id)) : visible;
+  const shown = visible.filter((id) => selection.includes(id) || animated(p.tracks[id]));
+  return shown.length ? shown : visible;
 }
 
 /** The dope-sheet summary groups only the explicit viewport selection. Curves

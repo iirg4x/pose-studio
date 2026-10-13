@@ -72,11 +72,14 @@ export const CurveEditor = memo(function CurveEditor({
   channel,
   focusKey,
   sidebar,
+  hideTracks = false,
   onReduce,
 }: {
   channel: Channel;
   focusKey?: { frame: number; serial: number };
   sidebar: ReactNode;
+  /** Start with the channel list hidden (another list drives the channel). */
+  hideTracks?: boolean;
   onReduce: (frames: number[]) => void;
 }) {
   const s = useStudioChrome({ frame: 'none', edits: 'live' }),
@@ -85,7 +88,7 @@ export const CurveEditor = memo(function CurveEditor({
   const [selected, setSelected] = useState<number[]>([]),
     [panel, setPanel] = useState<'key' | 'modifiers'>('key'),
     [view, setView] = useState<View | null>(null);
-  const [showTracks, setShowTracks] = useState(() => !isTouch || innerWidth > 700),
+  const [showTracks, setShowTracks] = useState(() => !hideTracks && (!isTouch || innerWidth > 700)),
     [guides, setGuides] = useState(false);
   const [tool, setTool] = useState<'box' | 'pan'>('box'),
     [multi, setMulti] = useState(false),
