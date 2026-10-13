@@ -116,7 +116,7 @@ export function ControlLayerSettings() {
     );
   };
   return (
-    <PropertySection id="control-layer-blend" title="Layer blending">
+    <PropertySection id="control-layer-blend" title="Layer blending" defaultOpen={false}>
       <div className="blend-context">
         <Layers size={13} />
         <strong>{layer.name}</strong>
