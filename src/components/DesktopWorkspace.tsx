@@ -11,58 +11,50 @@ import {
   SlidersHorizontal,
   Library,
   Settings2,
-  ListVideo,
-  PanelRightClose,
-  PanelBottomClose,
-  PinOff,
-  X,
+  PanelRight,
+  PanelBottom,
   Play,
   Pause,
   Diamond,
   ChevronDown,
+  SkipBack,
+  SkipForward,
 } from 'lucide-react';
 import { studio } from '../core/store';
-import { useStudioChrome, useStudioSelector, usePresence } from '../hooks';
+import { useStudioChrome, useStudioSelector } from '../hooks';
 import { TransformOptions } from './TransformOptions';
-import { Timeline } from './Timeline';
+import { Timeline, KeyLockButton } from './Timeline';
+import { ActiveLayer } from './PoseActions';
+import { AnimationMirror } from './AnimationMirror';
+import { LoopControls } from './LoopControls';
+import { ScrubNumber } from './ScrubNumber';
 import './desktop-workspace.css';
 
-type SidePanel = 'properties' | 'animations' | 'tools';
-type Layout = {
-  rig: boolean;
-  right: SidePanel | null;
-  timeline: boolean;
-  dockRig: boolean;
-  dockRight: boolean;
-  dockTimeline: boolean;
-};
-const defaults: Layout = {
-  rig: false,
-  right: null,
-  timeline: false,
-  dockRig: false,
-  dockRight: false,
-  dockTimeline: false,
-};
+type Side = 'properties' | 'animations' | 'rig' | 'tools';
+type Layout = { side: Side; sideOpen: boolean; editors: boolean };
+const LAYOUT_KEY = 'pose-desktop-layout-v2';
+const defaults: Layout = { side: 'properties', sideOpen: true, editors: true };
+const SIDES: { id: Side; label: string; Icon: typeof Library }[] = [
+  { id: 'properties', label: 'Pose properties', Icon: SlidersHorizontal },
+  { id: 'animations', label: 'Animation library', Icon: Library },
+  { id: 'rig', label: 'Rig controls', Icon: Waypoints },
+  { id: 'tools', label: 'Workspace tools', Icon: Settings2 },
+];
 function loadLayout(): Layout {
   try {
-    const p = JSON.parse(localStorage.getItem('pose-desktop-layout-v1') ?? '{}');
+    const p = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? '{}');
     return {
-      ...defaults,
-      dockRig: p.dockRig === true,
-      dockRight: p.dockRight === true,
-      dockTimeline: p.dockTimeline === true,
-      rig: p.dockRig === true && p.rig === true,
-      right:
-        p.dockRight === true && ['properties', 'animations', 'tools'].includes(p.right)
-          ? p.right
-          : null,
-      timeline: p.dockTimeline === true && p.timeline === true,
+      side: SIDES.some((s) => s.id === p.side) ? p.side : defaults.side,
+      sideOpen: p.sideOpen !== false,
+      editors: p.editors !== false,
     };
   } catch {
     return defaults;
   }
 }
+
+/** Animator layout: viewport, dope sheet and graph editor side by side, a properties
+ * column and a time slider. Areas are fixed; splitters size them. */
 export function DesktopWorkspace({
   scene,
   controls,
@@ -86,66 +78,22 @@ export function DesktopWorkspace({
   toolbarSlot?: HTMLElement | null;
 }) {
   const [layout, setLayout] = useState(loadLayout),
-    s = useStudioChrome({ frame: 'none' }),
-    ref = useRef<HTMLDivElement>(null);
+    s = useStudioChrome({ frame: 'none' });
   const change = (patch: Partial<Layout>) =>
     setLayout((old) => {
       const next = { ...old, ...patch };
       try {
-        localStorage.setItem('pose-desktop-layout-v1', JSON.stringify(next));
+        localStorage.setItem(LAYOUT_KEY, JSON.stringify(next));
       } catch {}
       return next;
     });
-  const rig = usePresence(layout.rig ? true : null),
-    right = usePresence(layout.right),
-    timing = usePresence(layout.timeline ? true : null);
+  const showSide = (side: Side) => change({ side, sideOpen: true });
   useEffect(() => {
-    if (retarget) change({ rig: true, right: 'properties' });
+    if (retarget) showSide('properties');
   }, [retarget]);
-  useEffect(() => {
-    const dismiss = (e: PointerEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.closest(
-          '[role=dialog],dialog,.desktop-panel,.desktop-panel-nav,.desktop-tools,[data-editor-overlay],.timeline,.file-menu,.title-menu',
-        )
-      )
-        return;
-      change({
-        ...(!layout.dockRig ? { rig: false } : {}),
-        ...(!layout.dockRight ? { right: null } : {}),
-        ...(!layout.dockTimeline ? { timeline: false } : {}),
-      });
-    };
-    const escape = (e: KeyboardEvent) => {
-      if (
-        e.key !== 'Escape' ||
-        e.defaultPrevented ||
-        document.querySelector('[role=dialog],dialog[open]')
-      )
-        return;
-      change({
-        ...(!layout.dockRig ? { rig: false } : {}),
-        ...(!layout.dockRight ? { right: null } : {}),
-        ...(!layout.dockTimeline ? { timeline: false } : {}),
-      });
-    };
-    document.addEventListener('pointerdown', dismiss, true);
-    window.addEventListener('keydown', escape);
-    return () => {
-      document.removeEventListener('pointerdown', dismiss, true);
-      window.removeEventListener('keydown', escape);
-    };
-  }, [layout.dockRig, layout.dockRight, layout.dockTimeline]);
-  const sideTitle =
-    right.value === 'properties'
-      ? 'Pose properties'
-      : right.value === 'animations'
-        ? 'Animations'
-        : 'Workspace tools';
   const toolbars = (
     <>
-      <nav className="desktop-tools" aria-label="Animation tools" data-editor-overlay>
+      <nav className="desktop-tools" aria-label="Animation tools">
         {(
           [
             ['select', MousePointer2, 'Select (Q)'],
@@ -160,235 +108,180 @@ export function DesktopWorkspace({
             aria-pressed={s.mode === mode}
             onClick={() => studio.patch({ mode })}
           >
-            <Icon size={18} />
+            <Icon size={16} />
           </button>
         ))}
         <i />
         <TransformOptions />
         <i />
         <button aria-label="Undo" title="Undo (Ctrl Z)" onClick={() => studio.undo()}>
-          <Undo2 size={17} />
+          <Undo2 size={15} />
         </button>
         <button aria-label="Redo" title="Redo (Ctrl Y)" onClick={() => studio.redo()}>
-          <Redo2 size={17} />
+          <Redo2 size={15} />
         </button>
       </nav>
-      <nav className="desktop-panel-nav" aria-label="Workspace panels" data-editor-overlay>
+      <nav className="desktop-panel-nav" aria-label="Workspace panels">
         <button
           className="desktop-clip-trigger"
-          title="Browse animations"
+          title="Animation library"
           aria-label="Animations panel"
-          aria-expanded={layout.right === 'animations'}
-          onClick={() => change({ right: layout.right === 'animations' ? null : 'animations' })}
+          onClick={() => showSide('animations')}
         >
-          <Library size={16} />
+          <Library size={14} />
           <strong>{s.project?.name ?? 'Animations'}</strong>
           <ChevronDown size={12} />
         </button>
+        {s.project && (
+          <>
+            <ActiveLayer />
+            <AnimationMirror />
+          </>
+        )}
         <i />
         <button
-          aria-label="Rig panel"
-          title="Rig controls"
-          aria-expanded={layout.rig}
-          onClick={() => change({ rig: !layout.rig })}
+          aria-label={layout.editors ? 'Hide editors' : 'Show editors'}
+          title="Dope sheet and graph editor"
+          aria-pressed={layout.editors}
+          onClick={() => change({ editors: !layout.editors })}
         >
-          <Waypoints size={18} />
+          <PanelBottom size={16} />
         </button>
         <button
-          aria-label="Pose panel"
-          title="Pose properties"
-          aria-expanded={layout.right === 'properties'}
-          onClick={() => change({ right: layout.right === 'properties' ? null : 'properties' })}
+          aria-label={layout.sideOpen ? 'Hide side panel' : 'Show side panel'}
+          title="Properties, library, rig and tools"
+          aria-pressed={layout.sideOpen}
+          onClick={() => change({ sideOpen: !layout.sideOpen })}
         >
-          <SlidersHorizontal size={18} />
-        </button>
-        <button
-          aria-label="Tools panel"
-          title="Workspace tools"
-          aria-expanded={layout.right === 'tools'}
-          onClick={() => change({ right: layout.right === 'tools' ? null : 'tools' })}
-        >
-          <Settings2 size={18} />
-        </button>
-        <button
-          aria-label={layout.timeline ? 'Hide timeline' : 'Show timeline'}
-          title="Timeline"
-          aria-expanded={layout.timeline}
-          onClick={() => change({ timeline: !layout.timeline })}
-        >
-          <ListVideo size={18} />
+          <PanelRight size={16} />
         </button>
       </nav>
     </>
   );
+  const side = SIDES.find((x) => x.id === layout.side)!;
   const style = {
-    '--dock-left': layout.rig && layout.dockRig ? sizes.controls + 'px' : '0px',
-    '--dock-right': layout.right && layout.dockRight ? sizes.inspector + 'px' : '0px',
-    '--dock-bottom': layout.timeline && layout.dockTimeline ? sizes.timeline + 'px' : '0px',
-    '--floating-timeline': sizes.timeline + 'px',
+    '--side-width': sizes.inspector + 'px',
+    '--editors-height': sizes.timeline + 'px',
   } as CSSProperties;
   return (
     <div
-      ref={ref}
-      className={
-        'desktop-stage' +
-        (layout.timeline ? ' has-timeline' : '') +
-        (layout.right && !layout.dockRight ? ' has-floating-right' : '') +
-        (layout.timeline && !layout.dockTimeline ? ' floating-timing' : '')
-      }
+      className="animate-layout"
+      data-side={layout.sideOpen}
+      data-editors={layout.editors}
       style={style}
     >
-      <div className="desktop-scene">
-        {scene}
-        {toolbarSlot ? createPortal(toolbars, toolbarSlot) : toolbars}
-        {!timing.value && <DesktopTransport />}
-      </div>
-      {rig.value && (
-        <DesktopPanel
-          title="Rig controls"
-          side="left"
-          docked={layout.dockRig}
-          exiting={rig.exiting}
-          toggleDock={() => change({ dockRig: !layout.dockRig })}
-          close={() => change({ rig: false })}
-          resize={(size) => resize('controls', size)}
-          size={sizes.controls}
-        >
-          {controls}
-        </DesktopPanel>
+      {toolbarSlot ? createPortal(toolbars, toolbarSlot) : toolbars}
+      <div className="area area-viewport">{scene}</div>
+      {layout.editors && (
+        <>
+          <Splitter
+            className="split-editors"
+            label="Resize editors"
+            axis="y"
+            size={sizes.timeline}
+            resize={(size) => resize('timeline', size)}
+          />
+          <div className="area area-editors">
+            <Timeline split />
+          </div>
+        </>
       )}
-      {right.value && (
-        <DesktopPanel
-          title={sideTitle}
-          side="right"
-          docked={layout.dockRight}
-          exiting={right.exiting}
-          toggleDock={() => change({ dockRight: !layout.dockRight })}
-          close={() => change({ right: null })}
-          resize={(size) => resize('inspector', size)}
-          size={sizes.inspector}
-        >
-          {right.value === 'properties'
-            ? inspector
-            : right.value === 'animations'
-              ? animations
-              : tools}
-        </DesktopPanel>
+      {layout.sideOpen && (
+        <>
+          <Splitter
+            className="split-side"
+            label="Resize side panel"
+            axis="x"
+            size={sizes.inspector}
+            resize={(size) => resize('inspector', size)}
+          />
+          <aside className="area area-side" aria-label={side.label}>
+            <nav className="side-tabs" aria-label="Side panel">
+              {SIDES.map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  aria-label={label}
+                  title={label}
+                  aria-pressed={layout.side === id}
+                  onClick={() => showSide(id)}
+                >
+                  <Icon size={15} />
+                </button>
+              ))}
+            </nav>
+            <div className="side-content">
+              {layout.side === 'properties'
+                ? inspector
+                : layout.side === 'animations'
+                  ? animations
+                  : layout.side === 'rig'
+                    ? controls
+                    : tools}
+            </div>
+          </aside>
+        </>
       )}
-      {timing.value && (
-        <DesktopPanel
-          title="Timeline"
-          side="bottom"
-          docked={layout.dockTimeline}
-          exiting={timing.exiting}
-          toggleDock={() => change({ dockTimeline: !layout.dockTimeline })}
-          close={() => change({ timeline: false })}
-          resize={(size) => resize('timeline', size)}
-          size={sizes.timeline}
-        >
-          <Timeline />
-        </DesktopPanel>
-      )}
+      <TimeSlider />
     </div>
   );
 }
-function DesktopPanel({
-  title,
-  side,
-  docked,
-  exiting,
-  toggleDock,
-  close,
-  children,
-  resize,
+
+/** Drag or arrow keys resize the area after (below / right of) the splitter. */
+function Splitter({
+  className,
+  label,
+  axis,
   size,
+  resize,
 }: {
-  title: string;
-  side: 'left' | 'right' | 'bottom';
-  docked: boolean;
-  exiting: boolean;
-  toggleDock: () => void;
-  close: () => void;
-  children: ReactNode;
-  resize: (size: number) => void;
+  className: string;
+  label: string;
+  axis: 'x' | 'y';
   size: number;
+  resize: (size: number) => void;
 }) {
-  const drag = useRef<{ x: number; y: number; size: number } | null>(null);
+  const drag = useRef<{ at: number; size: number } | null>(null);
   return (
-    <section
-      className={'desktop-panel panel-' + side + (docked ? ' docked' : ' floating')}
-      aria-label={title + ' panel'}
-      data-state={exiting ? 'closing' : 'open'}
-      aria-hidden={exiting || undefined}
-      inert={exiting || undefined}
-      data-editor-overlay
-    >
-      {/* No title bar: the panel's own first row carries these. */}
-      <div className="desktop-panel-actions">
-        <button
-          aria-label={(docked ? 'Undock ' : 'Dock ') + title}
-          title={docked ? 'Float over scene' : 'Dock beside scene'}
-          aria-pressed={docked}
-          onClick={toggleDock}
-        >
-          {docked ? (
-            <PinOff size={15} />
-          ) : side === 'bottom' ? (
-            <PanelBottomClose size={15} />
-          ) : (
-            <PanelRightClose size={15} />
-          )}
-        </button>
-        <button aria-label={'Close ' + title} title="Close panel" onClick={close}>
-          <X size={17} />
-        </button>
-      </div>
-      <div className="desktop-panel-content">{children}</div>
-      <div
-        className="desktop-panel-resize"
-        role="separator"
-        tabIndex={0}
-        aria-label={'Resize ' + title}
-        aria-orientation={side === 'bottom' ? 'horizontal' : 'vertical'}
-        aria-valuenow={Math.round(size)}
-        onPointerDown={(e) => {
-          e.preventDefault();
-          e.currentTarget.setPointerCapture(e.pointerId);
-          drag.current = { x: e.clientX, y: e.clientY, size };
-        }}
-        onPointerMove={(e) => {
-          const d = drag.current;
-          if (!d || !e.currentTarget.hasPointerCapture(e.pointerId)) return;
-          resize(
-            d.size +
-              (side === 'left'
-                ? e.clientX - d.x
-                : side === 'right'
-                  ? d.x - e.clientX
-                  : d.y - e.clientY),
-          );
-        }}
-        onPointerUp={() => {
-          drag.current = null;
-        }}
-        onPointerCancel={() => {
-          drag.current = null;
-        }}
-        onKeyDown={(e) => {
-          if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-            e.preventDefault();
-            resize(size + (['ArrowLeft', 'ArrowUp'].includes(e.key) ? -20 : 20));
-          }
-        }}
-      />
-    </section>
+    <div
+      className={'area-splitter ' + className}
+      role="separator"
+      tabIndex={0}
+      aria-label={label}
+      aria-orientation={axis === 'x' ? 'vertical' : 'horizontal'}
+      aria-valuenow={Math.round(size)}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        drag.current = { at: axis === 'x' ? e.clientX : e.clientY, size };
+      }}
+      onPointerMove={(e) => {
+        const d = drag.current;
+        if (!d || !e.currentTarget.hasPointerCapture(e.pointerId)) return;
+        resize(d.size + d.at - (axis === 'x' ? e.clientX : e.clientY));
+      }}
+      onPointerUp={() => {
+        drag.current = null;
+      }}
+      onPointerCancel={() => {
+        drag.current = null;
+      }}
+      onKeyDown={(e) => {
+        const grow = axis === 'x' ? 'ArrowLeft' : 'ArrowUp',
+          shrink = axis === 'x' ? 'ArrowRight' : 'ArrowDown';
+        if (e.key !== grow && e.key !== shrink) return;
+        e.preventDefault();
+        resize(size + (e.key === grow ? 20 : -20));
+      }}
+    />
   );
 }
-function DesktopTransport() {
+
+function TimeSlider() {
   const s = useStudioSelector(
     (s) => ({
       frame: s.frame,
       end: s.project?.end ?? 1,
+      fps: s.project?.fps ?? 30,
       ready: s.ready,
       playing: s.playing,
       count: s.selection.length,
@@ -397,36 +290,54 @@ function DesktopTransport() {
     (a, b) =>
       a.frame === b.frame &&
       a.end === b.end &&
+      a.fps === b.fps &&
       a.ready === b.ready &&
       a.playing === b.playing &&
       a.count === b.count &&
       a.autoKey === b.autoKey,
   );
   return (
-    <div className="desktop-transport" aria-label="Playback" data-editor-overlay>
+    <div className="time-slider" aria-label="Playback">
       <button
+        aria-label="First frame"
+        title="First frame (Home)"
+        onClick={() => studio.setFrame(0)}
+      >
+        <SkipBack size={15} />
+      </button>
+      <button
+        className="play"
         aria-label={s.playing ? 'Pause' : 'Play'}
         title="Play / pause (Space)"
         disabled={!s.ready}
         onClick={() => studio.patch({ playing: !s.playing, drafts: {} })}
       >
-        {s.playing ? <Pause size={18} /> : <Play size={18} fill="currentColor" />}
+        {s.playing ? <Pause size={15} /> : <Play size={15} fill="currentColor" />}
       </button>
-      <output aria-label="Current frame">
-        {s.frame}
-        <small> / {s.end}</small>
-      </output>
-      <input
-        type="range"
-        aria-label="Scrub animation"
-        min={0}
-        max={s.end}
-        value={s.frame}
-        onChange={(e) => studio.setFrame(Number(e.target.value))}
+      <button
+        aria-label="Last frame"
+        title="Last frame (End)"
+        onClick={() => studio.setFrame(s.end)}
+      >
+        <SkipForward size={15} />
+      </button>
+      <output aria-label="Current frame">{s.frame}</output>
+      <span className="time-slash">/</span>
+      <ScrubNumber
+        aria-label="End frame"
+        type="number"
+        min={1}
+        max={2400}
+        value={s.end}
+        onChange={(e) => {
+          const v = Number(e.target.value);
+          if (v >= 1 && v <= 2400) studio.updateProject({ end: Math.round(v) });
+        }}
       />
       <button
+        className="auto-key"
         aria-label="Auto key"
-        title="Auto key"
+        title="Record pose changes"
         aria-pressed={s.autoKey}
         onClick={() => studio.patch({ autoKey: !s.autoKey })}
       >
@@ -438,8 +349,36 @@ function DesktopTransport() {
         disabled={!s.count}
         onClick={() => studio.keySelected()}
       >
-        <Diamond size={17} />
+        <Diamond size={14} />
       </button>
+      <button
+        aria-label="Keyframe options"
+        title="Choose channels to key"
+        onClick={(e) => studio.showKeyframeMenu(e.clientX, e.clientY)}
+      >
+        <ChevronDown size={13} />
+      </button>
+      <input
+        type="range"
+        aria-label="Scrub animation"
+        min={0}
+        max={s.end}
+        value={s.frame}
+        onChange={(e) => studio.setFrame(Number(e.target.value))}
+      />
+      <select
+        aria-label="Frame rate"
+        value={s.fps}
+        onChange={(e) => studio.updateProject({ fps: Number(e.target.value) })}
+      >
+        {[24, 25, 30, 48, 60].map((v) => (
+          <option key={v} value={v}>
+            {v} fps
+          </option>
+        ))}
+      </select>
+      <LoopControls />
+      <KeyLockButton />
     </div>
   );
 }

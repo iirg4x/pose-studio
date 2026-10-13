@@ -179,13 +179,19 @@ export function PoseActions({
         </strong>
       </div>
       <div className="pose-action-buttons">
-        <button aria-label="Copy pose" disabled={!count} onClick={() => studio.copySelectedPose()}>
+        <button
+          aria-label="Copy pose"
+          title="Copy pose"
+          disabled={!count}
+          onClick={() => studio.copySelectedPose()}
+        >
           <Copy size={18} />
           <span>Copy pose</span>
         </button>
         {s.clipboard && (
           <button
             aria-label="Paste pose"
+            title="Paste pose"
             disabled={!s.clipboard || !editable}
             onClick={() => studio.pastePose(s.clipboard, true)}
           >
@@ -199,6 +205,7 @@ export function PoseActions({
           ) && (
             <button
               aria-label="Paste mirrored pose"
+              title="Paste mirrored pose"
               disabled={!editable || s.clipboard.layer !== p.editing}
               onClick={pasteMirrored}
             >

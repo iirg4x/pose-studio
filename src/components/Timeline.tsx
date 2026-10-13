@@ -3,6 +3,7 @@ import { mirrorDriver } from '../core/liveMirror';
 import { MirrorCurve } from './MirrorCurve';
 import { LockKeyhole, UnlockKeyhole } from 'lucide-react';
 import { memo, useState, useEffect, useLayoutEffect, useMemo } from 'react';
+import type { CSSProperties } from 'react';
 import { loadTimelineCollapsed, revealTimelineControl } from '../core/timelineHierarchy';
 import type { Channel } from '../core/curves';
 import { channelsFor } from '../core/curves';
@@ -38,11 +39,14 @@ export const Timeline = memo(function Timeline({
   expand,
   close,
   exiting = false,
+  split = false,
 }: {
   expanded?: boolean;
   expand?: () => void;
   close?: () => void;
   exiting?: boolean;
+  /** Desktop: dope sheet and graph editor side by side; transport lives elsewhere. */
+  split?: boolean;
 }) {
   const s = useStudioChrome({ frame: 'none' }),
     p = s.project;
@@ -62,6 +66,10 @@ export const Timeline = memo(function Timeline({
     [channel, setChannel] = useState<Channel>('px');
   const [curveFocus, setCurveFocus] = useState<{ frame: number; serial: number } | undefined>();
   const [reducer, setReducer] = useState<{ channel?: Channel; frames: number[] } | null>(null);
+  const [dopeShare, setDopeShare] = useState(() => {
+    const v = Number(localStorage.getItem('pose-dope-share'));
+    return v >= 0.2 && v <= 0.8 ? v : 0.45;
+  });
   useEffect(() => setReducer(null), [s.workspace?.activeId, p?.activeLayerId, p?.editing]);
   const visible = p ? timelineVisibleControls(p, s.selection) : [],
     visibilityKey = visible.join('|'),
@@ -111,6 +119,60 @@ export const Timeline = memo(function Timeline({
     },
   };
   if (!p) return <div className="timeline" />;
+  const grid = <TimelineGrid key={(s.workspace?.activeId ?? '') + p.editing} tracks={tracks} />;
+  const curves = mirrorDriver(p, s.selected) ? (
+    <MirrorCurve
+      project={p}
+      id={s.selected}
+      channel={channel}
+      sidebar={<CurveTrackTree state={tracks} ids={ids} />}
+    />
+  ) : (
+    <CurveEditor
+      key={(s.workspace?.activeId ?? '') + s.selected + p.editing + (p.activeLayerId ?? '')}
+      channel={channel}
+      focusKey={curveFocus}
+      onReduce={(frames) => setReducer({ channel, frames })}
+      sidebar={<CurveTrackTree state={tracks} ids={ids} />}
+    />
+  );
+  if (split)
+    return (
+      <section
+        className="timeline split"
+        aria-label="Animation editors"
+        style={{ '--dope-share': dopeShare } as CSSProperties}
+      >
+        <div className="split-dope">{grid}</div>
+        <div
+          className="split-editors-handle"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize dope sheet and graph editor"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.currentTarget.setPointerCapture(e.pointerId);
+          }}
+          onPointerMove={(e) => {
+            if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+            const box = e.currentTarget.parentElement!.getBoundingClientRect(),
+              share = Math.max(0.2, Math.min(0.8, (e.clientX - box.left) / box.width));
+            setDopeShare(share);
+            try {
+              localStorage.setItem('pose-dope-share', String(share));
+            } catch {}
+          }}
+        />
+        <div className="split-graph">{curves}</div>
+        {reducer && (
+          <CurveReducer
+            channel={reducer.channel}
+            selectedFrames={reducer.frames}
+            close={() => setReducer(null)}
+          />
+        )}
+      </section>
+    );
   return (
     <section
       id="touch-timeline"
@@ -148,25 +210,7 @@ export const Timeline = memo(function Timeline({
         <ActiveLayer />
         <div className="timeline-window-tools">
           <AnimationMirror />
-          <button
-            className="control-key-lock"
-            aria-label="Lock new keys on selected controls"
-            title="Prevent new keys on selected controls; existing keys stay editable"
-            aria-pressed={!!s.selection.length && s.selection.every((id) => p.tracks[id].keyLock)}
-            disabled={!s.selection.length}
-            onClick={() =>
-              studio.setControlKeyLock(
-                s.selection,
-                !s.selection.every((id) => p.tracks[id].keyLock),
-              )
-            }
-          >
-            {s.selection.length && s.selection.every((id) => p.tracks[id].keyLock) ? (
-              <LockKeyhole size={16} />
-            ) : (
-              <UnlockKeyhole size={16} />
-            )}
-          </button>
+          <KeyLockButton />
           <button
             aria-label="Reduce keyframes"
             title="Reduce keyframes with fitted curves"
@@ -279,26 +323,7 @@ export const Timeline = memo(function Timeline({
           </button>
         </div>
       </div>
-      {s.tab === 'curves' ? (
-        mirrorDriver(p, s.selected) ? (
-          <MirrorCurve
-            project={p}
-            id={s.selected}
-            channel={channel}
-            sidebar={<CurveTrackTree state={tracks} ids={ids} />}
-          />
-        ) : (
-          <CurveEditor
-            key={(s.workspace?.activeId ?? '') + s.selected + p.editing + (p.activeLayerId ?? '')}
-            channel={channel}
-            focusKey={curveFocus}
-            onReduce={(frames) => setReducer({ channel, frames })}
-            sidebar={<CurveTrackTree state={tracks} ids={ids} />}
-          />
-        )
-      ) : (
-        <TimelineGrid key={(s.workspace?.activeId ?? '') + p.editing} tracks={tracks} />
-      )}
+      {s.tab === 'curves' ? curves : grid}
       {reducer && (
         <CurveReducer
           channel={reducer.channel}
@@ -309,3 +334,23 @@ export const Timeline = memo(function Timeline({
     </section>
   );
 });
+
+/** Locks new keys on the selected controls; existing keys stay editable. */
+export function KeyLockButton() {
+  const s = useStudioChrome({ frame: 'none' }),
+    p = s.project;
+  if (!p) return null;
+  const locked = !!s.selection.length && s.selection.every((id) => p.tracks[id].keyLock);
+  return (
+    <button
+      className="control-key-lock"
+      aria-label="Lock new keys on selected controls"
+      title="Prevent new keys on selected controls; existing keys stay editable"
+      aria-pressed={locked}
+      disabled={!s.selection.length}
+      onClick={() => studio.setControlKeyLock(s.selection, !locked)}
+    >
+      {locked ? <LockKeyhole size={15} /> : <UnlockKeyhole size={15} />}
+    </button>
+  );
+}

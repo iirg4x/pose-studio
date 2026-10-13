@@ -1,86 +1,123 @@
+/* Desktop animator layout. Tablet keeps its own workspace (tablet.css). */
 .app.desktop-workspace,
 .app.desktop-workspace.curves-open,
 .app.desktop-workspace:not(.curves-open) {
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: 40px minmax(0, 1fr) 22px;
-  min-width: 640px;
+  grid-template-rows: 32px minmax(0, 1fr) 20px;
+  min-width: 800px;
 }
 .app.desktop-workspace > .titlebar {
   grid-row: 1;
   grid-column: 1;
+  gap: 8px;
+  padding: 0 8px;
 }
 .app.desktop-workspace > .statusbar {
   grid-row: 3;
   grid-column: 1;
 }
-.desktop-stage {
+
+.animate-layout {
+  --area-header: 26px;
   grid-row: 2;
   grid-column: 1;
-  position: relative;
   display: grid;
-  min-height: 0;
   min-width: 0;
+  min-height: 0;
   overflow: hidden;
-  grid-template-columns: var(--dock-left) minmax(0, 1fr) var(--dock-right);
-  grid-template-rows: minmax(0, 1fr) var(--dock-bottom);
-  transition:
-    grid-template-columns 200ms ease,
-    grid-template-rows 200ms ease;
+  grid-template-columns: minmax(0, 1fr) 4px var(--side-width);
+  grid-template-rows: minmax(120px, 1fr) 4px var(--editors-height) 28px;
+  grid-template-areas:
+    'view split-side side'
+    'split-editors split-side side'
+    'editors split-side side'
+    'slider slider slider';
+  background: var(--line);
 }
-.desktop-scene {
+.animate-layout[data-side='false'] {
+  grid-template-columns: minmax(0, 1fr) 0 0;
+}
+.animate-layout[data-editors='false'] {
+  grid-template-rows: minmax(120px, 1fr) 0 0 28px;
+}
+.area {
   position: relative;
   min-width: 0;
   min-height: 0;
-  grid-column: 2;
-  grid-row: 1;
   display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel);
 }
-.desktop-scene > .viewport {
+.area-viewport {
+  grid-area: view;
+}
+.area-viewport > .viewport {
   flex: 1;
   min-height: 0;
 }
-.desktop-tools,
-.desktop-panel-nav,
-.desktop-transport {
-  position: absolute;
-  z-index: 25;
+.area-editors {
+  grid-area: editors;
+}
+.area-side {
+  grid-area: side;
+}
+.area-splitter {
+  touch-action: none;
+  background: var(--line);
+}
+.area-splitter:hover,
+.area-splitter:focus-visible {
+  background: color-mix(in srgb, var(--cyan) 45%, var(--line));
+  outline: none;
+}
+.split-editors {
+  grid-area: split-editors;
+  cursor: ns-resize;
+}
+.split-side {
+  grid-area: split-side;
+  cursor: ew-resize;
+}
+
+/* Title bar: tools on the left; animation, layer and panel toggles on the right. */
+.titlebar .title-spacer:has(.desktop-tools) {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 5px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: var(--shadow-tool, 0 4px 16px #0004);
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
 }
-.desktop-tools {
-  left: 12px;
-  top: 12px;
-}
+.desktop-tools,
 .desktop-panel-nav {
-  right: 12px;
-  top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  -webkit-app-region: no-drag;
 }
 .desktop-tools > i,
 .desktop-panel-nav > i {
-  height: 18px;
   width: 1px;
-  margin: 0 4px;
+  height: 16px;
+  margin: 0 5px;
   background: var(--border);
 }
-.desktop-tools button,
-.desktop-panel-nav button {
-  height: 30px;
-  border-radius: 6px;
+.titlebar .desktop-tools button,
+.titlebar .desktop-panel-nav button {
+  height: 24px;
+  min-height: 24px;
+  padding: 3px 5px;
+  border-radius: 4px;
 }
 .desktop-tools button[aria-pressed='true'],
-.desktop-panel-nav button[aria-expanded='true'] {
+.desktop-panel-nav button[aria-pressed='true'] {
   background: var(--selection);
   color: var(--cyan);
 }
-.desktop-panel-nav .desktop-clip-trigger {
-  max-width: 200px;
-  gap: 8px;
+.desktop-clip-trigger {
+  max-width: 220px;
+  gap: 6px;
 }
 .desktop-clip-trigger strong {
   min-width: 0;
@@ -88,50 +125,242 @@
   text-overflow: ellipsis;
   font-weight: 500;
 }
-.desktop-scene .desktop-pose-context > .active-layer-control {
-  top: 12px;
-  right: 12px;
+.titlebar .active-layer-control {
+  position: relative;
+  inset: auto;
 }
-.desktop-stage.has-floating-right .desktop-pose-context > .active-layer-control {
-  right: calc(var(--inspector-width, 300px) + 36px);
-}
-.desktop-stage.has-timeline .desktop-pose-context > .active-layer-control {
+
+/* Viewport overlays sit at the edges; nothing else floats on the scene. */
+.area-viewport .desktop-pose-context > .active-layer-control {
   display: none;
 }
-.desktop-scene .pose-view-label {
-  top: 12px;
+.area-viewport .pose-view-label {
+  top: 8px;
 }
-.desktop-scene .preview-border {
-  top: 36px;
+.area-viewport .preview-border {
+  top: 28px;
 }
-.desktop-scene .desktop-pose-context > .selection-pose-tools {
-  bottom: 84px;
+.area-viewport .desktop-pose-context > .selection-pose-tools {
+  bottom: 10px;
 }
-.desktop-transport {
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  gap: 8px;
-  max-width: calc(100% - 210px);
+
+/* Side column: icon tabs are the header. */
+.side-tabs {
+  flex: none;
+  display: flex;
+  gap: 1px;
+  height: var(--area-header);
+  padding: 1px 4px;
+  border-bottom: 1px solid var(--line);
+  background: var(--canvas);
 }
-.desktop-transport > button {
+.side-tabs button {
   width: 30px;
-  height: 30px;
+  height: 24px;
+  min-height: 24px;
   padding: 4px;
-}
-.desktop-transport output {
-  white-space: nowrap;
-  min-width: 66px;
-  font-variant-numeric: tabular-nums;
-}
-.desktop-transport output small {
+  border-radius: 4px;
   color: var(--muted);
 }
-.desktop-transport input {
-  width: 160px;
+.side-tabs button[aria-pressed='true'] {
+  background: var(--selection);
+  color: var(--cyan);
+}
+.side-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+.side-content > .control-list,
+.side-content > .inspector,
+.side-content > .character-panel {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+  border: 0;
+}
+.side-content > .touch-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 10px;
+}
+.area-side .touch-settings h3 {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.area-side .touch-setting-pair {
+  display: flex;
+  gap: 4px;
+}
+.area-side .touch-setting-pair button {
+  flex: 1;
+  white-space: normal;
+}
+.area-side .touch-settings-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.area-side .touch-settings-actions button {
+  justify-content: flex-start;
+}
+.area-side .animation-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
   padding: 0;
-  accent-color: var(--cyan);
+  border: 0;
+  z-index: auto;
+}
+.area-side .animation-bar > .library-toggle,
+.area-side .animation-tabs-area,
+.area-side .animation-bar > .pose-toolbar {
+  display: none;
+}
+.area-side .animation-bar > .library-panel {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  border: 0;
+  box-shadow: none;
+  padding: 6px;
+  background: transparent;
+}
+.area-side .library-panel > header {
+  flex: none;
+}
+.area-side .library-panel > header h3,
+.area-side .library-header-tools > button:last-child {
+  display: none;
+}
+.area-side .library-header-tools {
+  margin-left: auto;
+}
+.area-side .animation-folders,
+.area-side .animation-folder-results {
+  flex: 1;
+  min-height: 0;
+}
+.area-side .pose-library .library-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.embedded-library-tabs {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.embedded-library-tabs button {
+  flex: 1;
+  height: 24px;
+  min-height: 24px;
+}
+.embedded-library-tabs button[aria-pressed='true'] {
+  background: var(--selection);
+  color: var(--cyan);
+}
+.area-side .control-list > header .context-flair {
+  display: none;
+}
+
+/* Editors: dope sheet | graph editor, each with its own tool row as header. */
+.timeline.split {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, calc(var(--dope-share) * 100%)) 4px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  border-top: 0;
+}
+.timeline.split > .split-dope,
+.timeline.split > .split-graph {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.timeline.split > .split-dope > *,
+.timeline.split > .split-graph > * {
+  flex: 1;
+  min-height: 0;
+}
+.split-editors-handle {
+  cursor: ew-resize;
+  touch-action: none;
+  background: var(--line);
+}
+.split-editors-handle:hover {
+  background: color-mix(in srgb, var(--cyan) 45%, var(--line));
+}
+
+/* Time slider: transport and range across the whole window. */
+.time-slider {
+  grid-area: slider;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 0 8px;
+  border-top: 1px solid var(--line);
+  background: var(--canvas);
+}
+.time-slider > button {
+  width: 26px;
+  height: 22px;
+  min-height: 22px;
+  padding: 3px;
+  border-radius: 4px;
+  color: var(--muted);
+}
+.time-slider > button:hover {
+  color: var(--text);
+}
+.time-slider > button.play {
+  width: 30px;
+  background: var(--selection);
+  color: var(--cyan);
+}
+.time-slider output {
+  min-width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.time-slider .time-slash {
+  color: var(--muted);
+}
+.time-slider input[type='number'] {
+  width: 46px;
+  height: 22px;
+}
+.time-slider input[type='range'] {
+  flex: 1;
+  min-width: 80px;
+  margin: 0 8px;
+  padding: 0;
   height: 3px;
+  accent-color: var(--cyan);
+}
+.time-slider select {
+  height: 22px;
+  min-height: 22px;
+  padding: 0 6px;
 }
 .record-dot {
   width: 9px;
@@ -143,188 +372,14 @@
   background: var(--red);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 15%, transparent);
 }
-.desktop-panel {
-  z-index: 40;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  min-width: 0;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-panel, 0 8px 30px #0005);
-  opacity: 1;
-  transition:
-    opacity 180ms ease,
-    translate 180ms ease;
-}
-.desktop-panel[data-state='closing'] {
-  opacity: 0;
-  translate: 0 8px;
-  pointer-events: none;
-}
-.desktop-panel.floating {
-  position: absolute;
-  border-radius: 12px;
-  top: 12px;
-  bottom: calc(var(--dock-bottom) + 96px);
-  width: var(--inspector-width, 300px);
-}
-.desktop-panel.panel-left.floating {
-  left: calc(var(--dock-left) + 12px);
-  width: var(--controls-width, 196px);
-}
-.desktop-panel.panel-right.floating {
-  right: calc(var(--dock-right) + 12px);
-}
-.desktop-panel.panel-bottom.floating {
-  top: auto;
-  bottom: 12px;
-  left: calc(var(--dock-left) + 12px);
-  right: calc(var(--dock-right) + 12px);
-  width: auto;
-  height: min(var(--floating-timeline), calc(100% - 100px));
-  z-index: 35;
-}
-.desktop-panel.docked {
-  position: relative;
-  border-radius: 0;
-  box-shadow: none;
-}
-.desktop-panel.panel-left.docked {
-  grid-column: 1;
-  grid-row: 1;
-}
-.desktop-panel.panel-right.docked {
-  grid-column: 3;
-  grid-row: 1;
-}
-.desktop-panel.panel-bottom.docked {
-  grid-column: 1/-1;
-  grid-row: 2;
-}
-.desktop-panel-content {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  border-radius: inherit;
-}
-.desktop-panel-content > .control-list,
-.desktop-panel-content > .inspector,
-.desktop-panel-content > .character-panel {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  flex: 1;
-  border: 0;
-}
-.desktop-panel-content > .timeline {
-  flex: 1;
-  min-height: 0;
-  border: 0;
-}
-.desktop-panel-content > .touch-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 16px;
-}
-.desktop-panel .touch-settings h3 {
-  margin-bottom: 8px;
-  color: var(--muted);
-  font-size: 11px;
-}
-.desktop-panel .touch-setting-pair {
-  display: flex;
-  gap: 4px;
-}
-.desktop-panel .touch-setting-pair button {
-  flex: 1;
-  white-space: normal;
-}
-.desktop-panel .touch-settings-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.desktop-panel .touch-settings-actions button {
-  justify-content: flex-start;
-}
-.desktop-panel .animation-bar {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  flex: 1;
-  min-height: 0;
-  padding: 0;
-  border: 0;
-}
-.desktop-panel .animation-bar > .library-toggle,
-.desktop-panel .animation-tabs-area,
-.desktop-panel .animation-bar > .pose-toolbar {
-  display: none;
-}
-.desktop-panel .animation-bar > .library-panel {
-  position: relative;
-  inset: auto;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  max-height: none;
-  border: 0;
-  box-shadow: none;
-  padding: 8px;
-  background: transparent;
-}
-.desktop-panel .library-panel > header {
-  flex: none;
-}
-.desktop-panel .library-panel > header h3,
-.desktop-panel .library-header-tools > button:last-child {
-  display: none;
-}
-.desktop-panel .library-header-tools {
-  margin-left: auto;
-}
-.desktop-panel .animation-folders {
-  flex: 1;
-  min-height: 0;
-}
-.desktop-panel .animation-folder-results {
-  min-height: 0;
-  flex: 1;
-}
-.desktop-panel-resize {
-  position: absolute;
-  touch-action: none;
-  z-index: 4;
-}
-.panel-left > .desktop-panel-resize {
-  right: -3px;
-  top: 36px;
-  bottom: 0;
-  width: 6px;
-  cursor: ew-resize;
-}
-.panel-right > .desktop-panel-resize {
-  left: -3px;
-  top: 36px;
-  bottom: 0;
-  width: 6px;
-  cursor: ew-resize;
-}
-.panel-bottom > .desktop-panel-resize {
-  top: -3px;
-  left: 0;
-  right: 0;
-  height: 6px;
-  cursor: ns-resize;
-}
-.desktop-panel-resize:hover {
-  background: color-mix(in srgb, var(--cyan) 30%, transparent);
+
+@media (max-width: 1100px) {
+  .desktop-clip-trigger {
+    max-width: 120px;
+  }
+  .desktop-tools .pivot-trigger {
+    display: none;
+  }
 }
 .delete-animation-dialog {
   width: 420px;
@@ -370,188 +425,83 @@
 .animation-context-menu .danger {
   color: var(--red);
 }
-@starting-style {
-  .desktop-panel.floating {
-    opacity: 0;
-    translate: 0 8px;
-  }
-}
-@media (max-width: 1100px) {
-  .desktop-panel-nav .desktop-clip-trigger {
-    max-width: 120px;
-  }
-  .desktop-tools .pivot-trigger {
-    display: none;
-  }
-  .desktop-tools {
-    gap: 0;
-  }
-  .desktop-tools > i {
-    margin: 0 2px;
-  }
-  .desktop-tools button {
-    padding: 4px 6px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .desktop-stage,
-  .desktop-panel {
-    transition: none;
-  }
-}
 
-.desktop-scene .desktop-pose-context > .active-layer-control {
-  transition: right 200ms ease;
+/* Density: animator tools use flat sections, 24px rows and 11px text. */
+.titlebar .active-layer-control .attached-flair {
+  display: none;
 }
-.desktop-stage.floating-timing .desktop-pose-context > .selection-pose-tools {
-  bottom: calc(var(--floating-timeline) + 36px);
-}
-.desktop-stage.floating-timing .desktop-panel.floating:not(.panel-bottom) {
-  bottom: calc(var(--floating-timeline) + 24px);
-}
-.embedded-library-tabs {
-  display: flex;
-  flex: none;
-  gap: 4px;
-  padding: 8px;
-  border-bottom: 1px solid var(--border);
-}
-.embedded-library-tabs button {
-  flex: 1;
-}
-.embedded-library-tabs button[aria-pressed='true'] {
-  background: var(--selection);
-  color: var(--cyan);
-}
-.desktop-panel .pose-library .library-list {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-}
-
-/* Toolbars live in the title bar, not on top of the scene. */
-.titlebar .title-spacer:has(.desktop-tools) {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-width: 0;
-}
-.titlebar .desktop-tools,
-.titlebar .desktop-panel-nav {
-  position: static;
-  padding: 0;
-  background: none;
-  border: 0;
-  box-shadow: none;
-  -webkit-app-region: no-drag;
-}
-.titlebar .desktop-tools button,
-.titlebar .desktop-panel-nav button {
+.area-side .property-context-tabs {
   height: 28px;
   min-height: 28px;
 }
-
-/* Panels have no title bar; dock/close sit at the end of the panel's first row. */
-.desktop-panel-actions {
-  position: absolute;
-  top: 5px;
-  right: 6px;
-  /* .animation-bar keeps z-index 80 from its old top-bar role. */
-  z-index: 90;
-  display: flex;
-  gap: 2px;
+.area-side .property-section {
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
-.desktop-panel-actions button {
-  width: 26px;
+.area-side .property-header {
   height: 26px;
   min-height: 26px;
-  padding: 4px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.area-side .property-content {
+  padding: 2px 8px 8px;
+  gap: 4px;
+}
+.area-side .property-row {
+  min-height: 24px;
+  gap: 6px;
+}
+.area-side .properties-editor :is(input, select, button) {
+  min-height: 22px;
+}
+.area-side .properties-editor .vector-inputs label {
+  height: 22px;
+}
+.area-side .properties-editor .vector-inputs input {
+  min-height: 20px;
+  padding: 2px 6px 2px 2px;
+}
+.area-side .properties-editor .rig-mode-switch,
+.area-side .properties-editor .rig-mode-switch button {
+  height: 22px;
+  min-height: 22px;
+}
+.area-side .property-note,
+.area-side .properties-editor p {
+  margin: 2px 0 0;
+  font-size: 10px;
+  line-height: 1.35;
   color: var(--muted);
 }
-.desktop-panel-actions button:hover {
-  color: var(--text);
-}
-.desktop-panel .control-list > header,
-.desktop-panel .property-context-tabs,
-.desktop-panel .embedded-library-tabs {
-  padding-right: 64px;
-}
-.desktop-panel .touch-settings {
-  padding-top: 40px;
+.area-side .property-edit-target {
+  padding: 4px 8px;
 }
 
-/* Docked timeline: one toolbar row (view, transport, layer, tools), then tracks. */
-.desktop-panel .timeline {
-  display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
-  grid-template-rows: 38px minmax(0, 1fr);
-  border-top: 0;
+/* Editors: narrower track lists; graph tools drop their text labels. */
+.timeline.split .split-dope {
+  --track-label-width: 160px;
 }
-.desktop-panel .timeline > .timeline-tabs {
-  display: contents;
+.timeline.split .split-graph {
+  --track-label-width: 150px;
 }
-.desktop-panel .timeline > * {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  min-height: 0;
-}
-.desktop-panel .timeline-tabs > *,
-.desktop-panel .timeline > .transport {
-  grid-row: 1;
-  align-self: center;
-}
-.desktop-panel .timeline .timeline-tab-group {
-  grid-column: 1;
-  margin-left: 8px;
-}
-.desktop-panel .timeline > .transport {
-  grid-column: 2;
-  min-height: 0;
-  height: 38px;
-  padding: 0 12px;
-  border: 0;
-  background: none;
-}
-.desktop-panel .timeline .timeline-context {
-  display: none;
-}
-.desktop-panel .timeline .timeline-tabs > .active-layer-control {
-  grid-column: 4;
-  position: static;
-}
-.desktop-panel .timeline .timeline-window-tools {
-  grid-column: 5;
-  margin-right: 64px;
-}
-.desktop-panel .timeline::before {
-  content: '';
-  grid-column: 1 / -1;
-  grid-row: 1;
-  background: #2a3440;
-  border-bottom: 1px solid #ffffff14;
-}
-/* The panel itself says what it is; keep room for the count and visibility toggles. */
-.desktop-panel .control-list > header .context-flair {
+.timeline.split .split-graph .curve-tools button > span,
+.timeline.split .split-dope .key-edit-tools button > span {
   display: none;
 }
 
-.desktop-panel .timeline > .transport {
-  flex-wrap: nowrap;
+/* Viewport selection actions: one slim icon row with tooltips. */
+.area-viewport .selection-pose-tools .pose-action-buttons button {
+  min-width: 0;
+  width: 30px;
+  height: 28px;
+  min-height: 28px;
+  padding: 5px;
 }
-/* Narrow windows: keep one toolbar row by dropping text labels; icons and tooltips remain. */
-@media (max-width: 1280px) {
-  .desktop-panel .timeline .timeline-tab-group span,
-  .desktop-panel .timeline .frame-label > span:first-child,
-  .desktop-panel .timeline .auto-key span,
-  .desktop-panel .timeline .insert-key span {
-    display: none;
-  }
-  .desktop-panel .timeline .timeline-tab-group button {
-    min-width: 0;
-  }
-  .desktop-panel .timeline > .transport {
-    gap: 6px;
-    padding: 0 6px;
-  }
+.area-viewport .selection-pose-tools .pose-action-buttons button > span {
+  display: none;
 }
