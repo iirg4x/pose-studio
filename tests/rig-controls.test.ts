@@ -214,10 +214,6 @@ describe('Mr Mannequins animator controls', () => {
     const before = rig.deformation();
     apply(copy, 0);
     for (const [name, m] of Object.entries(rig.deformation())) near(m, before[name], 6);
-    await fs.writeFile(
-      'examples/Rig and motion exercise.manny.json',
-      JSON.stringify(library(p), null, 2),
-    );
   });
 });
 describe('selection and Blender resets', () => {

@@ -58,7 +58,10 @@ it('poses the real 89-bone Manny and produces finite deterministic export frames
     geometry: { rifle: geometryData(createRifle()), magazine: geometryData(createMagazine()) },
     project,
   };
-  const folder = path.resolve('../../work');
-  await fs.mkdir(folder, { recursive: true });
-  await fs.writeFile(path.join(folder, 'export-fixture.json'), JSON.stringify(fixture));
+  // Blender FBX checks read this; set POSE_FIXTURE_DIR to write it (e.g. ../../work).
+  const folder = process.env.POSE_FIXTURE_DIR;
+  if (folder) {
+    await fs.mkdir(folder, { recursive: true });
+    await fs.writeFile(path.join(folder, 'export-fixture.json'), JSON.stringify(fixture));
+  }
 }, 20000);

@@ -28,7 +28,7 @@ describe('axe reference clips', () => {
     expect(() => validateProject({ ...p, propPreset: 'invalid' })).toThrow();
   });
   it('loads both reference actions with independent rigs, IK hands, and a closed idle loop', async () => {
-    const file = JSON.parse(await fs.readFile('examples/Axe equip and idle.manny.json', 'utf8'));
+    const file = JSON.parse(await fs.readFile('tests/fixtures/axe-equip-idle.manny.json', 'utf8'));
     const lib = validateLibrary(file);
     expect(lib.clips.map((c) => c.project.end)).toEqual([20, 80]);
     expect(lib.openIds).toHaveLength(2);

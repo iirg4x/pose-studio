@@ -2,6 +2,7 @@ import { rigLoader } from './rig-loader';
 import { describe, it, expect } from 'vitest';
 import { Matrix4, Quaternion, Vector3 } from 'three';
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MannyRig } from '../src/scene/rig';
 import {
@@ -187,7 +188,11 @@ describe('root control', () => {
       project: p,
       cameraReference: matrix(evaluate(forLayer(p, 'firstPerson'), 0).camera).toArray(),
     };
-    await fs.writeFile('../../work/root-export-fixture.json', JSON.stringify(fixture));
-    await fs.writeFile('examples/Root motion turn.manny.json', JSON.stringify(library(p), null, 2));
+    // Blender FBX checks read this; set POSE_FIXTURE_DIR to write it (e.g. ../../work).
+    const folder = process.env.POSE_FIXTURE_DIR;
+    if (folder) {
+      await fs.mkdir(folder, { recursive: true });
+      await fs.writeFile(path.join(folder, 'root-export-fixture.json'), JSON.stringify(fixture));
+    }
   }, 20000);
 });

@@ -50,8 +50,13 @@ const asar = require('@electron/asar');
       path.join(root, 'backend', name),
       path.join(out, 'resources', 'backend', name),
     );
-  for (const name of ['README.md', 'UNREAL-SETUP.md', 'THIRD-PARTY-NOTICES.txt'])
-    await fs.copyFile(path.join(root, name), path.join(out, name));
+  // Release notes ship as README.md beside the executable, as before.
+  for (const [from, name] of [
+    ['CHANGELOG.md', 'README.md'],
+    ['docs/UNREAL-SETUP.md', 'UNREAL-SETUP.md'],
+    ['THIRD-PARTY-NOTICES.txt', 'THIRD-PARTY-NOTICES.txt'],
+  ])
+    await fs.copyFile(path.join(root, from), path.join(out, name));
   const incoming = path.join(out, 'electron.exe'),
     executable = path.join(out, 'Manny Animation Studio.exe');
   // Avoid replacing an identical Electron binary on Windows; packaged resources carry app updates.

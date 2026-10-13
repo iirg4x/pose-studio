@@ -17,7 +17,7 @@ import { sampleCurve, channelsFor } from '../src/core/curves';
 import type { Channel } from '../src/core/curves';
 import { StudioStore } from '../src/core/store';
 const lib = validateLibrary(
-  JSON.parse(fs.readFileSync('examples/Axe equip and idle.manny.json', 'utf8')),
+  JSON.parse(fs.readFileSync('tests/fixtures/axe-equip-idle.manny.json', 'utf8')),
 );
 const source = JSON.parse(fs.readFileSync('tests/fixtures/axe-blender-curves.json', 'utf8'));
 const equip = lib.clips[0].project,
