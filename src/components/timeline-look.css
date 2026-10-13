@@ -80,6 +80,7 @@
   font-weight: 600;
 }
 :root .app .timeline-track-label.axis-label-row .track-name {
+  margin-left: 24px;
   color: var(--tl-muted);
 }
 :root .app .timeline-track-label.selected {
@@ -269,4 +270,33 @@
   border-color: transparent !important;
   background: transparent !important;
   color: var(--tl-text-2) !important;
+}
+
+/* Row height comes from the grid (TimelineGrid sets --track-row): a few tracks grow
+ * to fill the panel, many tracks keep the normal height and scroll. */
+:root .app .timeline .timeline-grid :is(.key-track, .timeline-track-label) {
+  height: var(--track-row);
+  min-height: var(--track-row);
+}
+/* Keys sit on the row's centre line, whatever its height. */
+:root .app .timeline .timeline-grid .keyframe {
+  top: calc(50% - 11px);
+}
+:root.android .app .timeline .timeline-grid .keyframe {
+  top: calc(50% - 14px);
+}
+
+/* Channel rows: the row itself carries the channel colour; its name says which. */
+:root .app .timeline-track-label.axis-label-row {
+  background: color-mix(in srgb, var(--track-color) 14%, var(--tl-labels));
+  box-shadow: none;
+}
+:root .app .timeline-track-label.axis-label-row .track-name {
+  color: color-mix(in srgb, var(--track-color) 55%, var(--tl-text));
+}
+:root .app .timeline-track-label.axis-label-row.selected {
+  background: color-mix(in srgb, var(--track-color) 30%, var(--tl-labels));
+}
+:root .app .timeline-track-label.axis-label-row.selected .track-name {
+  color: var(--tl-text);
 }

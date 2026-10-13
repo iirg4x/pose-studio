@@ -366,3 +366,76 @@
     padding: 0 10px;
   }
 }
+/* One even gap between the transport buttons. */
+:root.android .app .touch-timeline-bar .touch-timeline-transport {
+  gap: 6px;
+}
+:root.android .app .touch-timeline-transport > *,
+:root.android .app .touch-timeline-transport .insert-key-group {
+  margin: 0;
+}
+
+/* Play sits on the bar's centre line, key directly left of it, auto key directly
+ * right; the editor switch and the menu hold the outer edges. */
+:root.android .app .touch-timeline-bar {
+  column-gap: 6px;
+}
+:root.android .app .touch-timeline-bar .touch-timeline-transport {
+  display: contents;
+}
+:root.android .app .touch-timeline-bar > *,
+:root.android .app .touch-timeline-transport > * {
+  grid-row: 1;
+}
+:root.android .app .touch-timeline-bar .timeline-tab-group {
+  grid-column: 1;
+  justify-self: start;
+}
+:root.android .app .touch-timeline-transport .insert-key-group {
+  grid-column: 1;
+  justify-self: end;
+}
+:root.android .app .touch-timeline-transport > .touch-timeline-play {
+  grid-column: 2;
+}
+:root.android .app .touch-timeline-transport > .auto-key {
+  grid-column: 3;
+  justify-self: start;
+}
+:root.android .app .touch-timeline-bar .touch-timeline-end {
+  grid-column: 3;
+  justify-self: end;
+}
+
+/* Buttons that touch read as one control: key | play | auto key share one rounded
+ * outline, with square joins and a hairline between them. */
+:root.android .app .touch-timeline-bar {
+  column-gap: 0;
+}
+:root.android .app .touch-timeline-transport .insert-key-group {
+  border-radius: var(--ds-radius) 0 0 var(--ds-radius);
+}
+:root.android .app .touch-timeline-transport > .touch-timeline-play {
+  border-radius: 0;
+  box-shadow:
+    -1px 0 0 var(--canvas),
+    1px 0 0 var(--canvas);
+}
+:root.android .app .touch-timeline-transport > .auto-key {
+  border-radius: 0 var(--ds-radius) var(--ds-radius) 0;
+}
+:root.android .app .touch-timeline-bar .timeline-tab-group,
+:root.android .app .touch-timeline-bar .touch-timeline-end {
+  margin-inline: 4px;
+}
+
+/* The tool strip is one surface: its orientation and pivot buttons are flat parts of
+ * it, not boxes inside it. */
+:root.android .app .touch-pose-rail .transform-options > button {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+:root.android .app .touch-pose-rail .transform-options > button[aria-expanded='true'] {
+  background: var(--selection);
+}

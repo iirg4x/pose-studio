@@ -679,19 +679,6 @@
 .timeline-track-label.axis-label-row .track-name {
   color: var(--track-muted);
 }
-.axis-letter {
-  display: grid;
-  place-items: center;
-  width: 19px;
-  height: 19px;
-  flex: none;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--track-color);
-  background: transparent;
-  border-radius: 4px;
-  margin: 0 4px;
-}
 .axis-curve-strip {
   position: relative;
   width: 100%;
@@ -1250,11 +1237,7 @@
   .android .timeline .timeline-track-label .track-children {
     display: none;
   }
-  .android .timeline .axis-letter {
-    width: 16px;
-    margin: 0 2px;
-  }
-  .android .timeline .timeline-track-label .track-name {
+  .android .android .timeline .timeline-track-label .track-name {
     font-size: 10px;
   }
   .android .timeline .curve-tools {
@@ -1854,9 +1837,6 @@
 }
 .timeline-track-label .track-disclosure[aria-expanded='true'] svg {
   rotate: 0deg;
-}
-.timeline .axis-letter {
-  background: color-mix(in srgb, var(--track-color) 14%, transparent);
 }
 .timeline .curve-tools {
   background: #303e4d;

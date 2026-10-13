@@ -86,9 +86,6 @@ export function TimelineTrackLabel({
     >
       {channel ? (
         <>
-          <span className="axis-letter">
-            {channel.length === 2 ? channel.at(-1)!.toUpperCase() : '•'}
-          </span>
           <button
             className="track-name"
             aria-label={row.label + ' ' + CHANNEL_LABELS[channel] + ' curve'}

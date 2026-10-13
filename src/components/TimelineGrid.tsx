@@ -100,7 +100,8 @@ export const TimelineGrid = memo(function TimelineGrid({
     };
   }, [toolsOpen]);
   const [zoom, setZoom] = useState(1),
-    rowHeight = timelineRowHeight,
+    // Phones use the compact row (phone.css); other layouts the shared track height.
+    baseRowHeight = isAndroid && (innerWidth <= 700 || innerHeight <= 540) ? 34 : timelineRowHeight,
     rulerHeight = isAndroid ? 40 : 30;
   const s = useStudioChrome({ frame: 'none' }),
     scroll = useRef<HTMLDivElement>(null),
@@ -175,6 +176,10 @@ export const TimelineGrid = memo(function TimelineGrid({
     reveal.current = null;
   }, [collapsed, tracks.expanded, tracks.query, s.selected, s.selection, ids]);
   const [viewport, setViewport] = useState({ top: 0, height: 360 });
+  // A few tracks share the panel height instead of leaving it empty; once they no longer
+  // fit, rows return to their normal height and scroll.
+  const fill = rows.length ? Math.floor((viewport.height - rulerHeight) / rows.length) : 0,
+    rowHeight = Math.max(baseRowHeight, fill);
   useEffect(() => {
     const el = scroll.current;
     if (!el) return;
@@ -617,7 +622,7 @@ export const TimelineGrid = memo(function TimelineGrid({
       <div
         className="timeline-grid"
         ref={scroll}
-        style={{ '--timeline-zoom': zoom } as CSSProperties}
+        style={{ '--timeline-zoom': zoom, '--track-row': rowHeight + 'px' } as CSSProperties}
       >
         <div className="track-labels">
           <div className="track-ruler-label">
