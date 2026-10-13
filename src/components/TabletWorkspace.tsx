@@ -119,20 +119,24 @@ export function TabletWorkspace({
             <span>{label}</span>
           </button>
         ))}
+        {/* The timeline is a panel too; it has its own play and key controls. */}
+        <button
+          aria-label={timeline ? 'Hide timeline' : 'Show timeline'}
+          aria-expanded={timeline}
+          aria-controls="touch-timeline"
+          onClick={toggleTimeline}
+        >
+          <ListVideo size={22} />
+          <span>Timeline</span>
+        </button>
       </nav>
       <ActiveLayer />
       <PoseActions pasteMirrored={pasteMirrored} mirror={mirror} timeline={timeline} />
-      <TabletTransport timeline={timeline} toggleTimeline={toggleTimeline} />
+      <TabletTransport />
     </>
   );
 }
-function TabletTransport({
-  timeline,
-  toggleTimeline,
-}: {
-  timeline: boolean;
-  toggleTimeline: () => void;
-}) {
+function TabletTransport() {
   const s = useStudioSelector(
       (s) => ({
         frame: s.frame,
@@ -196,15 +200,6 @@ function TabletTransport({
       >
         <Diamond size={23} />
         <span>Key</span>
-      </button>
-      <button
-        aria-label={timeline ? 'Hide timeline' : 'Show timeline'}
-        aria-expanded={timeline}
-        aria-controls="touch-timeline"
-        onClick={toggleTimeline}
-      >
-        <ListVideo size={23} />
-        <span>Timeline</span>
       </button>
     </div>
   );

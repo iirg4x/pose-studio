@@ -11,7 +11,6 @@ import type { ControlId } from '../core/model';
 import { CurveTrackTree } from './TimelineTracks';
 import type { TimelineTracksState } from './TimelineTracks';
 import { ActiveLayer } from './PoseActions';
-import { isTouch as isAndroid } from '../platform/storage';
 import { ScrubNumber } from './ScrubNumber';
 import { TimelineGrid } from './TimelineGrid';
 import { CurveEditor } from './CurveEditor';
@@ -122,7 +121,6 @@ export const Timeline = memo(function Timeline({
         setCurveFocus({ frame, serial: Date.now() });
       } else setCurveFocus(undefined);
       studio.patch({ tab: 'curves' });
-      if (isAndroid && !expanded) expand?.();
     },
   };
   if (!p) return <div className="timeline" />;
