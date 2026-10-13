@@ -7,7 +7,7 @@ import { previewViews } from '../core/previewLinks';
 import { controllerConstraints, groundingClearance } from '../core/controllerConstraints';
 import { animationCamera, cameraControl } from './animationCamera';
 import { mirrorControlPose, mirrorDestination } from '../core/mirrorPose';
-import { TrailSamples } from './trailSampling';
+import { MotionTrail } from './MotionTrail';
 import { copyPoseTracks } from '../core/poseEdits';
 import { TouchGestures } from './touchGestures';
 import type { TouchPoint } from './touchGestures';
@@ -328,14 +328,6 @@ export class StudioScene {
   private lastPlaybackClip = '';
   private lastSelected = '';
   private lastLayer = '';
-  private trailKey = '';
-  private trailJob?: {
-    key: string;
-    id: ControlId;
-    project: Project;
-    samples: TrailSamples<T.Vector3>;
-  };
-  private trailIdle = 0;
   private clickStart = [0, 0];
   private unsubscribe: () => void;
   private env: T.WebGLRenderTarget;
@@ -346,9 +338,43 @@ export class StudioScene {
   private resizePending = true;
   private preview = { x: 20, y: 38, w: 330, h: 186 };
   private materialCache = new Set<T.Material>();
-  private trail?: T.Line;
-  private trailControl?: ControlId;
-  showTrails = false;
+  private trails = new MotionTrail({
+    add: (line) => this.overlays.add(line),
+    key: () => {
+      const s = this.store.state;
+      return [
+        s.revision,
+        s.selected,
+        s.project?.editing,
+        this.previewSignature,
+        this.targetLoad,
+      ].join(':');
+    },
+    busy: () => {
+      const s = this.store.state;
+      return (
+        s.playing ||
+        s.interacting ||
+        s.gameView ||
+        s.retargetMode ||
+        this.touch.active ||
+        this.dragging ||
+        !!this.modal ||
+        this.recording ||
+        document.hidden
+      );
+    },
+    current: () => ({ id: this.store.state.selected, project: this.store.state.project }),
+    positionAt: (frame, project, id) => {
+      this.apply(frame, project);
+      return this.markers.get(id)!.position.clone();
+    },
+    restore: () => this.apply(this.store.state.frame),
+    controlVisible: (id) => this.store.controlVisible(id),
+    redraw: () => {
+      this.drawDirty = true;
+    },
+  });
   private fitOnApply = false;
   private drawDirty = true;
   private forcePose = true;
@@ -1182,10 +1208,7 @@ export class StudioScene {
     this.cursorMarker.visible = this.store.state.transformPivot === 'cursor';
     this.cursorMarker.position.fromArray(this.store.state.cursorPosition);
     this.cursorMarker.quaternion.copy(view.quaternion);
-    if (this.trail)
-      this.trail.visible =
-        this.trailControl === this.store.state.selected &&
-        this.store.controlVisible(this.store.state.selected);
+    this.trails.sync(this.store.state.selected);
     if (!this.dragging) {
       const id = this.store.state.selected;
       const selectedMarker = this.markers.get(id)!;
@@ -2678,7 +2701,7 @@ export class StudioScene {
     const moved = this.orbit.update(),
       needsPose =
         this.forcePose || this.lastPoseState !== this.store.state || frame !== this.lastPoseFrame;
-    if (this.showTrails) this.updateTrail();
+    if (this.trails.enabled) this.trails.update();
     if (!needsPose && !moved && !this.drawDirty) return;
     this.renderer.shadowMap.autoUpdate = !isAndroid || this.store.state.cameraPreview;
     if (needsPose) {
@@ -2919,112 +2942,7 @@ export class StudioScene {
     this.orbit.update();
   }
   toggleTrail() {
-    this.drawDirty = true;
-    this.showTrails = !this.showTrails;
-    this.trailKey = '';
-    this.updateTrail();
-  }
-  private clearTrail() {
-    if (this.trail) {
-      this.trail.removeFromParent();
-      this.trail.geometry.dispose();
-      (this.trail.material as T.Material).dispose();
-      this.trail = undefined;
-    }
-  }
-  private cancelTrailSample() {
-    if (this.trailIdle) {
-      cancelIdleCallback(this.trailIdle);
-      this.trailIdle = 0;
-    }
-  }
-  private currentTrailKey() {
-    const s = this.store.state;
-    return [
-      s.revision,
-      s.selected,
-      s.project?.editing,
-      this.previewSignature,
-      this.targetLoad,
-    ].join(':');
-  }
-  private trailBusy() {
-    const s = this.store.state;
-    return (
-      s.playing ||
-      s.interacting ||
-      s.gameView ||
-      s.retargetMode ||
-      this.touch.active ||
-      this.dragging ||
-      !!this.modal ||
-      this.recording ||
-      document.hidden
-    );
-  }
-  private updateTrail() {
-    if (!this.showTrails || !this.store.state.project) {
-      this.cancelTrailSample();
-      this.trailJob = undefined;
-      this.trailKey = '';
-      this.clearTrail();
-      return;
-    }
-    const key = this.currentTrailKey();
-    if (this.trailJob && this.trailJob.key !== key) {
-      this.cancelTrailSample();
-      this.trailJob = undefined;
-    }
-    if (this.trailKey === key || this.trailBusy()) {
-      this.cancelTrailSample();
-      return;
-    }
-    if (!this.trailJob) {
-      const s = this.store.state;
-      this.trailJob = {
-        key,
-        id: s.selected,
-        project: s.project!,
-        samples: new TrailSamples(s.project!.end),
-      };
-    }
-    if (this.trailIdle) return;
-    this.trailIdle = requestIdleCallback(
-      (deadline) => {
-        this.trailIdle = 0;
-        if (this.disposed || !this.showTrails) return;
-        const job = this.trailJob;
-        if (!job || job.key !== this.currentTrailKey() || this.trailBusy()) return;
-        if (deadline.timeRemaining() < 1 && !deadline.didTimeout) {
-          this.updateTrail();
-          return;
-        }
-        // One pose per idle slice, always restore the live scene before yielding.
-        // Never feed a sampled pose into a pointer gesture or a playback frame.
-        try {
-          job.samples.step((frame) => {
-            this.apply(frame, job.project);
-            return this.markers.get(job.id)!.position.clone();
-          });
-        } finally {
-          this.apply(this.store.state.frame);
-        }
-        if (job.samples.done) {
-          this.clearTrail();
-          this.trail = new T.Line(
-            new T.BufferGeometry().setFromPoints(job.samples.points),
-            new T.LineBasicMaterial({ color: 0x55bfd3, transparent: true, opacity: 0.6 }),
-          );
-          this.trailControl = job.id;
-          this.trail.visible = this.store.controlVisible(job.id);
-          this.overlays.add(this.trail);
-          this.trailKey = job.key;
-          this.trailJob = undefined;
-          this.drawDirty = true;
-        } else this.updateTrail();
-      },
-      { timeout: 500 },
-    );
+    this.trails.toggle();
   }
 
   async renderRecording(
@@ -3241,9 +3159,7 @@ export class StudioScene {
     window.removeEventListener('keydown', this.selectionKeys);
     window.removeEventListener('keyup', this.selectionKeys);
     window.removeEventListener('blur', this.clearSelectionModifier);
-    this.cancelTrailSample();
-    this.clearTrail();
-    this.trailJob = undefined;
+    this.trails.dispose();
     this.touch.cancel();
     window.removeEventListener('pose-activate-control', this.activateControl);
     window.removeEventListener('pose-paste-mirrored-keys', this.pasteMirroredKeys);
