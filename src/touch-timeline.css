@@ -16,7 +16,7 @@
 :root.android .touch-timeline-bar :is(button, select) {
   flex: none;
 }
-:root.android .touch-timeline-bar > button,
+:root.android .touch-timeline-bar :is(.touch-timeline-transport, .touch-timeline-end) > button,
 :root.android .touch-timeline-bar .insert-key-group > button,
 :root.android .timeline-more-anchor > button {
   display: inline-flex;
@@ -61,20 +61,6 @@
 :root.android .touch-timeline-bar .touch-timeline-play {
   background: var(--accent);
   color: var(--accent-ink);
-}
-:root.android .touch-timeline-bar .frame-label {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-:root.android .touch-timeline-bar .frame-label input {
-  width: 46px;
-  height: 40px;
-  min-height: 40px;
-  padding: 0 4px;
-  text-align: center;
 }
 :root.android .touch-timeline-bar .insert-key-group {
   display: flex;
@@ -167,7 +153,7 @@
   :root.android .touch-timeline-bar :is(.timeline-tab-group, .insert-key-group, .auto-key) span {
     display: none;
   }
-  :root.android .touch-timeline-bar > button,
+  :root.android .touch-timeline-bar :is(.touch-timeline-transport, .touch-timeline-end) > button,
   :root.android .touch-timeline-bar .insert-key-group > button:first-child,
   :root.android .timeline-more-anchor > button {
     min-width: 40px;
@@ -179,13 +165,10 @@
     min-height: 38px;
     padding: 0 8px;
   }
-  :root.android .touch-timeline-bar .frame-label input {
-    width: 38px;
-  }
 }
 
 /* Bar items size themselves here, not from the generic 48px touch button. */
-:root.android .app .touch-timeline-bar > button,
+:root.android .app .touch-timeline-bar :is(.touch-timeline-transport, .touch-timeline-end) > button,
 :root.android .app .touch-timeline-bar .insert-key-group > button,
 :root.android .app .timeline-more-anchor > button {
   position: static;
@@ -203,7 +186,7 @@
   width: 9px;
 }
 :root.android .timeline-more-length {
-  display: none;
+  display: flex;
   align-items: center;
   gap: 8px;
   color: var(--secondary);
@@ -214,7 +197,11 @@
   min-height: 44px;
 }
 @media (max-width: 700px), (max-height: 540px) {
-  :root.android .app .touch-timeline-bar > button,
+  :root.android
+    .app
+    .touch-timeline-bar
+    :is(.touch-timeline-transport, .touch-timeline-end)
+    > button,
   :root.android .app .touch-timeline-bar .insert-key-group > button:first-child,
   :root.android .app .timeline-more-anchor > button {
     width: 40px;
@@ -230,12 +217,6 @@
     min-width: 36px;
     padding: 0;
     justify-content: center;
-  }
-  :root.android .app .touch-timeline-bar .frame-label > :not(:first-child) {
-    display: none;
-  }
-  :root.android .timeline-more-length {
-    display: flex;
   }
 }
 
@@ -291,4 +272,32 @@
   :root.android .timeline .curve-help {
     display: none;
   }
+}
+
+/* Editor switch left, transport centred, menu right. */
+:root.android .app .touch-timeline-bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+}
+:root.android .touch-timeline-bar .timeline-tab-group {
+  justify-self: start;
+}
+:root.android .touch-timeline-transport,
+:root.android .touch-timeline-end {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+:root.android .touch-timeline-end {
+  justify-self: end;
+}
+@media (max-width: 700px), (max-height: 540px) {
+  :root.android .touch-timeline-transport,
+  :root.android .touch-timeline-end {
+    gap: 2px;
+  }
+}
+:root.android .app .touch-timeline-transport > .touch-timeline-play {
+  background: var(--accent);
+  color: var(--accent-ink);
 }

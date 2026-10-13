@@ -2,7 +2,6 @@ import type { CSSProperties, PointerEvent } from 'react';
 import { memo, useLayoutEffect, useRef, useState } from 'react';
 import { useStudioSelector, useDisplayFrame } from '../hooks';
 import { studio } from '../core/store';
-import { ScrubNumber } from './ScrubNumber';
 
 // Only these small leaves subscribe to the clock. Moving the playhead must not
 // reconcile the key buttons, graph paths, or offscreen tracks.
@@ -42,20 +41,6 @@ export const TimelinePlayhead = memo(function TimelinePlayhead({
     </div>
   ) : (
     <div ref={ref} className="playhead" style={style} />
-  );
-});
-export const TimelineFrame = memo(function TimelineFrame({ end }: { end: number }) {
-  const frame = useStudioSelector((s) => s.frame);
-  return (
-    <ScrubNumber
-      aria-label="Current frame"
-      type="number"
-      step="any"
-      min={0}
-      max={end}
-      value={frame}
-      onChange={(e) => studio.setFrame(Number(e.target.value))}
-    />
   );
 });
 export const CurvePlayhead = memo(function CurvePlayhead({

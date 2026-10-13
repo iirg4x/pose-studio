@@ -545,7 +545,11 @@ html.android body {
   :root.android .app .touch-panel-rail button,
   :root.android .app .touch-transport > button,
   :root.android .app .pose-action-buttons button,
-  :root.android .app .touch-timeline-bar > button,
+  :root.android
+    .app
+    .touch-timeline-bar
+    :is(.touch-timeline-transport, .touch-timeline-end)
+    > button,
   :root.android .app .touch-timeline-bar .insert-key-group > button,
   :root.android .app .timeline-more-anchor > button,
   :root.android .app .touch-timeline-bar .timeline-tab-group button,
@@ -624,12 +628,6 @@ html.android body {
     min-width: 36px;
     border-radius: var(--ds-radius);
     height: 32px;
-  }
-  :root.android .app .touch-timeline-bar .frame-label input {
-    width: 34px;
-    height: 30px;
-    min-height: 30px;
-    font-size: 13px;
   }
   :root.android .app .touch-timeline-bar .insert-key-group > button + button {
     width: 22px;

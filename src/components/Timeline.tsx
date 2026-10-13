@@ -11,7 +11,6 @@ import type { ControlId } from '../core/model';
 import { CurveTrackTree } from './TimelineTracks';
 import type { TimelineTracksState } from './TimelineTracks';
 import { ActiveLayer } from './PoseActions';
-import { TimelineFrame } from './TimelinePlayhead';
 import { isTouch as isAndroid } from '../platform/storage';
 import { ScrubNumber } from './ScrubNumber';
 import { TimelineGrid } from './TimelineGrid';
@@ -233,134 +232,122 @@ export const Timeline = memo(function Timeline({
             <span>Curves</span>
           </button>
         </div>
-        <button
-          className={'touch-timeline-play' + (s.playing ? ' playing' : '')}
-          aria-label={s.playing ? 'Pause' : 'Play'}
-          onClick={() => studio.patch({ playing: !s.playing, drafts: {} })}
-        >
-          {s.playing ? <Pause size={18} /> : <Play size={18} fill="currentColor" />}
-        </button>
-        <label className="frame-label">
-          <TimelineFrame end={p.end} />
-          <span>/</span>
-          <ScrubNumber
-            aria-label="End frame"
-            type="number"
-            min={1}
-            max={2400}
-            value={p.end}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              if (v >= 1 && v <= 2400) studio.updateProject({ end: Math.round(v) });
-            }}
-          />
-        </label>
-        <div className="insert-key-group">
+        <div className="touch-timeline-transport">
           <button
-            className="insert-key"
-            aria-label="Add keyframe"
-            disabled={!s.selection.length}
-            onClick={() => studio.keySelected()}
+            className={'touch-timeline-play' + (s.playing ? ' playing' : '')}
+            aria-label={s.playing ? 'Pause' : 'Play'}
+            onClick={() => studio.patch({ playing: !s.playing, drafts: {} })}
           >
-            <Diamond size={17} />
-            <span>Key</span>
+            {s.playing ? <Pause size={18} /> : <Play size={18} fill="currentColor" />}
           </button>
+          <div className="insert-key-group">
+            <button
+              className="insert-key"
+              aria-label="Add keyframe"
+              disabled={!s.selection.length}
+              onClick={() => studio.keySelected()}
+            >
+              <Diamond size={17} />
+              <span>Key</span>
+            </button>
+            <button
+              aria-label="Keyframe options"
+              onClick={(e) => studio.showKeyframeMenu(e.clientX, e.clientY)}
+            >
+              <ChevronDown size={15} />
+            </button>
+          </div>
           <button
-            aria-label="Keyframe options"
-            onClick={(e) => studio.showKeyframeMenu(e.clientX, e.clientY)}
+            className={'auto-key ' + (s.autoKey ? 'enabled' : '')}
+            aria-label="Auto key"
+            aria-pressed={s.autoKey}
+            onClick={() => studio.patch({ autoKey: !s.autoKey })}
           >
-            <ChevronDown size={15} />
+            <i />
+            <span>Auto</span>
           </button>
         </div>
-        <button
-          className={'auto-key ' + (s.autoKey ? 'enabled' : '')}
-          aria-label="Auto key"
-          aria-pressed={s.autoKey}
-          onClick={() => studio.patch({ autoKey: !s.autoKey })}
-        >
-          <i />
-          <span>Auto</span>
-        </button>
-        <span className="title-spacer" />
-        <div className="timeline-more-anchor">
-          <button
-            aria-label="More timeline options"
-            aria-expanded={more}
-            onClick={() => setMore(!more)}
-          >
-            <MoreHorizontal size={18} />
-          </button>
-          {more && (
-            <div className="timeline-more" role="group" aria-label="Timeline options">
-              {/* Phones keep the bar to one row; the clip length moves here. */}
-              <label className="timeline-more-length">
-                <span>Length</span>
-                <ScrubNumber
-                  aria-label="Animation length in frames"
-                  type="number"
-                  min={1}
-                  max={2400}
-                  value={p.end}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (v >= 1 && v <= 2400) studio.updateProject({ end: Math.round(v) });
-                  }}
-                />
-              </label>
-              <div className="timeline-more-row">
-                <button aria-label="First frame" onClick={() => studio.setFrame(0)}>
-                  <SkipBack size={17} />
-                </button>
-                <button aria-label="Last frame" onClick={() => studio.setFrame(p.end)}>
-                  <SkipForward size={17} />
-                </button>
-                <select
-                  aria-label="Frame rate"
-                  value={p.fps}
-                  onChange={(e) => studio.updateProject({ fps: Number(e.target.value) })}
-                >
-                  {[24, 25, 30, 48, 60].map((v) => (
-                    <option key={v} value={v}>
-                      {v} fps
-                    </option>
-                  ))}
-                </select>
-                <LoopControls />
-              </div>
-              <ActiveLayer />
-              <div className="timeline-more-row">
-                <AnimationMirror />
-                <KeyLockButton />
-                <button
-                  aria-label="Reduce keyframes"
-                  onClick={() => {
-                    setMore(false);
-                    setReducer({
-                      channel: s.tab === 'curves' ? channel : undefined,
-                      frames: s.timelineSelection.map((k) => k.frame),
-                    });
-                  }}
-                >
-                  <Scissors size={16} />
-                </button>
-                {expand && (
-                  <button
-                    aria-label={expanded ? 'Collapse timeline' : 'Expand timeline'}
-                    aria-pressed={expanded}
-                    onClick={expand}
-                  >
-                    <ChevronsUpDown size={18} />
+        <div className="touch-timeline-end">
+          <div className="timeline-more-anchor">
+            <button
+              aria-label="More timeline options"
+              aria-expanded={more}
+              onClick={() => setMore(!more)}
+            >
+              <MoreHorizontal size={18} />
+            </button>
+            {more && (
+              <div className="timeline-more" role="group" aria-label="Timeline options">
+                {/* The playhead shows the current frame; the clip length lives here. */}
+                <label className="timeline-more-length">
+                  <span>Length</span>
+                  <ScrubNumber
+                    aria-label="Animation length in frames"
+                    type="number"
+                    min={1}
+                    max={2400}
+                    value={p.end}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (v >= 1 && v <= 2400) studio.updateProject({ end: Math.round(v) });
+                    }}
+                  />
+                </label>
+                <div className="timeline-more-row">
+                  <button aria-label="First frame" onClick={() => studio.setFrame(0)}>
+                    <SkipBack size={17} />
                   </button>
-                )}
+                  <button aria-label="Last frame" onClick={() => studio.setFrame(p.end)}>
+                    <SkipForward size={17} />
+                  </button>
+                  <select
+                    aria-label="Frame rate"
+                    value={p.fps}
+                    onChange={(e) => studio.updateProject({ fps: Number(e.target.value) })}
+                  >
+                    {[24, 25, 30, 48, 60].map((v) => (
+                      <option key={v} value={v}>
+                        {v} fps
+                      </option>
+                    ))}
+                  </select>
+                  <LoopControls />
+                </div>
+                <ActiveLayer />
+                <div className="timeline-more-row">
+                  <AnimationMirror />
+                  <KeyLockButton />
+                  <button
+                    aria-label="Reduce keyframes"
+                    onClick={() => {
+                      setMore(false);
+                      setReducer({
+                        channel: s.tab === 'curves' ? channel : undefined,
+                        frames: s.timelineSelection.map((k) => k.frame),
+                      });
+                    }}
+                  >
+                    <Scissors size={16} />
+                  </button>
+                  {expand && (
+                    <button
+                      aria-label={expanded ? 'Collapse timeline' : 'Expand timeline'}
+                      aria-pressed={expanded}
+                      onClick={expand}
+                    >
+                      <ChevronsUpDown size={18} />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
+          </div>
+          {close && (
+            <button aria-label="Close timeline" onClick={close}>
+              <X size={20} />
+            </button>
           )}
         </div>
-        {close && (
-          <button aria-label="Close timeline" onClick={close}>
-            <X size={20} />
-          </button>
-        )}
       </div>
       {s.tab === 'curves' ? curves : grid}
       {reducer && (
