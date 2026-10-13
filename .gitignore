@@ -1,0 +1,31 @@
+# Dependencies and build output
+node_modules/
+dist/
+dist-pwa/
+release/
+windows-build/
+android-build/
+android/app/build/
+android/build/
+android/.gradle/
+android/app/src/main/assets/public/
+*.tsbuildinfo
+
+# Private user data: projects, backups and exported example files
+projects/
+backups/
+examples/
+*.pose
+*.manny.json
+
+# Local QA output
+screenshots/
+verification/
+*.log
+
+# Editor/tool leftovers
+*.blend1
+backend/manny-source.blend
+NVIDIA Corporation/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,51 @@
+import {AnimationMirror} from './AnimationMirror';
+import {mirrorDriver} from '../core/liveMirror';
+import {MirrorCurve} from './MirrorCurve';
+import {LockKeyhole,UnlockKeyhole} from 'lucide-react';
+import {memo,useState,useEffect,useLayoutEffect,useMemo} from 'react';
+import {loadTimelineCollapsed,revealTimelineControl} from '../core/timelineHierarchy';
+import type {Channel} from '../core/curves';
+import {channelsFor} from '../core/curves';
+import type {ControlId} from '../core/model';
+import {CurveTrackTree} from './TimelineTracks';
+import type {TimelineTracksState} from './TimelineTracks';
+import {ActiveLayer} from './PoseActions';
+import {TimelineFrame} from './TimelinePlayhead';
+import {isTouch as isAndroid} from '../platform/storage';
+import {ScrubNumber} from './ScrubNumber';
+import {TimelineGrid} from './TimelineGrid';
+import {CurveEditor} from './CurveEditor';
+import {CurveReducer} from './CurveReducer';
+import {LoopControls} from './LoopControls';
+import {Play,Pause,SkipBack,SkipForward,Diamond,ChevronDown,ListVideo,Spline,ChevronsUpDown,Scissors,X} from 'lucide-react';
+import {useStudioChrome} from '../hooks';
+import {studio} from '../core/store';
+import {timelineVisibleControls} from '../core/timelineChannels';
+export const Timeline=memo(function Timeline({expanded=false,expand,close,exiting=false}:{expanded?:boolean;expand?:()=>void;close?:()=>void;exiting?:boolean}){
+ const s=useStudioChrome({frame:'none'}),p=s.project;
+ const [expandedChannels,setExpandedChannels]=useState<Set<ControlId>>(()=>new Set(s.tab==='curves'&&s.selection.includes(s.selected)?[s.selected]:[]));
+ const [collapsed,setCollapsed]=useState(()=>p?revealTimelineControl(timelineVisibleControls(p,s.selection),loadTimelineCollapsed(),s.selected):loadTimelineCollapsed()),[query,setQuery]=useState(''),[channel,setChannel]=useState<Channel>('px');
+ const [curveFocus,setCurveFocus]=useState<{frame:number;serial:number}|undefined>();
+ const [reducer,setReducer]=useState<{channel?:Channel;frames:number[]}|null>(null);
+ useEffect(()=>setReducer(null),[s.workspace?.activeId,p?.activeLayerId,p?.editing]);
+ const visible=p?timelineVisibleControls(p,s.selection):[],visibilityKey=visible.join('|'),ids=useMemo(()=>visible,[visibilityKey]);
+ useEffect(()=>{if(s.timelineSelection.some(k=>!ids.includes(k.id)))studio.selectTimeline(s.timelineSelection.filter(k=>ids.includes(k.id)));},[visibilityKey]);
+ const fold=(next:Set<ControlId>)=>{setCollapsed(next);try{localStorage.setItem('pose-timeline-collapsed',JSON.stringify([...next]));}catch{}};
+ useLayoutEffect(()=>{if(!p)return;setCollapsed(old=>revealTimelineControl(ids,old,s.selected));if(s.tab==='curves')setExpandedChannels(old=>old.has(s.selected)?old:new Set([...old,s.selected]));},[s.selected,s.tab,visibilityKey]);
+ useEffect(()=>{if(p&&!channelsFor(s.selected,p.tracks[s.selected]).includes(channel))setChannel('px');},[s.selected,p?.tracks[s.selected].rotationMode,channel]);
+ const tracks:TimelineTracksState= {expanded:expandedChannels,collapsed,query,channel,fold,setQuery,
+  toggleChannels:id=>setExpandedChannels(old=>{const next=new Set(old);next.has(id)?next.delete(id):next.add(id);return next;}),
+  openCurve:(id,axis,frame)=>{studio.selectControl(id);setChannel(p&&channelsFor(id,p.tracks[id]).includes(axis)?axis:'px');setExpandedChannels(old=>new Set([...old,id]));if(frame!==undefined){studio.setFrame(frame);setCurveFocus({frame,serial:Date.now()});}else setCurveFocus(undefined);studio.patch({tab:'curves'});if(isAndroid&&!expanded)expand?.();}
+ };
+ if(!p)return <div className="timeline"/>;
+ return <section id="touch-timeline" className="timeline" aria-label="Animation timeline" aria-hidden={exiting||undefined} inert={exiting||undefined} data-state={exiting?"closing":"open"}>
+  <div className="timeline-tabs"><div className="timeline-tab-group"><button className={s.tab==='timeline'?'active':''} aria-label="Timeline" aria-pressed={s.tab==='timeline'} onClick={()=>studio.patch({tab:'timeline'})}><ListVideo size={17}/><span>Keys</span></button><button className={s.tab==='curves'?'active':''} aria-label="Curves" aria-pressed={s.tab==='curves'} onClick={()=>{studio.patch({tab:'curves'});if(isAndroid&&!expanded)expand?.();}}><Spline size={17}/><span>Curves</span></button></div><span className="timeline-context">{p.name}</span><ActiveLayer/><div className="timeline-window-tools"><AnimationMirror/><button className="control-key-lock" aria-label="Lock new keys on selected controls" title="Prevent new keys on selected controls; existing keys stay editable" aria-pressed={!!s.selection.length&&s.selection.every(id=>p.tracks[id].keyLock)} disabled={!s.selection.length} onClick={()=>studio.setControlKeyLock(s.selection,!s.selection.every(id=>p.tracks[id].keyLock))}>{s.selection.length&&s.selection.every(id=>p.tracks[id].keyLock)?<LockKeyhole size={16}/>:<UnlockKeyhole size={16}/>}</button><button aria-label="Reduce keyframes" title="Reduce keyframes with fitted curves" onClick={()=>setReducer({channel:s.tab==='curves'?channel:undefined,frames:s.timelineSelection.map(k=>k.frame)})}><Scissors size={16}/></button>{isAndroid&&<button aria-label={expanded?'Collapse timeline':'Expand timeline'} aria-pressed={expanded} onClick={expand}><ChevronsUpDown size={18}/></button>}{close&&<button aria-label="Close timeline" onClick={close}><X size={20}/></button>}</div></div>
+  <div className="transport"><div className="playback-controls"><button aria-label="First frame" title="First frame (Home)" onClick={()=>studio.setFrame(0)}><SkipBack size={17}/></button><button className={s.playing?'playing':''} aria-label={s.playing?'Pause':'Play'} title="Play / pause (Space)" onClick={()=>studio.patch({playing:!s.playing,drafts:{}})}>{s.playing?<Pause size={20}/>:<Play size={20} fill="currentColor"/>}</button><button aria-label="Last frame" title="Last frame (End)" onClick={()=>studio.setFrame(p.end)}><SkipForward size={17}/></button></div>
+   <label className="frame-label"><span>Frame</span><TimelineFrame end={p.end}/><span>/</span><ScrubNumber aria-label="End frame" type="number" min={1} max={2400} value={p.end} onChange={e=>{const v=Number(e.target.value);if(v>=1&&v<=2400)studio.updateProject({end:Math.round(v)});}}/></label>
+   <div className="playback-options"><button className={'auto-key '+(s.autoKey?'enabled':'')} aria-label="Auto key" title="Record pose changes" aria-pressed={s.autoKey} onClick={()=>studio.patch({autoKey:!s.autoKey})}><i/><span>Auto key</span></button><select aria-label="Frame rate" value={p.fps} onChange={e=>studio.updateProject({fps:Number(e.target.value)})}>{[24,25,30,48,60].map(v=><option key={v} value={v}>{v} fps</option>)}</select><LoopControls/></div>
+   <div className="insert-key-group"><button className="insert-key" aria-label="Add keyframe" disabled={!s.selection.length} onClick={()=>studio.keySelected()}><Diamond size={18}/><span>Add key</span></button><button aria-label="Keyframe options" title="Choose channels to key" onClick={e=>studio.showKeyframeMenu(e.clientX,e.clientY)}><ChevronDown size={16}/></button></div>
+  </div>
+  {s.tab==='curves'?mirrorDriver(p,s.selected)?<MirrorCurve project={p} id={s.selected} channel={channel} sidebar={<CurveTrackTree state={tracks} ids={ids}/>}/>:<CurveEditor key={(s.workspace?.activeId??'')+s.selected+p.editing+(p.activeLayerId??'')} channel={channel} focusKey={curveFocus} onReduce={frames=>setReducer({channel,frames})} sidebar={<CurveTrackTree state={tracks} ids={ids}/>}/>:<TimelineGrid key={(s.workspace?.activeId??'')+p.editing} tracks={tracks}/>}
+  {reducer&&<CurveReducer channel={reducer.channel} selectedFrames={reducer.frames} close={()=>setReducer(null)}/>}
+ </section>;
+});

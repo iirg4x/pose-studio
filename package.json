@@ -1,0 +1,82 @@
+{
+  "name": "manny-animation-studio",
+  "version": "0.8.24",
+  "private": true,
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "start": "electron .",
+    "test": "vitest run",
+    "package": "npm run build && node scripts/package.cjs",
+    "android:sync": "npm run build && cap sync android",
+    "android:apk": "npm run android:sync && node scripts/android-build.cjs",
+    "build:pwa": "tsc -b && vite build --mode pwa --outDir dist-pwa"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@noble/hashes": "2.4.0",
+    "lucide-react": "^0.468.0",
+    "mediabunny": "^1.61.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
+    "@electron/asar": "3.4.1",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@types/three": "^0.180.0",
+    "@vitejs/plugin-react": "^4.5.0",
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.0",
+    "playwright": "^1.56.0",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.0"
+  },
+  "build": {
+    "appId": "local.manny.animationstudio",
+    "productName": "Manny Animation Studio",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json",
+      "shared/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "electron/refresh-file-associations.ps1",
+        "to": "refresh-file-associations.ps1"
+      },
+      {
+        "from": "backend",
+        "to": "backend",
+        "filter": [
+          "export_fbx.py",
+          "manny-clean.blend",
+          "skeleton.json",
+          "import_asset.py",
+          "import_character.py",
+          "export_character.py",
+          "export_shared.py",
+          "import_shared_unreal.py"
+        ]
+      }
+    ],
+    "win": {
+      "target": "dir",
+      "signAndEditExecutable": false
+    }
+  },
+  "description": "A standalone humanoid animation editor with project assets and layered posing",
+  "author": "Local personal project"
+}

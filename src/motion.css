@@ -1,0 +1,162 @@
+/* An editing surface should settle, without bouncing or delaying a command. */
+:root{--motion-quick:130ms;--motion-surface:200ms;--motion-ease:cubic-bezier(.2,.8,.2,1)}
+[data-motion],.android .tablet-sheet,.android .app>.timeline{animation:none!important;transition:opacity var(--motion-surface) var(--motion-ease),translate var(--motion-surface) var(--motion-ease);opacity:1;translate:0 0}
+[data-motion=popover]{--motion-offset:0 -5px}
+[data-motion=context]{--motion-offset:0 5px}
+.android .tablet-sheet{--motion-offset:12px 0}
+.android .app>.timeline{--motion-offset:0 14px}
+[data-motion][data-state=closing],.android .tablet-sheet[data-state=closing],.android .app>.timeline[data-state=closing]{opacity:0;translate:var(--motion-offset,0 0);pointer-events:none}
+@starting-style{
+ [data-motion],.android .tablet-sheet,.android .app>.timeline{opacity:0;translate:var(--motion-offset,0 0)}
+}
+.motion-overlay{position:fixed;inset:0;z-index:1000;pointer-events:none}
+.motion-overlay>*{pointer-events:auto}
+.motion-overlay[data-state=closing]>*{pointer-events:none}
+.motion-overlay .modal-backdrop{animation:none!important}
+.motion-overlay .modal{translate:0 0;scale:1;transition:translate var(--motion-surface) var(--motion-ease),scale var(--motion-surface) var(--motion-ease)}
+.motion-overlay[data-state=closing] .modal{translate:0 8px;scale:.985}
+@starting-style{.motion-overlay .modal{translate:0 8px;scale:.985}}
+.motion-collapse{display:grid;grid-template-rows:1fr;transition:grid-template-rows var(--motion-surface) var(--motion-ease),opacity var(--motion-surface) var(--motion-ease)}
+.motion-collapse[data-state=closing]{grid-template-rows:0fr}
+.motion-collapse-inner{min-height:0;overflow:hidden}
+@starting-style{.motion-collapse{grid-template-rows:0fr;opacity:0}}
+.property-chevron{rotate:-90deg;transition:rotate var(--motion-surface) var(--motion-ease)}
+.property-chevron[data-open=true]{rotate:0deg}
+.motion-size{overflow:hidden}.motion-size-content{display:flow-root;min-width:0}
+.android .tablet-sheet-content.motion-size{padding-top:0}.android .tablet-sheet-content.motion-size>.motion-size-content{padding-top:10px}
+/* Keep the same anchors as panels open and the timeline makes room. */
+.android .selection-pose-tools{transition:bottom var(--motion-surface) var(--motion-ease),opacity var(--motion-surface) var(--motion-ease),translate var(--motion-surface) var(--motion-ease)}
+.android .touch-pose-rail,.android .touch-panel-rail{transition:top var(--motion-surface) var(--motion-ease),opacity var(--motion-surface) var(--motion-ease),visibility var(--motion-surface)}
+.android .touch-pose-rail.no-selection>button:nth-child(-n+2),.android .touch-pose-rail.no-selection>.transform-options,.android .touch-pose-rail.no-selection>i{display:flex;opacity:.45}
+.android .touch-pose-rail.no-selection>.transform-options{flex-direction:column}
+.android .touch-pose-rail>button,.android .touch-pose-rail>.transform-options{transition:opacity var(--motion-quick) ease,background-color var(--motion-quick) ease,color var(--motion-quick) ease}
+.android .touch-transport{transition:padding var(--motion-surface) var(--motion-ease),gap var(--motion-surface) var(--motion-ease)}
+.android .touch-transport>.touch-scrubber,.android .touch-transport>.touch-key,.android .touch-transport>button:first-child{overflow:hidden;max-width:240px;opacity:1;transition:max-width var(--motion-surface) var(--motion-ease),padding var(--motion-surface) var(--motion-ease),opacity var(--motion-quick) ease,visibility var(--motion-surface)}
+.android .app.timeline-visible .touch-transport>.touch-key,.android .app.timeline-visible .touch-transport>.touch-scrubber,.android .app.timeline-visible .touch-transport>button:first-child{display:flex;max-width:0;min-width:0;padding-inline:0;opacity:0;visibility:hidden;pointer-events:none}
+.android .app.timeline-visible .touch-transport{gap:0}
+.android .app.timeline-expanded .selection-pose-tools{display:block;opacity:0;visibility:hidden;pointer-events:none}
+/* Native disclosures animate their actual content height on current WebViews. */
+@supports(interpolate-size:allow-keywords){
+ details{interpolate-size:allow-keywords}
+ details::details-content{block-size:0;opacity:0;overflow:clip;transition:block-size var(--motion-surface) var(--motion-ease),opacity var(--motion-quick) ease,content-visibility var(--motion-surface) allow-discrete}
+ details[open]::details-content{block-size:auto;opacity:1}
+}
+.timeline .dope-sheet,.timeline .curve-editor{animation:editor-settle 150ms ease-out}
+@keyframes editor-settle{from{opacity:.35}to{opacity:1}}
+@media(max-width:700px){.android .app.sheet-open .touch-pose-rail{opacity:0}}
+@media(prefers-reduced-motion:reduce){
+ [data-motion],.motion-overlay .modal,.motion-collapse,.property-chevron,.android .tablet-sheet,.android .app>.timeline,.android .touch-pose-rail,.android .touch-panel-rail,.android .touch-transport,.android .touch-transport>*{transition:none!important;animation:none!important}
+ .timeline .dope-sheet,.timeline .curve-editor{animation:none}
+ details::details-content{transition:none!important}
+}
+
+.android .touch-transport>.touch-scrubber,.android .touch-transport>.touch-key,.android .touch-transport>button:first-child{max-height:90px;transition:max-width var(--motion-surface) var(--motion-ease),max-height var(--motion-surface) var(--motion-ease),padding var(--motion-surface) var(--motion-ease),opacity var(--motion-quick) ease,visibility var(--motion-surface)}
+.android .app.timeline-visible .touch-transport>.touch-key,.android .app.timeline-visible .touch-transport>.touch-scrubber,.android .app.timeline-visible .touch-transport>button:first-child{max-height:0;min-height:0;padding-block:0}
+
+.android .app>.timeline{transition:height var(--motion-surface) var(--motion-ease),opacity var(--motion-surface) var(--motion-ease),translate var(--motion-surface) var(--motion-ease)}
+/* Fixed grid slots keep an exiting inspector in the same row until its fade
+   completes. Optional channels collapse in place instead of reflowing the graph. */
+.timeline .curve-editor{--curve-track-size:var(--track-label-width);--curve-inspector-size:0px;--curve-inspector-width:226px;grid-template-rows:minmax(0,1fr);transition:grid-template-columns var(--motion-surface) var(--motion-ease)}
+.timeline .curve-editor,.timeline .curve-editor.inspecting,.timeline .curve-editor.tracks-hidden,.timeline .curve-editor.tracks-hidden.inspecting{grid-template-columns:var(--curve-track-size) minmax(0,1fr) var(--curve-inspector-size)}
+.timeline .curve-editor.inspecting{--curve-inspector-size:var(--curve-inspector-width)}
+.timeline .curve-editor.tracks-hidden{--curve-track-size:0px}
+.timeline .curve-track-tree{grid-column:1;grid-row:1}
+.timeline .curve-center{grid-column:2;grid-row:1}
+.timeline .curve-properties{grid-column:3;grid-row:1;width:var(--curve-inspector-width);min-width:0}
+@media(max-width:1100px){.timeline .curve-editor{--curve-inspector-width:210px}}
+@media(max-width:900px){.timeline .curve-editor.inspecting{--curve-inspector-size:0px}.timeline .curve-properties{grid-column:auto;--curve-inspector-width:226px}}
+@media(max-width:700px){.android .timeline .curve-properties{--curve-inspector-width:230px}}
+@media(prefers-reduced-motion:reduce){.timeline .curve-editor{transition:none}}
+
+/* Foot tools are contextual and keep anatomical pivots within thumb reach. */
+.foot-pose-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 2px 0;margin-top:6px;border-top:1px solid #425362}
+.foot-pivot-options{display:flex;align-items:center;gap:8px}.foot-pivot-options>span{font-size:10px;color:var(--secondary)}.foot-pivot-options>div{display:flex;gap:2px;background:#111c26;border:1px solid #3b4f60;border-radius:8px;padding:2px}
+.foot-pose-tools button{min-width:40px;min-height:32px;font-size:11px;padding:4px 7px;border-radius:5px}.foot-pose-tools button[aria-pressed=true]{color:#d2f5fc;background:#315766}.foot-pose-tools .ground-toes-command{margin-left:auto;gap:5px;color:#b9dcd6}
+.android .foot-pose-tools button{min-height:40px}.android .pose-action-buttons{flex-wrap:wrap;justify-content:center}.android .pose-action-buttons button{flex:1 1 48px;min-width:48px}
+@media(max-width:700px){.foot-pivot-options{gap:4px}.foot-pivot-options>span{max-width:32px}.foot-pose-tools{gap:4px}.foot-pose-tools button{padding-inline:5px;min-width:36px}.foot-pose-tools .ground-toes-command{font-size:10px}}
+
+/* In a tall phone viewport the timeline leaves a short editing area. Compact
+   the two rails above the selection bar instead of covering its edge buttons. */
+@media(max-width:700px) and (min-height:750px){
+ .android .app.timeline-open:not(.timeline-expanded) .touch-pose-rail{display:grid;grid-template-columns:repeat(4,42px);top:126px;left:8px;transform:none;gap:2px;padding:4px}
+ .android .app.timeline-open:not(.timeline-expanded) .touch-pose-rail .transform-options{display:contents!important}
+ .android .app.timeline-open:not(.timeline-expanded) .touch-pose-rail>i{display:none}
+ .android .app.timeline-open:not(.timeline-expanded) .touch-pose-rail button,.android .app.timeline-open:not(.timeline-expanded) .touch-pose-rail .transform-options>button{width:42px;height:44px;min-height:44px}
+ .android .app.timeline-open:not(.timeline-expanded) .touch-panel-rail{display:grid;grid-template-columns:repeat(2,44px);top:126px;right:8px;transform:none;gap:2px;padding:4px}
+ .android .app.timeline-open:not(.timeline-expanded) .touch-panel-rail button{width:44px;height:44px;min-height:44px}
+ .android .app.timeline-open:not(.timeline-expanded) .touch-pose-rail .transform-popover{top:calc(100% + 8px);left:0;transform:none;width:280px;max-width:calc(100vw - 24px)}
+ .android .app.timeline-open:not(.timeline-expanded) .touch-pose-rail .transform-popover button{width:100%;height:auto;min-height:48px}
+ .android .app.timeline-open:not(.timeline-expanded) .tablet-sheet{right:112px;max-width:calc(100vw - 128px)}
+}
+
+@media(max-height:540px){
+ .android .app>.active-layer-control{top:16px;left:50%;transform:translateX(-50%)}
+ .android .app>.active-layer-control .active-layer-trigger{height:44px;max-width:180px}
+ .android .app .touch-pose-rail,.android .app .touch-panel-rail{top:76px;bottom:auto;transform:none;gap:2px;padding:4px}
+ .android .app .touch-pose-rail button,.android .app .touch-pose-rail .transform-options>button,.android .app .touch-panel-rail button{width:40px;height:44px;min-height:44px}
+ .android .app .touch-pose-rail .transform-options{gap:2px}
+ .android .app .touch-pose-rail .transform-popover{top:calc(100% + 8px);bottom:auto;left:0;transform:none;max-height:calc(100dvh - 148px)}
+ .android .app .touch-pose-rail .transform-popover button{width:100%;height:auto;min-height:44px}
+}
+
+@media(max-height:540px){
+ .android .app.sheet-open .tablet-sheet,.android .app.sheet-open:has(.selection-pose-tools:not([data-state=closing])) .tablet-sheet{top:140px;bottom:auto;max-height:calc(100dvh - 156px)}
+}
+
+/* Flow elements relinquish their space during the fade, not on unmount. */
+.motion-inline{display:grid;interpolate-size:allow-keywords;inline-size:max-content;min-inline-size:0;flex:0 0 auto;overflow:clip;opacity:1;transition:inline-size var(--motion-surface) var(--motion-ease),margin-inline-end var(--motion-surface) var(--motion-ease),opacity var(--motion-surface) var(--motion-ease)}
+.motion-inline-inner{inline-size:max-content;min-inline-size:0}
+.motion-inline[data-state=closing]{inline-size:0;margin-inline-end:calc(-1 * var(--motion-inline-gap,0px))}
+@starting-style{.motion-inline{inline-size:0;margin-inline-end:calc(-1 * var(--motion-inline-gap,0px));opacity:0}}
+.timeline .key-edit-tools{--motion-inline-gap:4px}
+.timeline .selected-key-actions{animation:none}
+.android .tablet-sheet{transition:max-height var(--motion-surface) var(--motion-ease),opacity var(--motion-surface) var(--motion-ease),translate var(--motion-surface) var(--motion-ease)}
+@media(prefers-reduced-motion:reduce){.motion-inline,.android .tablet-sheet{transition:none!important}}
+
+.timeline .curve-clipboard-tools{display:flex;align-items:center;gap:2px;border-inline-start:1px solid #ffffff12;padding-inline-start:4px;flex:0 0 auto}
+.timeline .curve-clipboard-tools button{display:flex;gap:5px;padding-inline:7px}
+.timeline .curve-clipboard-tools span{font-size:11px}
+.timeline .curve-playhead-control{cursor:ew-resize;touch-action:none;outline:none}
+.timeline .curve-playhead-hit{stroke:transparent;stroke-width:20;pointer-events:stroke}
+.timeline .curve-playhead-grip rect{fill:var(--track-clock,#72d5e6);stroke:#11202c;stroke-width:1}
+.timeline .curve-playhead-grip text{fill:#12212c;font-size:10px;font-weight:700;pointer-events:none}
+.timeline .curve-playhead-control:focus-visible .curve-playhead-grip rect{stroke:white;stroke-width:2}
+
+/* Compact the toolbar to its actual graph width, including beside an inspector. */
+.timeline .curve-center{container-type:inline-size;container-name:curve-center}
+@container curve-center (max-width:800px){
+ .timeline .curve-tools .curve-secondary-view,.timeline .curve-selection-tools .curve-secondary-action{display:none}
+ .timeline .curve-view-options{display:block}
+ .timeline .curve-tools strong{min-width:0;flex:1;margin-inline-end:2px}
+ .timeline .curve-tools .title-spacer{display:none}
+ .timeline .curve-tools{gap:2px;padding-inline:4px}
+ .timeline .curve-tools button{padding-inline:4px}
+}
+
+/* Clipboard actions remain readable and wrap without squeezing the tracks. */
+.timeline .key-edit-tools{flex-wrap:wrap;row-gap:2px}
+.timeline .key-edit-tools button{gap:5px;white-space:nowrap}
+.timeline .key-edit-tools .selected-key-actions{display:flex;align-items:center;gap:2px}
+.timeline .key-edit-tools button[aria-label="Paste mirrored keyframes"]{color:#bce4d6}
+.timeline .key-edit-tools button[aria-label="Paste mirrored keyframes"] span,.timeline .key-edit-tools button[aria-label="Multi select keyframes"] span{display:inline}
+.timeline .timeline-track-label:has(.track-summary-icon){background:#293747;color:#dcf5fc}
+
+.timeline [data-interpolation="loop"]{--segment-color:#b99aed}
+.key-interpolation-option[data-interpolation="loop"] .interpolation-line{stroke:#b99aed}
+
+/* Layer channels: familiar axis colors, one compact editing surface. */
+.blend-context{display:flex;align-items:center;gap:7px;margin:0 0 12px;color:var(--text-muted,#91a2b5);min-width:0}
+.blend-context strong{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text,#dae4ec)}
+.blend-context small{font-size:10px;white-space:nowrap}
+.blend-overall,.blend-axis{display:grid;grid-template-columns:26px minmax(76px,1fr) 74px 28px;align-items:center;gap:5px}
+.blend-overall{margin-bottom:12px}.blend-overall>span{grid-column:1/3;font-size:12px}
+.blend-percent{position:relative;min-width:0}.blend-percent input{width:100%;min-width:0;padding-right:19px!important;text-align:right;font-variant-numeric:tabular-nums}.blend-percent>span{pointer-events:none;position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:10px;color:#8d9fb2}
+.blend-axis{margin-top:4px}.blend-axis>b{font-size:11px;text-align:center}.blend-axis[data-axis=x]>b{color:#df7a77}.blend-axis[data-axis=y]>b{color:#83bb89}.blend-axis[data-axis=z]>b{color:#75a9df}
+.blend-axis select{width:100%;min-width:0;font-size:12px}.blend-axis input,.blend-axis select,.blend-overall input{height:32px;border-radius:6px;background:#101922;border:1px solid #314050}
+.blend-channel-group+.blend-channel-group{margin-top:15px}.blend-column-head{display:grid;grid-template-columns:1fr 74px 28px;gap:5px;align-items:center;margin-bottom:5px;font-size:10px;color:#8093a7}.blend-column-head strong{font-size:11px;color:#bed0df}.blend-column-head>span:first-of-type{display:none}.blend-column-head>span:last-child{grid-column:2;text-align:center}
+.blend-key{padding:0!important;width:28px;min-height:30px!important;border:0!important;display:grid;place-items:center;color:#8495a6!important;background:transparent!important}.blend-key.keyed{color:#efc37e!important}.blend-key.keyed svg{fill:currentColor}
+.blend-animation{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:15px;padding-top:12px;border-top:1px solid #ffffff0c;font-size:11px}.blend-animation label{display:flex;align-items:center;gap:6px}.blend-animation button,.blend-reference button{display:flex;align-items:center;gap:5px;font-size:11px;padding:5px 7px;border-radius:6px}
+.blend-transition{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.blend-transition label{display:grid;gap:5px;font-size:10px;color:#95a8bb;min-width:0}.blend-transition label>div{display:flex;align-items:center;gap:6px}.blend-transition input{width:52px;min-width:0}.blend-transition select{width:100%;min-width:0}.blend-transition small{grid-column:1/-1;font-size:10px;line-height:1.5;color:#91a4b7}
+.blend-reference{display:flex;align-items:center;justify-content:space-between;margin-top:13px;font-size:10px;color:#8b9fb4;gap:4px}
+.curve-cleanup{display:flex!important;align-items:center;gap:5px;padding:0 9px!important;width:auto!important;flex-shrink:0;color:#d6e6ee!important;background:#314352!important;border:1px solid #ffffff14!important;border-radius:7px!important;font-size:11px}
+@media(pointer:coarse){.blend-axis{grid-template-columns:22px minmax(80px,1fr) 78px 36px;gap:6px}.blend-key{width:36px;min-height:40px!important}.blend-axis input,.blend-axis select,.blend-overall input{height:40px}.blend-animation button,.blend-reference button{min-height:36px}.blend-transition input,.blend-transition select{height:40px}.curve-cleanup{min-height:36px!important}}

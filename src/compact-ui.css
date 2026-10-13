@@ -1,0 +1,167 @@
+/* Shared context flairs: names never set the size of a floating tool palette. */
+:root{--flair-height:20px;--tool-radius:10px;--tool-gap:4px}
+.context-flair{display:inline-flex;align-items:center;gap:6px;width:fit-content;max-width:100%;min-width:0;min-height:var(--flair-height);padding:2px 7px;border:1px solid var(--border);border-radius:5px;background:var(--raised);color:var(--secondary);font-size:10px;font-weight:500;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.attached-flair{position:absolute;top:0;left:10px;transform:translateY(-50%);z-index:2;max-width:calc(100% - 20px);margin:0;pointer-events:none}
+.selection-pose-tools{position:relative;isolation:isolate}
+.selection-pose-tools .pose-action-context{pointer-events:auto}
+.pose-action-context strong{font-size:10px;font-weight:500}
+.pose-action-buttons{max-width:100%}
+.pose-action-buttons button{min-width:60px;padding:6px 10px;gap:4px}
+.active-layer-trigger{position:relative;display:flex;align-items:center;gap:8px;padding:6px 10px;min-height:40px;max-width:240px;border-radius:var(--tool-radius)}
+.active-layer-trigger>strong{min-width:0;text-align:left;font-weight:500;font-size:12px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.active-layer-trigger>svg{flex:none}
+.active-layer-trigger .context-flair{font-size:10px;color:var(--muted)}
+.active-layer-menu{padding:6px;border-radius:var(--tool-radius)}
+.active-layer-menu header.context-flair{margin:2px 6px 4px;padding:2px 7px;color:var(--muted);font-size:10px}
+.active-layer-menu footer{margin-top:4px;padding-top:4px}
+.property-context-heading.context-flair{flex:0 0 auto;align-self:flex-start;min-height:20px;height:auto;margin:8px 12px 0;padding:2px 7px;max-width:calc(100% - 24px);gap:6px}
+.property-context-heading.context-flair strong{font-size:10px;font-weight:500}
+.property-context-heading.context-flair small{font-size:9px}
+.property-context-heading.context-flair i{width:5px;height:5px}
+.property-section{border-radius:7px}
+.property-header{background:transparent;border-radius:6px}
+.property-content{padding-top:4px}
+.property-layer-editor .layer-stack{min-height:0}
+.property-vector-label small,.attachment-key-status b{background:var(--raised);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.transform-popover h4.context-flair{margin:4px 6px 6px;padding:2px 7px;font-size:10px}
+.control-list header{padding:6px 8px;gap:8px}
+.control-list header>span{font-size:10px;margin-left:auto}
+.control-list header .control-list-actions{padding:0;border:0;gap:0}
+.library-panel h3,.library-title{font-size:12px;font-weight:500}
+.library-panel header{padding:4px 8px;gap:8px}
+.modal{border-radius:var(--tool-radius);padding:16px}
+.modal header{align-items:center;gap:12px;margin-bottom:12px}
+.modal h2{font-size:15px;font-weight:600}
+.modal footer{margin-top:16px}
+/* Touch sheets grow with their contents, and scroll only when they reach the stage limits. */
+.android .active-layer-trigger{height:48px;min-height:48px;padding:6px 10px}
+.android .tablet-sheet{bottom:auto;height:auto;max-height:calc(100dvh - 80px - var(--touch-dock) - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:visible;border-radius:var(--tool-radius)}
+.android .app.sheet-open .tablet-sheet{bottom:auto}
+.android .app.sheet-open:has(.selection-pose-tools:not([data-state=closing])) .tablet-sheet{max-height:calc(100dvh - 80px - var(--touch-dock) - 100px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+.android .tablet-sheet>header{position:absolute;inset:0 0 auto;height:0;min-height:0;padding:0;border:0;z-index:4;pointer-events:none}
+.android .tablet-sheet>header h2{font-size:10px;font-weight:500}
+.android .tablet-sheet>header>button{position:absolute;top:0;right:-56px;width:48px;height:48px;padding:0;border:1px solid var(--touch-divider);border-radius:var(--tool-radius);background:var(--panel);pointer-events:auto}
+.android .tablet-sheet-content{flex:0 1 auto;max-height:inherit;overflow-y:auto;overflow-x:hidden;border-radius:inherit;padding-top:10px}
+.android .tablet-sheet .control-list,.android .tablet-sheet .inspector{flex:0 0 auto;overflow:visible}
+.android .tablet-sheet .control-list-rows,.android .tablet-sheet .inspector-scroll{flex:0 0 auto;overflow:visible}
+.android .tablet-sheet-animations .animation-bar{flex:0 0 auto}
+.android .tablet-sheet-animations .animation-results{max-height:none}
+.android .property-context-heading.context-flair{flex:0 0 auto;height:auto;min-height:20px;padding:2px 7px}
+.android .property-context-heading.context-flair strong{font-size:11px}
+.android .property-context-tabs{background:transparent;padding:0 8px;gap:8px}
+.android .property-context-tabs button{flex:0 1 auto;padding:0 12px;font-size:12px}
+.android .property-section{margin-bottom:6px;border-color:var(--touch-divider)}
+.android .property-content{padding:4px 10px 10px}
+.android .property-header{padding:0 10px;font-size:12px;background:transparent}
+.android .property-row{margin:0;gap:8px}
+.android .property-vector{margin-bottom:8px}
+.android .property-vector-label{margin-bottom:4px}
+.android .property-layer-editor .layer-stack{min-height:0;max-height:none}
+.android .properties-editor .slider-row{margin:0}
+.android .touch-settings{gap:16px;padding:8px 10px 10px}
+.android .touch-settings h3{display:inline-flex;align-items:center;min-height:20px;font-size:10px;padding:2px 7px;border:1px solid var(--border);border-radius:5px;background:var(--raised);margin:0 0 6px;color:var(--muted)}
+.android .touch-setting-pair{gap:4px}
+.android .touch-setting-pair button{gap:6px}
+.android .touch-settings-actions{gap:4px}
+.android .touch-settings-actions button{background:transparent;border:1px solid var(--touch-divider)}
+.android .touch-pose-rail .transform-popover{padding:6px;border-radius:var(--tool-radius)}
+.android .touch-pose-rail .transform-popover h4.context-flair{margin:4px 6px;font-size:10px}
+.android .touch-pose-rail .transform-popover button{min-height:48px;padding:6px 8px}
+.android .touch-pose-rail .transform-popover small{font-size:10px}
+.android .viewport-bottom.view-options-open{width:224px}
+.android .viewport-bottom>div{padding:6px;border-radius:var(--tool-radius);gap:0}
+.android .viewport-bottom header{padding-left:6px}
+.android .viewport-bottom header>strong{font-size:10px}
+.android .tablet-sheet .control-list header{padding:4px 8px;min-height:48px}
+.android .tablet-sheet-animations .library-panel{margin-top:4px;padding:4px 0}
+.android .tablet-sheet-animations .library-panel header{padding:0 4px 4px}
+.android .modal header>button{margin:0;flex:none}
+.android .modal footer{padding-top:8px}
+.android .timeline .timeline-context{flex:0 1 auto;margin:0;padding:2px 7px;max-width:36%;line-height:16px;border:1px solid var(--line);border-radius:5px;background:var(--raised);font-size:10px}
+@media(max-width:700px){
+ .android .pose-action-buttons button{min-width:0;padding:6px;flex:0 1 auto}
+ .android .pose-action-buttons button{height:56px;min-height:56px}
+ .android .pose-action-buttons button>span{font-size:10px;white-space:normal;line-height:12px}
+ .android .tablet-sheet>header>button{right:-56px}
+ .android .tablet-sheet-content{padding-top:10px}
+}
+@media(max-height:540px){
+ .android .tablet-sheet{right:64px;max-height:calc(100dvh - 228px)}
+ .android .app.sheet-open:has(.selection-pose-tools:not([data-state=closing])) .tablet-sheet{max-height:calc(100dvh - 228px)}
+}
+
+/* The modifier stack is an editing tool: direct clipboard actions, collapsible bodies. */
+.modifier-panel{min-width:0}
+.modifier-context{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.modifier-context>small{font-size:10px;color:var(--muted)}
+.modifier-clipboard{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px}
+.modifier-clipboard button{gap:6px;min-width:0;min-height:32px;font-size:11px;border:1px solid var(--line);border-radius:6px;background:var(--raised)}
+.modifier-clipboard-source{font-size:10px;color:var(--muted);line-height:1.5;margin:0 0 8px}
+.modifier-panel .add-modifier{gap:4px;margin-bottom:12px}
+.modifier-panel .add-modifier select{min-width:0;width:100%;border-radius:6px}
+.modifier-panel .add-modifier button{width:36px;flex:none;border-radius:6px;color:var(--cyan)}
+.modifier-panel .modifier-card{border-radius:8px;padding:0;background:var(--panel);margin-bottom:8px;overflow:hidden}
+.modifier-panel .modifier-card.muted{opacity:1}
+.modifier-card.muted .modifier-body{opacity:.55}
+.modifier-panel .modifier-card header{margin:0;padding:0 4px;gap:0;min-height:36px}
+.modifier-panel .modifier-card header button{height:36px;min-height:36px;width:auto;padding:4px 6px;border-radius:6px}
+.modifier-disclosure{flex:1;gap:6px;text-align:left;justify-content:flex-start;min-width:0}
+.modifier-disclosure>svg{rotate:-90deg;flex:none;transition:rotate 140ms ease}
+.modifier-disclosure>svg[data-open=true]{rotate:0deg}
+.modifier-disclosure strong{font-size:12px;font-weight:500}
+.modifier-disclosure small{margin-left:auto;color:var(--muted);font-size:10px;font-variant-numeric:tabular-nums}
+.modifier-enabled{flex:none;color:var(--muted)}
+.modifier-enabled[aria-pressed=true]{color:var(--cyan)}
+.modifier-body{padding:0 8px 6px}
+.modifier-loop{margin-bottom:10px}
+.modifier-loop>button{width:100%;justify-content:flex-start;gap:6px;min-height:32px;font-size:11px;padding:4px 8px;border:1px solid var(--line);border-radius:6px}
+.modifier-loop>button>i{margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.modifier-loop>button[aria-pressed=true]{color:var(--cyan);background:var(--selection)}
+.modifier-loop>button[aria-pressed=true]>i{background:var(--cyan)}
+.modifier-loop>small{display:block;font-size:10px;color:var(--muted);line-height:1.5;margin:4px 0}
+.modifier-panel .curve-field{font-size:11px;margin-bottom:8px;gap:5px}
+.modifier-panel .curve-field input:not([type=checkbox]),.modifier-panel .curve-field select{height:32px;border-radius:5px;font-variant-numeric:tabular-nums}
+.modifier-panel input[type=checkbox]{width:16px;height:16px;vertical-align:middle;margin-right:4px}
+.modifier-panel .curve-field>span{display:flex;align-items:center;gap:6px;min-height:32px}
+.modifier-card-actions{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:2px;border-top:1px solid var(--line);padding-top:4px}
+.modifier-card-actions button{min-width:0;min-height:36px;padding:4px 2px;border-radius:5px;flex-direction:column;gap:3px}
+.modifier-card-actions button>span{font-size:9px}
+.modifier-card-actions button:disabled{opacity:.3}
+.modifier-advanced{gap:6px;font-size:11px;color:var(--muted);width:100%;justify-content:flex-start}
+.modifier-bake{padding:4px 8px;border:1px solid var(--line);border-radius:6px}
+.modifier-panel .curve-note{padding:6px 0;line-height:1.5;font-size:11px}
+.android .curve-editor{grid-template-columns:104px minmax(160px,1fr) 304px}
+.android .curve-properties{min-width:0}
+.android .curve-property-tabs{height:48px;min-height:48px;display:flex}
+.android .curve-property-tabs button{height:48px;min-height:48px;flex:1;padding:4px 8px;white-space:nowrap;font-size:12px}
+.android .curve-property-scroll{padding:10px;overscroll-behavior:contain}
+.android .modifier-clipboard button,.android .modifier-panel .add-modifier>button,.android .modifier-panel .modifier-card header button,.android .modifier-card-actions button{min-height:48px;height:48px}
+.android .modifier-panel .add-modifier>button{width:48px;min-width:48px}
+.android .modifier-panel .modifier-enabled{min-width:48px}
+.android .modifier-loop>button{min-height:48px;font-size:12px}
+.android .modifier-panel .curve-field{font-size:12px}
+.android .modifier-panel .curve-field input:not([type=checkbox]),.android .modifier-panel .curve-field select{height:44px;min-height:44px;font-size:13px;padding:4px 8px}
+.android .modifier-panel .curve-field select{padding-right:28px}
+.android .modifier-panel .curve-field input[type=checkbox]{width:22px;height:22px;min-width:22px}
+.android .modifier-panel .curve-field>span{min-height:44px}
+.android .modifier-card-actions{grid-template-columns:1fr 1fr 1fr 1fr}
+.android .modifier-card-actions button{min-width:0!important}
+.android .motion-settings{border-radius:8px;padding:8px}
+.android .motion-direction{display:flex;gap:4px}
+.android .motion-direction button{min-height:44px;flex:1;font-size:11px;padding:4px}
+.android .motion-parameter{grid-template-columns:76px minmax(32px,1fr) 64px;min-height:48px;gap:8px}
+.android .motion-parameter input[type=number]{width:64px;min-width:0;font-size:12px}
+@media(max-width:700px){.android .curve-editor{grid-template-columns:80px minmax(140px,1fr)}.android .curve-properties{width:288px}}
+@media(prefers-reduced-motion:reduce){.modifier-disclosure>svg{transition:none}}
+
+/* Controller constraints share the compact property rhythm and touch targets. */
+.constraint-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:36px;font-size:12px;cursor:pointer}
+.constraint-toggle input{width:17px;height:17px;accent-color:var(--accent)}
+.constraint-reach{display:flex;min-width:130px}.constraint-reach button{flex:1;min-height:30px;padding:4px 12px}
+.android .constraint-toggle{min-height:48px}.android .constraint-reach button{min-height:48px}
+
+/* Keep the layer flair clear of the properties tabs on narrow tablets. */
+@media(max-width:700px) and (min-height:541px){
+ .android .app.sheet-open .tablet-sheet{top:calc(144px + env(safe-area-inset-top));max-height:calc(100dvh - 144px - var(--touch-dock) - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+ .android .app.sheet-open:has(.selection-pose-tools:not([data-state=closing])) .tablet-sheet{max-height:calc(100dvh - 144px - var(--touch-dock) - 100px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+}

@@ -1,0 +1,145 @@
+/* Touch stage: permanent chrome hugs the edges; every editor is a sheet. */
+.touch-pose-rail,.touch-panel-rail,.touch-transport,.touch-selection,.touch-view-toggle{display:none}
+html.android{font-size:14px;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+.android body{user-select:none;overscroll-behavior:none}
+.android input,.android textarea{user-select:text}
+.android .app,.android .app.curves-open,.android .app:not(.curves-open){display:block;position:relative;min-width:0;width:100%;height:100dvh;overflow:hidden;--touch-edge:16px;--touch-sheet:348px;--touch-dock:88px;--touch-timeline:42dvh;--touch-surface:var(--panel);--touch-divider:color-mix(in srgb,var(--border) 50%,transparent)}
+.android .app>.workspace{position:absolute;inset:0;display:block;width:100%;height:100%}
+.android .workspace>.viewport{position:absolute;inset:0}
+.android .app>.titlebar{position:absolute;top:calc(var(--touch-edge) + env(safe-area-inset-top));left:calc(var(--touch-edge) + env(safe-area-inset-left));height:48px;max-width:calc(100% - 112px);width:auto;z-index:60;gap:8px;padding:0 8px 0 4px;border:1px solid var(--touch-divider);border-radius:12px;background:var(--touch-surface);-webkit-app-region:no-drag}
+.android .titlebar .title-spacer,.android .titlebar>.export-button{display:none}
+.android .titlebar .project-title{max-width:32vw;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.android .titlebar .brand{height:44px;padding:4px 8px}.android .brand span{font-size:15px}.android .titlebar .save-indicator{margin:0 4px}
+.android button,.android select{min-height:48px;touch-action:manipulation;font-size:13px}
+.android button:has(>svg:only-child){min-width:48px}
+.android input:not([type=checkbox]):not([type=range]){min-height:40px;font-size:14px}
+.android input[type=checkbox]{width:22px;height:22px;flex:none}
+.android button[aria-pressed=true],.android .touch-panel-rail button[aria-expanded=true],.android .touch-transport button[aria-expanded=true]{color:var(--cyan);background:var(--selection)}
+.android .touch-pose-rail,.android .touch-panel-rail{display:flex;flex-direction:column;position:absolute;top:50%;transform:translateY(-50%);z-index:20;background:var(--touch-surface);border:1px solid var(--touch-divider);padding:4px;gap:4px;border-radius:14px}
+.android .touch-pose-rail{left:calc(var(--touch-edge) + env(safe-area-inset-left))}.android .touch-panel-rail{right:calc(var(--touch-edge) + env(safe-area-inset-right));z-index:51}
+.android .touch-pose-rail button,.android .touch-panel-rail button{width:56px;height:56px;padding:4px;flex-direction:column;gap:3px;border-radius:9px;color:var(--secondary)}
+.android .touch-pose-rail span,.android .touch-panel-rail span,.android .touch-transport button span{font-size:10px;font-weight:500}
+.android .touch-pose-rail i{height:1px;background:var(--touch-divider);margin:4px 8px}.android .touch-pose-rail button:nth-last-child(-n+2){height:48px}
+.android .touch-selection{display:flex;align-items:center;gap:8px;position:absolute;bottom:calc(var(--touch-dock) + 12px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);font-size:12px;color:var(--secondary);pointer-events:none;text-shadow:0 1px 4px #000;z-index:10}
+.android .touch-selection small{color:var(--cyan)}
+.android .touch-transport{display:flex;align-items:center;gap:8px;position:absolute;z-index:55;bottom:calc(var(--touch-edge) + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);padding:4px 8px;border-radius:16px;border:1px solid var(--touch-divider);background:var(--touch-surface);max-width:calc(100vw - 32px)}
+.android .touch-transport>button{width:60px;height:56px;flex-direction:column;gap:3px;flex:none;border-radius:10px}.android .touch-transport>button:first-child{width:52px}.android .touch-key{color:var(--amber)}
+.android .touch-scrubber{width:clamp(124px,22vw,300px);display:flex;flex-direction:column;justify-content:center;flex:none;height:64px}
+.android .touch-scrubber>div{display:flex;align-items:center;justify-content:space-between;height:30px}.android .touch-scrubber button{min-height:32px!important;min-width:36px!important;height:32px;padding:0}
+.android .touch-scrubber output{font-size:14px;font-variant-numeric:tabular-nums;font-weight:600}.android .touch-scrubber small{font-size:11px;color:var(--muted);font-weight:400}
+.android .touch-scrubber input{width:100%;height:28px;margin:0;padding:0;accent-color:var(--cyan);touch-action:none;background:none;border:0}
+.android .touch-scrubber input::-webkit-slider-thumb{min-width:20px;min-height:20px}
+.android .tablet-sheet{position:absolute;z-index:50;top:calc(80px + env(safe-area-inset-top));right:calc(92px + env(safe-area-inset-right));bottom:calc(var(--touch-dock) + 28px + env(safe-area-inset-bottom));width:var(--touch-sheet);max-width:calc(100vw - 112px);border:1px solid var(--touch-divider);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;background:var(--touch-surface)}
+.android .tablet-sheet>header{display:flex;align-items:center;justify-content:space-between;flex:none;height:56px;padding:0 8px 0 16px;border-bottom:1px solid var(--touch-divider)}
+.android .tablet-sheet h2{font-size:14px;font-weight:600}.android .tablet-sheet>header button{border-radius:9px}
+.android .tablet-sheet-content{display:flex;flex-direction:column;min-height:0;flex:1;overflow:auto;overscroll-behavior:contain}
+.android .tablet-sheet .control-list,.android .tablet-sheet .character-panel,.android .tablet-sheet .inspector,.android .tablet-sheet .retarget-inspector{display:flex;position:static;width:100%;flex:1;min-height:0;border:0;box-shadow:none;background:transparent}
+.android .tablet-sheet .control-list{overflow:hidden}.android .control-row{min-height:48px}.android .control-row button{min-height:44px}.android .control-search{min-height:44px}
+.android .tablet-sheet .inspector-section{padding:16px}.android .property-row{min-height:44px}.android .vector-inputs{gap:8px}
+.android .tablet-sheet .toolbar{display:flex;flex-wrap:wrap;align-content:flex-start;gap:8px;padding:12px;border:0;background:transparent;overflow:visible}
+.android .tablet-sheet .toolbar .title-spacer{display:none}.android .tablet-sheet .toolbar-divider{width:100%;height:1px;margin:4px 0;background:var(--touch-divider)}
+.android .tablet-sheet .workspace-tabs{width:100%;height:48px}.android .tablet-sheet .workspace-tabs button{flex:1;min-width:0;border-radius:8px}
+.android .tablet-sheet .tool{width:48px;height:48px}.android .tablet-sheet .rig-switch{margin:0}.android .tablet-sheet .toolbar>button{width:48px}.android .tablet-sheet .transform-options{flex-wrap:wrap}
+.android .tablet-sheet-animations .animation-bar{height:auto;display:flex;flex-wrap:wrap;align-content:flex-start;padding:8px;gap:8px;border:0;background:transparent;overflow:visible;flex:1}
+.android .tablet-sheet-animations .animation-tabs-area{width:100%;order:2;display:flex;min-height:48px;flex:none}.android .tablet-sheet-animations .animation-tabs{flex-direction:column;overflow:auto;width:100%;max-height:220px;flex:none}.android .tablet-sheet-animations .animation-tab{width:100%;min-height:48px;flex:none}.android .animation-tab button{min-height:44px}
+.android .tablet-sheet-animations .library-panel{position:relative;top:auto;left:auto;right:auto;width:100%;max-width:100%;box-shadow:none;order:3;max-height:none;border:0}.android .tablet-sheet-animations .animation-browser{position:relative}
+.android .app>.timeline{position:absolute;z-index:40;left:calc(88px + env(safe-area-inset-left));right:calc(88px + env(safe-area-inset-right));bottom:calc(var(--touch-dock) + 12px + env(safe-area-inset-bottom));height:var(--touch-timeline);border:1px solid var(--touch-divider);border-radius:14px;overflow:hidden}
+.android .app.timeline-expanded{--touch-timeline:calc(100dvh - 192px)}.android .app.timeline-open .touch-selection{display:none}
+.android .timeline-tabs{height:48px;min-height:48px}.android .timeline-tabs button{height:48px;min-width:48px;width:48px;flex:none}.android .timeline-context{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.android .transport{height:56px;min-height:56px;overflow-x:auto;padding:4px 12px;gap:8px;scrollbar-width:none}.android .transport>*{flex-shrink:0}.android .transport button{height:48px;min-width:48px}.android .transport .auto-key{width:48px}
+.android .timeline .keyframe{min-width:24px;min-height:24px;width:24px;height:24px}.android .timeline .key-edit-tools{left:144px;right:8px;width:auto;overflow-x:auto;scrollbar-width:none;min-height:48px}.android .timeline .key-edit-tools>button{height:48px;min-width:48px}.android .key-edit-tools>span{display:none}
+.android .curve-editor{grid-template-columns:104px minmax(160px,1fr) 240px}
+.android .pose-view-label{display:none}.android .preview-border{left:var(--preview-x);top:var(--preview-y)}.android .preview-border button{opacity:1}.android .viewport-orientation{right:92px;bottom:16px;width:64px;opacity:.75;pointer-events:none}
+.android .touch-view-toggle{display:flex;position:absolute;right:calc(var(--touch-edge) + env(safe-area-inset-right));top:calc(var(--touch-edge) + env(safe-area-inset-top));z-index:52;background:var(--touch-surface);border:1px solid var(--touch-divider);border-radius:12px;height:48px;padding:0 12px;gap:8px}
+.android .viewport-bottom{display:none}.android .viewport-bottom.view-options-open{display:block;position:absolute;z-index:54;top:76px;bottom:auto;right:16px;left:auto;width:248px;text-shadow:none}
+.android .viewport-bottom>div{display:flex;flex-direction:column;gap:4px;background:var(--touch-surface);border:1px solid var(--touch-divider);border-radius:14px;padding:8px}.android .viewport-bottom header{display:flex;align-items:center;justify-content:space-between;padding-left:8px;color:var(--text)}
+.android .viewport-bottom button{width:100%;height:48px;justify-content:flex-start;padding:8px 12px;border-radius:8px;background:none;text-align:left}.android .viewport-bottom header button{width:48px;justify-content:center;padding:0}
+.android .statusbar{position:absolute;left:88px;right:88px;bottom:2px;border:0;background:transparent;font-size:10px;pointer-events:none;height:16px;z-index:5;color:var(--muted)}.android .statusbar>span:first-child{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:28vw}.android .statusbar>span:last-child{display:none}
+.android .modal-backdrop{padding:16px;align-items:center;backdrop-filter:none}.android .modal{width:min(720px,100%);max-width:100%;max-height:calc(100dvh - 32px);overflow-y:auto;border-radius:14px}.android .modal footer{position:sticky;bottom:0;background:var(--panel);padding-top:12px}.android .compact-modal{max-width:520px}
+.android .asset-library{top:80px;right:16px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 112px)}.android .file-menu{top:52px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 96px);overflow-y:auto;border-radius:12px}.android .file-menu button{min-height:48px}
+.android-export-options{display:grid;gap:12px;padding:16px 0}.android-export-options button{display:flex;align-items:center;text-align:left;gap:16px;padding:16px;background:var(--raised);border:1px solid var(--border);border-radius:8px}.android-export-options small{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+@media(max-width:700px){.android .app{--touch-edge:8px;--touch-sheet:calc(100vw - 88px)}.android .titlebar .project-title{display:none}.android .touch-pose-rail,.android .touch-panel-rail{padding:3px;gap:2px}.android .touch-pose-rail button,.android .touch-panel-rail button{width:48px;height:52px}.android .tablet-sheet{right:72px;max-width:calc(100vw - 88px)}.android .app.sheet-open .touch-pose-rail{visibility:hidden}.android .touch-transport{gap:4px;padding:4px}.android .touch-transport>button{width:52px}.android .touch-scrubber{width:120px}.android .app>.timeline{left:8px;right:8px}.android .app.timeline-open .touch-pose-rail,.android .app.timeline-open .touch-panel-rail{top:32%}.android .viewport-orientation{display:none}.android .curve-editor{grid-template-columns:80px minmax(140px,1fr)}.android .curve-properties{position:absolute;right:0;top:48px;bottom:0;width:200px;z-index:2}.android .touch-view-toggle span{display:none}}
+@media(max-height:540px){.android .app{--touch-edge:8px;--touch-dock:76px;--touch-timeline:calc(100dvh - 164px)}.android .touch-pose-rail,.android .touch-panel-rail{flex-direction:row;top:auto;bottom:92px;transform:none}.android .touch-pose-rail button,.android .touch-panel-rail button{height:48px;width:48px}.android .touch-pose-rail i{display:none}.android .touch-pose-rail{left:8px}.android .touch-panel-rail{right:8px}.android .tablet-sheet{top:68px;bottom:148px;right:8px}.android .touch-selection{display:none}.android .app>.timeline{left:8px;right:8px;bottom:148px;height:calc(100dvh - 220px)}}
+
+/* Inspector fields are sized by their containers as well as their inputs. */
+.android .properties-editor .vector-inputs label{height:44px;min-height:44px}.android .properties-editor .vector-inputs input{height:42px;min-height:42px;font-size:14px}.android .property-header{height:48px;min-height:48px;font-size:13px}.android .property-vector-label{font-size:12px}.android .property-content{padding:12px}.android .properties-editor .rig-mode-switch{height:44px}.android .properties-editor .rig-mode-switch button{height:44px;min-height:44px;font-size:12px}.android .property-row input:not([type=checkbox]),.android .property-row select{height:44px;min-height:44px;font-size:13px}.android .properties-editor input[type=checkbox]{width:22px;height:22px}.android .property-layer-editor .layer-row{height:48px;min-height:48px}.android .property-layer-editor .layer-row>button{height:44px;min-height:44px}.android .property-layer-editor .layer-row>button:not(.layer-select){width:40px;min-width:40px}.android .property-stack-tools button{min-height:44px;min-width:40px}.android .property-layer-editor .layer-select{font-size:12px}.android .properties-editor .slider-row{min-height:44px;font-size:12px}.android .properties-editor .slider-row .slider-number{height:40px;width:64px;flex-basis:64px}.android input[type=range]{touch-action:none;min-height:28px}.android .property-note{font-size:12px}.android .property-context-heading strong{font-size:13px}
+.android .tablet-sheet-animations .animation-tabs-area{display:none}.android .tablet-sheet-animations .animation-bar{display:block;padding:8px}.android .tablet-sheet-animations .pose-toolbar{display:inline-flex;vertical-align:top;margin-left:8px}.android .tablet-sheet-animations .library-toggle{vertical-align:top}.android .tablet-sheet-animations .library-panel{margin-top:8px;padding:8px 0}.android .tablet-sheet-animations .library-header-tools button[aria-label="Close animation library"]{display:none}.android .tablet-sheet-animations .library-panel header{padding:0 0 8px}.android .tablet-sheet-animations .animation-result{height:auto;min-height:56px}.android .tablet-sheet-animations .animation-result strong{white-space:normal;overflow-wrap:anywhere;font-size:12px}.android .tablet-sheet-animations .animation-filters button{height:44px;min-height:44px}.android .tablet-sheet-animations .library-search input{min-height:44px;font-size:13px}
+
+.android .timeline .key-edit-tools{right:64px;padding:0;top:0}.android .timeline-tabs>button[aria-label="Close timeline"]{position:absolute;right:4px;top:0;z-index:75}.android .timeline .timeline-grid{overflow:auto;overscroll-behavior:contain;align-content:start;grid-template-columns:180px calc((100% - 204px)*var(--timeline-zoom,1));touch-action:pan-x pan-y}.android .timeline .track-labels{position:sticky;left:0;z-index:8}.android .timeline .track-label-row,.android .timeline .key-track{height:44px;min-height:44px}.android .timeline .track-name{height:44px;min-height:44px;font-size:12px}.android .timeline .track-disclosure,.android .timeline .track-leaf-space{width:32px;min-width:32px;height:44px;min-height:44px}.android .timeline .time-ruler,.android .timeline .track-ruler-label{height:40px;min-height:40px}.android .timeline .keyframe{top:8px;height:28px;min-height:28px;width:28px;min-width:28px}.android .timeline .keyframe svg{width:13px;height:13px}.android .timeline .playhead{top:40px}.android .timeline .contact-track,.android .timeline .contact-label{height:48px;min-height:48px}.android .timeline .contact-segment{min-height:38px;height:38px}
+
+.android .touch-settings{padding:16px;display:flex;flex-direction:column;gap:24px}.android .touch-settings h3{font-size:12px;color:var(--secondary);font-weight:500;margin-bottom:8px}.android .touch-setting-pair{display:flex;gap:8px}.android .touch-setting-pair button{flex:1;padding:8px;min-width:0;white-space:normal;background:var(--raised);border-radius:8px;font-size:12px}.android .touch-settings .transform-options{display:flex;gap:8px;flex-wrap:wrap}.android .touch-settings .transform-options button{min-height:48px}.android .touch-settings .preview-model{width:100%;margin:0}.android .touch-settings .preview-model select{flex:1;min-width:0}.android .touch-settings-actions{display:flex;flex-direction:column;gap:8px}.android .touch-settings-actions button{justify-content:flex-start;padding:8px 12px;border-radius:8px;background:var(--raised);gap:12px}
+
+.android .timeline .keyframe,.android .timeline .time-ruler,.android .timeline .dope-sheet.box-armed .track-content{touch-action:none}
+
+/* Manipulation options live beside Move/Rotate, within the thumb's reach. */
+.android .touch-pose-rail .transform-options{position:static;flex-direction:column;gap:4px;z-index:auto}
+.android .touch-pose-rail .transform-options>button{position:relative;width:56px;height:56px;min-height:56px;padding:4px;border:0;background:var(--raised);border-radius:9px;gap:3px;flex-direction:column;color:var(--text)}
+.android .touch-pose-rail .transform-options>button>svg:first-child{width:22px;height:22px}
+.android .touch-pose-rail .transform-options>button>svg:last-child{position:absolute;right:4px;top:5px;width:9px;height:9px;color:var(--muted)}
+.android .touch-pose-rail .transform-options>button>span{font-size:10px;font-weight:500;line-height:14px}
+.android .touch-pose-rail:has(.transform-popover){z-index:70}
+.android .touch-pose-rail .transform-popover{top:50%;left:calc(100% + 12px);transform:translateY(-50%);width:280px;max-width:calc(100vw - 112px);max-height:calc(100dvh - 160px);overflow:auto;padding:8px;border:1px solid var(--touch-divider);border-radius:12px;background:var(--panel);box-shadow:none}
+.android .touch-pose-rail .transform-popover h4{margin:8px 8px 12px;font-size:12px}
+.android .touch-pose-rail .transform-popover button{width:100%;height:auto;min-height:56px;flex-direction:row;padding:8px;gap:12px;border-radius:8px}
+.android .touch-pose-rail .transform-popover button span{font-size:13px}.android .touch-pose-rail .transform-popover small{font-size:11px;line-height:1.4}
+.android .touch-pose-rail .transform-options>button[aria-expanded=true]{color:var(--cyan);background:var(--selection)}
+/* Motion belongs to the tools, never to the authored pose or camera. */
+.android .app{--touch-ease:cubic-bezier(.2,.8,.2,1);--touch-enter:180ms;--touch-press:100ms}
+.android .touch-pose-rail button,.android .touch-panel-rail button,.android .touch-transport>button,.android .touch-view-toggle,.android .tablet-sheet button{transition:background-color 140ms ease,color 140ms ease,border-color 140ms ease,scale var(--touch-press) ease}
+.android .touch-pose-rail button:active:not(:disabled),.android .touch-panel-rail button:active:not(:disabled),.android .touch-transport>button:active:not(:disabled),.android .touch-view-toggle:active,.android .tablet-sheet button:active:not(:disabled){scale:.96}
+.android .tablet-sheet{animation:touch-sheet-in var(--touch-enter) var(--touch-ease) both}
+.android .tablet-sheet[data-state=closing]{animation:touch-sheet-out var(--touch-enter) var(--touch-ease) both;pointer-events:none}
+.android .app>.timeline{animation:touch-timeline-in var(--touch-enter) var(--touch-ease) both}
+.android .app>.timeline[data-state=closing]{animation:touch-timeline-out var(--touch-enter) var(--touch-ease) both;pointer-events:none}
+.android .file-menu,.android .viewport-bottom.view-options-open{animation:touch-menu-in 140ms var(--touch-ease) both}
+.android .transform-popover{animation:touch-fade-in 140ms ease both}
+.android .modal-backdrop{animation:touch-fade-in 140ms ease both}
+@keyframes touch-sheet-in{from{opacity:0;translate:20px 0}to{opacity:1;translate:0 0}}
+@keyframes touch-sheet-out{from{opacity:1;translate:0 0}to{opacity:0;translate:20px 0}}
+@keyframes touch-timeline-in{from{opacity:0;translate:0 20px}to{opacity:1;translate:0 0}}
+@keyframes touch-timeline-out{from{opacity:1;translate:0 0}to{opacity:0;translate:0 20px}}
+@keyframes touch-menu-in{from{opacity:0;translate:0 -8px}to{opacity:1;translate:0 0}}
+@keyframes touch-fade-in{from{opacity:0}to{opacity:1}}
+@media(max-width:700px){.android .touch-pose-rail .transform-options>button{width:48px;height:52px;min-height:52px}}
+@media(max-height:540px){.android .touch-pose-rail .transform-options{flex-direction:row}.android .touch-pose-rail .transform-options>button{width:48px;height:48px;min-height:48px}.android .touch-pose-rail .transform-popover{top:auto;bottom:calc(100% + 12px);left:0;transform:none;max-height:calc(100dvh - 168px)}}
+@media(prefers-reduced-motion:reduce){.android .tablet-sheet,.android .app>.timeline,.android .file-menu,.android .viewport-bottom.view-options-open,.android .transform-popover,.android .modal-backdrop{animation:none}.android .tablet-sheet[data-state=closing],.android .app>.timeline[data-state=closing]{visibility:hidden}.android .touch-pose-rail button,.android .touch-panel-rail button,.android .touch-transport>button,.android .touch-view-toggle,.android .tablet-sheet button{transition:none;scale:1!important}}
+
+/* The properties editor owns a consistent 48px row; no desktop height survives. */
+.android .property-context-tabs{height:48px;min-height:48px;flex:0 0 48px;padding:0 12px;gap:12px;align-items:stretch}
+.android .property-context-tabs button{height:48px;min-height:48px;flex:1;padding:0 8px;font-size:13px}
+.android .property-context-heading{height:44px;min-height:44px;flex:0 0 44px;padding:8px 16px}
+.android .properties-content{padding:8px;min-height:0}.android .property-section{border-radius:8px;margin-bottom:8px;overflow:hidden}
+.android .property-header{padding:0 12px;gap:8px;border-radius:0}
+.android .property-content{padding:12px}.android .property-row{grid-template-columns:84px minmax(0,1fr);gap:12px;min-height:48px;margin:4px 0;font-size:12px}
+.android .property-row>span{line-height:16px}.android .property-row select{padding-right:36px}.android .property-row output{min-height:44px;height:auto;font-size:12px}
+.android .property-checkbox{font-size:12px;line-height:18px;gap:8px}.android .property-percent>span{top:50%;translate:0 -50%;font-size:12px}
+.android .properties-editor .vector-inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.android .properties-editor .vector-inputs label{width:100%;height:48px;min-height:48px;align-items:center}
+.android .properties-editor .vector-inputs input{height:46px;min-height:46px;width:100%;padding:4px 8px 4px 2px;font-size:13px;font-variant-numeric:tabular-nums}
+.android .properties-editor .vector-inputs label>span{width:22px;padding:0;text-align:center;font-size:10px}
+.android .property-vector-label{margin-bottom:8px}.android .property-vector-label small{font-size:10px}
+.android .properties-editor .rig-mode-switch{height:48px;min-height:48px;padding:3px;align-items:stretch;gap:4px}
+.android .properties-editor .rig-mode-switch button{height:40px;min-height:40px;padding:4px;border-radius:5px}
+.android .attachment-editor{padding:0;gap:12px}.android .attachment-target{gap:8px}
+.android .attachment-target-button,.android .attachment-pick{height:48px;min-height:48px;border-radius:6px;padding:0 10px;font-size:12px}
+.android .attachment-pick{width:48px;min-width:48px;padding:0}
+.android .attachment-inherit{display:grid;grid-template-columns:56px minmax(0,1fr);gap:8px;font-size:12px}
+.android .attachment-inherit>div{gap:8px;min-width:0}.android .attachment-inherit button{height:44px;min-height:44px;min-width:0;font-size:11px;padding:0 6px;gap:6px;border-radius:6px}
+.android .attachment-key-status{font-size:11px;min-height:20px}
+.android .attachment-popover{padding:8px;border-radius:10px;animation:touch-fade-in 140ms ease both}.android .attachment-search{padding:0 0 8px;gap:8px}.android .attachment-search input{height:44px;font-size:13px}.android .attachment-options button{min-height:48px;font-size:13px;padding:8px;border-radius:6px}.android .attachment-option-group{font-size:11px;padding:12px 8px 4px}
+.android .properties-editor .slider-row{display:grid;grid-template-columns:56px minmax(0,1fr) 64px;gap:8px;min-height:48px;margin:4px 0}
+.android .properties-editor .slider-row>label{min-width:0;max-width:none;line-height:16px}.android .properties-editor .slider-row input[type=range]{width:100%;min-width:0;margin:0;padding:0}
+.android .properties-editor .slider-row .slider-number{width:64px;min-width:0;height:44px;min-height:44px;margin:0;padding:4px 8px;font-variant-numeric:tabular-nums}
+.android .property-layer-editor{display:flex;flex-direction:column;gap:8px}.android .property-layer-editor .layer-stack{min-height:96px;max-height:240px;overflow-y:auto}.android .property-stack-tools{display:flex;flex-direction:row;align-items:center}.android .property-stack-tools>span{flex:1}.android .property-layer-editor .layer-row{height:48px;min-height:48px;align-items:center}.android .property-stack-tools{gap:4px}.android .property-stack-tools button{width:44px;height:44px;min-width:44px;min-height:44px;border-radius:6px}
+.android .property-layer-editor .layer-stack{border-radius:6px}.android .property-layer-editor .layer-select{display:flex;align-items:center;gap:8px;min-width:0;min-height:44px}.android .property-edit-target{min-height:44px;font-size:12px;margin-bottom:8px}.android .property-edit-target small{font-size:10px}
+.android .property-add-layer{padding:4px;border-radius:6px}.android .property-add-layer button{min-height:56px;font-size:13px}.android .property-add-layer small{font-size:11px}
+.android .property-mask-actions{gap:8px}.android .property-mask-actions button{min-height:44px;font-size:12px;padding:8px;white-space:normal}
+.android .property-chevron{rotate:-90deg;transition:rotate 160ms var(--touch-ease)}.android .property-chevron[data-open=true]{rotate:0deg}
+.android .property-reveal{display:grid;grid-template-rows:1fr;animation:property-open 180ms var(--touch-ease) both}
+.android .property-reveal[data-state=closing]{animation:property-close 180ms var(--touch-ease) both;pointer-events:none}
+.android .property-reveal-inner{min-height:0;overflow:hidden}
+@keyframes property-open{from{grid-template-rows:0fr;opacity:0}to{grid-template-rows:1fr;opacity:1}}
+@keyframes property-close{from{grid-template-rows:1fr;opacity:1}to{grid-template-rows:0fr;opacity:0}}
+@media(prefers-reduced-motion:reduce){.android .property-reveal,.android .attachment-popover{animation:none}.android .property-reveal[data-state=closing]{display:none}.android .property-chevron{transition:none}}
+
+.android .timeline .timeline-context{padding-right:60px;}

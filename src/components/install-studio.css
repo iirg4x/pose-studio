@@ -1,0 +1,17 @@
+.install-studio{box-sizing:border-box;width:min(440px,calc(100vw - 32px));max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));margin:auto;padding:24px;border:1px solid #35424c;border-radius:24px;background:#182129;color:#eaf1f5;box-shadow:0 30px 90px #0009;overflow:auto;animation:install-enter 220ms cubic-bezier(.2,.8,.2,1)}
+.install-studio::backdrop{background:#080e16b8;backdrop-filter:blur(8px)}
+.install-studio header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}.install-flair{font-size:10px;letter-spacing:.2em;color:#94b1c2;font-weight:600}.install-studio header button{border:0;background:transparent;color:#a8bdcb;min-width:44px;min-height:44px;border-radius:12px}
+.install-studio>img{border-radius:18px;display:block;margin-bottom:20px}.install-studio h2{font-size:27px;line-height:1.12;letter-spacing:-.035em;font-weight:600;margin:0 0 12px}.install-studio p{font-size:14px;line-height:1.6;color:#aebfc9;margin:0 0 20px}.install-studio ol{padding:0;list-style:none;display:grid;gap:18px;margin:28px 0}.install-studio li{display:flex;gap:14px;align-items:flex-start;font-size:14px;line-height:1.6}.install-studio li svg{flex:none;color:#70d6e8;margin-top:3px}.install-studio strong{font-weight:600;color:#eaf1f5}
+.install-status{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:#23313b;color:#b6c8d2;font-size:13px;margin-bottom:16px}.install-status.ready{color:#90d7b7;background:#203630}.install-status.error,.install-status.unavailable{color:#ebc185}.install-studio .install-note{font-size:12px;margin-bottom:16px}.install-studio footer{display:flex;gap:8px;flex-wrap:wrap}.install-studio footer button{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border:1px solid #3b4a55;border-radius:12px;color:#c4d3dc;background:transparent;min-height:44px;flex:1;font-size:12px}.install-studio footer .install-done{background:#70d6e8;border-color:#70d6e8;color:#102028;font-weight:600}
+@keyframes install-enter{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.install-studio{animation:none}}
+@media(max-height:740px){.install-studio{padding:20px}.install-studio header{margin-bottom:12px}.install-studio>img{width:56px;height:56px;margin-bottom:16px}.install-studio h2{font-size:24px}.install-studio p{margin-bottom:16px}.install-studio ol{margin:20px 0;gap:12px}.install-studio li{line-height:1.5}.install-studio footer{position:sticky;bottom:-20px;background:#182129;padding:8px 0;margin-top:-8px}}
+/* Prevent Safari's input focus zoom from moving the 3D stage off screen. */
+.web.android input:not([type=checkbox]):not([type=range]),.web.android select,.web.android textarea{font-size:16px}
+@media(max-height:540px){
+ html.web.android .app.sheet-open .touch-transport,html.web.android .app.sheet-open .selection-pose-tools{left:calc((100vw - var(--touch-sheet) - 80px)/2);max-width:calc(100vw - var(--touch-sheet) - 96px)}
+ html.web.android .app.sheet-open .touch-transport .touch-scrubber{display:none}
+ html.web.android .app.sheet-open .pose-action-buttons{gap:2px}
+ html.web.android .app.sheet-open .pose-action-buttons button{min-width:0;width:48px;flex:1 1 48px;padding:4px}
+ html.web.android .app.sheet-open .pose-action-buttons button>span{display:none}
+}

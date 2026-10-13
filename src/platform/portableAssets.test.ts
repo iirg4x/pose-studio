@@ -1,0 +1,9 @@
+import {describe,it,expect} from 'vitest';
+import {assetHash,decode64,encode64,validateGLB,embedAssets,restoreAssets} from './portableAssets';
+function glb(json:unknown={asset:{version:'2.0'}}){const raw=new TextEncoder().encode(JSON.stringify(json)),size=Math.ceil(raw.length/4)*4,bytes=new Uint8Array(20+size),v=new DataView(bytes.buffer);v.setUint32(0,0x46546c67,true);v.setUint32(4,2,true);v.setUint32(8,bytes.length,true);v.setUint32(12,size,true);v.setUint32(16,0x4e4f534a,true);bytes.fill(32,20);bytes.set(raw,20);return bytes;}
+describe('Android portable assets',()=>{
+ it('round trips binary across native bridge chunk boundaries',()=>{const bytes=Uint8Array.from({length:800003},(_,i)=>i%256);expect(decode64(encode64(bytes))).toEqual(bytes);});
+ it('rejects truncated GLB and external resources before parsing',()=>{expect(()=>validateGLB(glb().slice(0,-1))).toThrow();expect(()=>validateGLB(glb({buffers:[{uri:'https://example.com/mesh.bin'}]}))).toThrow('Pack textures');});
+ it('embeds shared character/prop bytes once and restores unchanged',async()=>{const bytes=glb(),id=await assetHash(bytes),p={characters:[{asset:id}],clips:[{project:{props:{weapon:{asset:id}}}}]},cached=new Map();let reads=0;const portable=await embedAssets(p,async()=>{reads++;return bytes;});expect(reads).toBe(1);expect(Object.keys(portable.characterAssets as object)).toEqual([id]);expect(await restoreAssets(portable,async(k,v)=>{cached.set(k,v);})).toEqual(p);expect(cached.get(id)).toEqual(bytes);expect(p).not.toHaveProperty('characterAssets');});
+ it('rejects corrupt assets before writing any to the cache',async()=>{const bytes=glb(),id=await assetHash(bytes),bad='0'.repeat(64),writes:string[]=[];await expect(restoreAssets({characters:[{asset:id},{asset:bad}],characterAssets:{[id]:encode64(bytes),[bad]:encode64(bytes)}},async k=>{writes.push(k);})).rejects.toThrow('checksum');expect(writes).toEqual([]);});
+});
