@@ -93,7 +93,7 @@ export const Timeline = memo(function Timeline({
     const onResize = () => measure();
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, []);
+  }, [!!p, split]);
   useEffect(() => {
     if (!more) return;
     const outside = (e: PointerEvent) => {
