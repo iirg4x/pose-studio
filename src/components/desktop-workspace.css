@@ -262,8 +262,8 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, calc(var(--dope-share) * 100%)) 4px minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, calc(var(--dope-share) * 100%)) 4px minmax(0, 1fr);
   border-top: 0;
 }
 .timeline.split > .split-dope,
@@ -281,7 +281,7 @@
   min-height: 0;
 }
 .split-editors-handle {
-  cursor: ew-resize;
+  cursor: ns-resize;
   touch-action: none;
   background: var(--line);
 }
