@@ -461,26 +461,6 @@
 .timeline .selected-channel .timeline-interpolation {
   opacity: 1;
 }
-:is(.timeline-interpolation, .key-interpolation-option)[data-interpolation='linear'] {
-  --interpolation-color: #abc0d0;
-  color: var(--interpolation-color);
-}
-:is(.timeline-interpolation, .key-interpolation-option)[data-interpolation='bezier'] {
-  --interpolation-color: #78cfc7;
-  color: var(--interpolation-color);
-}
-:is(.timeline-interpolation, .key-interpolation-option)[data-interpolation='step'] {
-  --interpolation-color: #e4b57b;
-  color: var(--interpolation-color);
-}
-:is(.timeline-interpolation, .key-interpolation-option)[data-interpolation='spring'] {
-  --interpolation-color: #b9a3e3;
-  color: var(--interpolation-color);
-}
-:is(.timeline-interpolation, .key-interpolation-option)[data-interpolation='bounce'] {
-  --interpolation-color: #dca38f;
-  color: var(--interpolation-color);
-}
 .timeline-interpolation[data-interpolation='hold'] {
   color: #8796a8;
 }
@@ -559,59 +539,6 @@
   margin-left: auto;
   border-radius: 5px;
 }
-.key-interpolation-options {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.keyframe-settings .key-interpolation-option {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  width: 100%;
-  height: 36px;
-  min-height: 36px;
-  padding: 4px 9px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  text-align: left;
-  background: transparent;
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease;
-}
-.keyframe-settings .key-interpolation-option > span:nth-child(2) {
-  flex: 1;
-  font-size: 12px;
-  color: #d6dfe9;
-}
-.keyframe-settings .key-interpolation-option:hover {
-  background: #ffffff06;
-}
-.keyframe-settings .key-interpolation-option[aria-pressed='true'] {
-  background: color-mix(in srgb, var(--interpolation-color) 10%, transparent);
-  border-color: color-mix(in srgb, var(--interpolation-color) 32%, transparent);
-  color: var(--interpolation-color);
-}
-.key-interpolation-preview {
-  width: 68px;
-  height: 24px;
-  flex: none;
-  position: relative;
-}
-.key-interpolation-preview .interpolation-caption {
-  display: none;
-}
-.keyframe-settings .key-setting {
-  padding: 8px 3px;
-  margin: 5px 0;
-  border-top: 1px solid #ffffff0e;
-}
-.keyframe-settings .key-setting select {
-  border: 1px solid #ffffff16;
-  border-radius: 5px;
-  background-color: #171e27;
-}
 .keyframe-settings .key-setting-note {
   padding: 0 3px;
   color: #97a5b5;
@@ -626,16 +553,9 @@
 .keyframe-settings .keyframe-context-actions button {
   border-radius: 5px;
 }
-.android .keyframe-settings .key-interpolation-option {
-  height: 44px;
-  min-height: 44px;
-}
 @media (prefers-reduced-motion: reduce) {
   .keyframe-settings {
     animation: none;
-  }
-  .keyframe-settings .key-interpolation-option {
-    transition: none;
   }
 }
 .timeline .reference-key {
@@ -797,28 +717,6 @@
 }
 .timeline .axis-curve-open:hover {
   background: #ffffff04;
-}
-.timeline .axis-curve-key {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  width: 18px;
-  min-width: 18px;
-  height: 22px;
-  min-height: 22px;
-  padding: 0;
-  color: inherit;
-  z-index: 2;
-  background: none;
-}
-.axis-curve-key i {
-  width: 6px;
-  height: 6px;
-  background: currentColor;
-  transform: rotate(45deg);
-  border: 1px solid var(--track-ink);
-}
-.axis-curve-key:hover i {
-  background: var(--track-key);
 }
 .timeline-empty {
   padding: 16px;
@@ -1254,12 +1152,6 @@
   width: 28px;
   height: 28px;
   min-height: 28px;
-}
-.android .timeline .axis-curve-key {
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
-  min-height: 30px;
 }
 .android .timeline .curve-tools button,
 .android .timeline .curve-selection-tools button {

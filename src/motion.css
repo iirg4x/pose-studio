@@ -653,9 +653,6 @@
 .timeline [data-interpolation='loop'] {
   --segment-color: #b99aed;
 }
-.key-interpolation-option[data-interpolation='loop'] .interpolation-line {
-  stroke: #b99aed;
-}
 
 /* Layer channels: familiar axis colors, one compact editing surface. */
 .blend-context {

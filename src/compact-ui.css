@@ -153,8 +153,7 @@
   border: 0;
   gap: 0;
 }
-.library-panel h3,
-.library-title {
+.library-panel h3 {
   font-size: 12px;
   font-weight: 500;
 }
@@ -249,9 +248,6 @@
 }
 .android .tablet-sheet-animations .animation-bar {
   flex: 0 0 auto;
-}
-.android .tablet-sheet-animations .animation-results {
-  max-height: none;
 }
 .android .property-context-heading.context-flair {
   flex: 0 0 auto;
@@ -733,20 +729,6 @@
 }
 
 /* Controller constraints share the compact property rhythm and touch targets. */
-.constraint-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 36px;
-  font-size: 12px;
-  cursor: pointer;
-}
-.constraint-toggle input {
-  width: 17px;
-  height: 17px;
-  accent-color: var(--accent);
-}
 .constraint-reach {
   display: flex;
   min-width: 130px;
@@ -755,9 +737,6 @@
   flex: 1;
   min-height: 30px;
   padding: 4px 12px;
-}
-.android .constraint-toggle {
-  min-height: 48px;
 }
 .android .constraint-reach button {
   min-height: 48px;

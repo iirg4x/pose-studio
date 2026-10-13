@@ -451,12 +451,6 @@
   z-index: 500;
 }
 
-.bone-follow-toggle {
-  min-height: 27px;
-  gap: 8px;
-  font-size: 11px;
-}
-
 /* Attachment: one parent target, two independent inheritance channels. */
 .attachment-editor {
   display: grid;

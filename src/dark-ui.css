@@ -28,7 +28,6 @@
 .inspector-scroll,
 .animation-tabs,
 .library-list,
-.curve-channels,
 .curve-property-scroll,
 .control-list-rows {
   scrollbar-width: auto;
@@ -60,26 +59,13 @@
 .statusbar {
   background: var(--canvas);
 }
-.toolbar,
 .animation-bar {
   background: var(--panel);
 }
-.toolbar {
-  gap: 4px;
-}
-.toolbar-divider {
-  height: 22px;
-  margin: 0 6px;
-}
-.workspace-tabs button.active:after,
 .timeline-tabs button.active:after {
   height: 2px;
   left: 12px;
   right: 12px;
-}
-.tool.active {
-  border-color: transparent;
-  box-shadow: inset 0 -2px var(--accent);
 }
 .primary.export-button {
   background: #315d8c;
@@ -89,54 +75,13 @@
 .primary.export-button:hover {
   background: #3d70a3;
 }
-.transform-space {
-  display: flex;
-  align-items: center;
-  padding: 2px;
-  gap: 2px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--inset);
-}
-.transform-space button {
-  height: 27px;
-  min-height: 27px;
-  padding: 4px 8px;
-  font-size: 11px;
-  color: var(--muted);
-}
-.transform-space button[aria-pressed='true'] {
-  background: var(--selection);
-  color: var(--text);
-}
-.transform-space button[aria-pressed='true'] svg {
-  color: var(--accent);
-}
-.rig-switch {
-  margin-left: 8px;
-  padding: 2px;
-  background: var(--inset);
-}
-.rig-switch button[aria-pressed='true'] {
-  background: #26394d;
-}
 .animation-tab.active {
   background: var(--raised);
 }
 .animation-tab.active:after {
   background: var(--accent);
 }
-.clip-kind {
-  color: var(--cyan);
-  border-color: var(--line);
-  font-size: 8px;
-  letter-spacing: 0.4px;
-}
-.animation-tab[data-layer='body'] .clip-kind {
-  color: var(--green);
-}
 .new-animation,
-.duplicate-animation,
 .pose-toolbar > button {
   width: 30px;
   min-width: 30px;
@@ -206,46 +151,8 @@
   border-left-color: var(--accent);
   background: var(--selection);
 }
-.active-control-heading {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 46px;
-  padding: 12px;
-}
-.active-control-heading > i {
-  width: 7px;
-  height: 7px;
-  border-radius: 2px;
-  background: var(--control-tint);
-  flex: none;
-}
-.active-control-heading h3 {
-  font-size: 13px;
-  font-weight: 600;
-}
-.active-control-heading > span {
-  display: block;
-  margin-left: auto;
-  padding: 2px 6px;
-  background: var(--selection);
-  border-radius: 3px;
-  font-size: 10px;
-}
 .inspector-scroll {
   padding-bottom: 12px;
-}
-.inspector-section {
-  padding: 12px;
-  border-color: var(--line);
-}
-.inspector-section .help-text {
-  font-size: 10px;
-  line-height: 1.5;
-  color: var(--muted);
-}
-.selection-summary {
-  display: none;
 }
 .vector-inputs label:nth-child(1) > span {
   color: var(--red);
@@ -416,9 +323,6 @@
 .curve-editor {
   background: var(--inset);
 }
-.curve-channels {
-  background: var(--panel);
-}
 .curve-properties {
   background: var(--panel);
 }
@@ -437,26 +341,7 @@
 .viewport-orientation [data-axis='Y'] {
   color: var(--green);
 }
-.panel-divider:hover,
-.panel-divider:focus-visible {
-  background: var(--accent);
-}
 @media (max-width: 1100px) {
-  .toolbar {
-    gap: 3px;
-  }
-  .workspace-tabs button {
-    min-width: 80px !important;
-  }
-  .rig-switch {
-    margin-left: 4px;
-  }
-  .rig-switch button {
-    padding: 5px 7px;
-  }
-  .transform-space button {
-    padding: 4px 6px;
-  }
   .pose-toolbar > button > svg {
     display: block;
   }
@@ -478,13 +363,6 @@
   width: auto;
   flex: 1;
   min-width: 0;
-}
-.following .release-control {
-  flex: none;
-  width: 26px;
-  min-height: 27px;
-  padding: 4px;
-  color: var(--green);
 }
 
 /* Dialog effects stay in the workspace; window controls remain usable. */

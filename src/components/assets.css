@@ -188,12 +188,3 @@
   color: var(--cyan);
   margin: 16px 0;
 }
-.prop-origin-note {
-  font-size: 11px;
-  color: var(--muted);
-  line-height: 1.6;
-}
-.attachment-picker-active {
-  color: var(--cyan) !important;
-  background: var(--selection) !important;
-}
