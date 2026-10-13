@@ -213,7 +213,8 @@ html.android {
   height: 28px;
   margin: 0;
   padding: 0;
-  accent-color: var(--cyan);
+  -webkit-appearance: none;
+  appearance: none;
   touch-action: none;
   background: none;
   border: 0;
@@ -221,6 +222,40 @@ html.android {
 .android .touch-scrubber input::-webkit-slider-thumb {
   min-width: 20px;
   min-height: 20px;
+  width: 20px;
+  height: 20px;
+  margin-top: -8px;
+  -webkit-appearance: none;
+  appearance: none;
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cyan) 45%, transparent);
+}
+.android .touch-scrubber input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+}
+.android .touch-scrubber input::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+}
+.android .touch-scrubber input::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--cyan);
+}
+.android .touch-scrubber input::-moz-range-thumb {
+  min-width: 20px;
+  min-height: 20px;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cyan) 45%, transparent);
 }
 .android .tablet-sheet {
   position: absolute;

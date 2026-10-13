@@ -598,7 +598,7 @@ html.android body {
   }
   /* Bars hug their controls. */
   :root.android .app {
-    --phone-transport: 40px;
+    --phone-transport: 56px;
     --phone-tabs: 46px;
   }
   :root.android .app .touch-panel-rail button {
@@ -613,6 +613,24 @@ html.android body {
   }
   :root.android .app .touch-transport {
     height: var(--phone-transport);
+  }
+  :root.android .app .touch-scrubber {
+    height: calc(var(--phone-transport) - 2px);
+  }
+  :root.android .app .touch-scrubber > div {
+    height: 32px;
+    flex: none;
+  }
+  :root.android .app .touch-scrubber button {
+    width: 32px;
+    min-width: 32px !important;
+    height: 32px;
+    min-height: 32px !important;
+  }
+  :root.android .app .touch-scrubber input {
+    height: 22px;
+    min-height: 22px;
+    flex: none;
   }
   :root.android .app .touch-scrubber output {
     font-size: 12px;

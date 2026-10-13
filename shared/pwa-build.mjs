@@ -50,7 +50,7 @@ export function posePwa() {
         .replace('<title>Pose</title>', '<title>Pose Studio</title>')
         .replace(
           '</head>',
-          '<link rel="manifest" href="./manifest.webmanifest"/><link rel="apple-touch-icon" href="./icons/apple-touch-icon.png"/><link rel="icon" type="image/png" href="./icons/icon-192.png"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/><meta name="apple-mobile-web-app-title" content="Pose"/></head>',
+          '<link rel="manifest" href="./manifest.webmanifest"/><link rel="apple-touch-icon" href="./icons/apple-touch-icon.png"/><link rel="icon" type="image/png" href="./icons/icon-192.png"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black"/><meta name="apple-mobile-web-app-title" content="Pose"/></head>',
         );
     },
     async writeBundle(options) {
@@ -78,10 +78,16 @@ export function posePwa() {
         hash.update(file);
         hash.update(await fs.readFile(path.join(out, file)));
       }
+      const revision = hash.digest('hex').slice(0, 20);
+      const index = path.join(out, 'index.html');
       await fs.writeFile(
-        path.join(out, 'sw.js'),
-        serviceWorkerSource(files, hash.digest('hex').slice(0, 20)),
+        index,
+        (await fs.readFile(index, 'utf8')).replace(
+          '</head>',
+          `<meta name="pose-build" content="${revision}"/></head>`,
+        ),
       );
+      await fs.writeFile(path.join(out, 'sw.js'), serviceWorkerSource(files, revision));
       await fs.writeFile(path.join(out, '.nojekyll'), '');
     },
   };

@@ -688,6 +688,7 @@ export const CurveEditor = memo(function CurveEditor({
           </div>
           <span className="title-spacer" />
           <button
+            className="curve-compact-secondary"
             aria-label="Compare sibling axes"
             title="Show the other axes"
             aria-pressed={compare}
@@ -707,7 +708,12 @@ export const CurveEditor = memo(function CurveEditor({
           >
             <Grid3X3 size={16} />
           </button>
-          <button title="Fit all (Home)" aria-label="Fit curve" onClick={() => setView(null)}>
+          <button
+            className="curve-compact-secondary"
+            title="Fit all (Home)"
+            aria-label="Fit curve"
+            onClick={() => setView(null)}
+          >
             <Maximize2 size={15} />
             <span>Fit</span>
           </button>
@@ -737,6 +743,7 @@ export const CurveEditor = memo(function CurveEditor({
             <span>Clean up</span>
           </button>
           <button
+            className="curve-compact-secondary"
             title="Add channel key at playhead"
             aria-label="Add channel key"
             onClick={() => insertKey()}
@@ -783,6 +790,15 @@ export const CurveEditor = memo(function CurveEditor({
                 ref={viewMenu}
                 className="curve-view-menu"
                 data-editor-overlay
+                role="menu"
+                aria-label="Curve view options"
+                onKeyDown={(e) => {
+                  if (e.key !== 'Escape') return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setViewMenuOpen(false);
+                  viewMenuButton.current?.focus();
+                }}
                 style={{ left: viewMenuPosition.left, top: viewMenuPosition.top }}
               >
                 <button aria-label="Zoom in curve" onClick={() => zoom(0.5)}>
@@ -800,6 +816,45 @@ export const CurveEditor = memo(function CurveEditor({
                 >
                   <Grid3X3 size={16} />
                   Guide lines
+                </button>
+                <button
+                  aria-label="Compare sibling axes"
+                  aria-pressed={compare}
+                  onClick={() => {
+                    setCompare(!compare);
+                    setView(null);
+                  }}
+                >
+                  <Layers2 size={16} />
+                  Compare axes
+                </button>
+                <button aria-label="Fit curve" onClick={() => setView(null)}>
+                  <Maximize2 size={16} />
+                  Fit curve
+                </button>
+                <button aria-label="Clean up curve" onClick={() => onReduce(selected)}>
+                  <Scissors size={16} />
+                  Clean up
+                </button>
+                <button aria-label="Add channel key" onClick={() => insertKey()}>
+                  <Plus size={16} />
+                  Add key
+                </button>
+                <button
+                  aria-label="Copy curve keys"
+                  disabled={!selected.length}
+                  onClick={() => studio.copyCurveKeys(channel, selected)}
+                >
+                  <Copy size={16} />
+                  Copy keys
+                </button>
+                <button
+                  aria-label="Paste curve keys"
+                  disabled={!s.curveClipboard?.length}
+                  onClick={paste}
+                >
+                  <ClipboardPaste size={16} />
+                  Paste keys
                 </button>
                 {selected.length > 0 && (
                   <>
@@ -830,6 +885,7 @@ export const CurveEditor = memo(function CurveEditor({
             document.body,
           )}
           <button
+            className="curve-inspector-trigger"
             aria-label="Curve key and tangent properties"
             title="Key values and tangent handles"
             aria-pressed={inspecting && panel === 'key'}
@@ -841,6 +897,7 @@ export const CurveEditor = memo(function CurveEditor({
             <SlidersHorizontal size={16} />
           </button>
           <button
+            className="curve-modifier-trigger"
             aria-label="Curve modifiers"
             title="Channel modifiers"
             aria-pressed={inspecting && panel === 'modifiers'}
@@ -1231,6 +1288,12 @@ export const CurveEditor = memo(function CurveEditor({
                         editKeys((k) => ({ ...k, value: k.value + (value - active.value) }))
                       }
                     />
+                  </div>
+                  <div className="curve-property-actions">
+                    <button aria-label="Delete selected channel keys" onClick={remove}>
+                      <Trash2 size={15} />
+                      Delete selected keys
+                    </button>
                   </div>
                   <InterpolationSettings
                     mode={

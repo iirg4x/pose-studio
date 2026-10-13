@@ -1,0 +1,105 @@
+/* Top-level touch popovers share one visual stack and stay below the chrome rows. */
+:root.android .app .touch-view-toggle,
+:root.android .app > .titlebar .brand {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+:root.android .app > .titlebar .brand {
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+}
+
+:root.android .app > .titlebar .brand[aria-expanded='true'] {
+  background: var(--hover);
+}
+
+:root.android .app .viewport-bottom.view-options-open {
+  position: fixed;
+  z-index: var(--z-context-menu);
+  top: calc(var(--touch-viewport-top, 0px) + var(--touch-edge) + env(safe-area-inset-top) + 56px);
+  right: calc(
+    100vw - var(--touch-viewport-left, 0px) - var(--screen-w, 100vw) + var(--touch-edge) +
+      env(safe-area-inset-right)
+  );
+  width: min(248px, calc(var(--screen-w, 100vw) - 2 * var(--touch-edge)));
+  max-height: calc(var(--screen-h, 100dvh) - var(--touch-edge) - env(safe-area-inset-top) - 72px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+:root.android .app .active-layer-control:has(.active-layer-menu) {
+  z-index: var(--z-context-menu);
+}
+
+:root.android .app .active-layer-menu {
+  right: 0;
+  left: auto;
+  width: min(280px, calc(var(--screen-w, 100vw) - 2 * var(--touch-edge)));
+  max-height: calc(var(--screen-h, 100dvh) - env(safe-area-inset-top) - 88px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+:root.android .app .scene-selection-tools {
+  top: calc(var(--touch-edge) + env(safe-area-inset-top) + 64px);
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  max-width: calc(var(--screen-w, 100vw) - 2 * var(--touch-edge));
+}
+
+:root.android .app .scene-selection-tools .context-flair {
+  position: static;
+  grid-column: 1 / -1;
+  transform: none;
+  margin: 0 2px 2px;
+}
+
+@media (max-width: 700px), (max-height: 540px) {
+  :root.android .app > .titlebar .brand {
+    height: 36px;
+    min-height: 36px;
+    padding: 4px 8px;
+  }
+
+  :root.android .app .viewport-bottom.view-options-open {
+    top: calc(var(--touch-viewport-top, 0px) + var(--phone-top) + 92px);
+    right: calc(
+      100vw - var(--touch-viewport-left, 0px) - var(--screen-w, 100vw) + var(--phone-right)
+    );
+    width: min(248px, calc(var(--screen-w, 100vw) - var(--phone-left) - var(--phone-right)));
+    max-height: calc(var(--screen-h, 100dvh) - var(--phone-top) - 100px - var(--phone-bottom, 0px));
+  }
+
+  :root.android .app .active-layer-menu {
+    position: fixed;
+    top: calc(var(--touch-viewport-top, 0px) + var(--phone-top) + 46px);
+    right: calc(
+      100vw - var(--touch-viewport-left, 0px) - var(--screen-w, 100vw) + var(--phone-right)
+    );
+    left: auto;
+    width: min(280px, calc(var(--screen-w, 100vw) - var(--phone-left) - var(--phone-right)));
+    max-height: calc(var(--screen-h, 100dvh) - var(--phone-top) - 52px - var(--phone-bottom, 0px));
+  }
+
+  :root.android .app .scene-selection-tools {
+    top: calc(var(--phone-top) + 96px);
+    max-width: calc(var(--screen-w, 100vw) - var(--phone-left) - var(--phone-right));
+  }
+}
+
+@media (max-width: 360px) {
+  :root.android .app .scene-selection-tools {
+    gap: 2px;
+    padding: 4px;
+  }
+
+  :root.android .app .scene-selection-tools button {
+    min-width: 40px;
+    padding-inline: 7px;
+    font-size: 11px;
+  }
+}

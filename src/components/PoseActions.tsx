@@ -2,7 +2,7 @@ import { mirrorDriver } from '../core/liveMirror';
 import { MirrorDriverNotice } from './AnimationMirror';
 import { FootPoseTools } from './FootPoseTools';
 import { MotionPresence, Collapse } from './Motion';
-import { useEffect, useRef, useState, useId } from 'react';
+import { useRef, useState, useId } from 'react';
 import {
   ArrowDownToLine,
   Copy,
@@ -23,27 +23,21 @@ import { mirrorDestination } from '../core/mirrorPose';
 import { studio } from '../core/store';
 import { controlLabel } from '../core/model';
 import { activeAnimationLayer, editLayerAllowed } from '../core/layers';
+import { useTransientPopover } from '../hooks/transientPopover';
 
 export function ActiveLayer() {
   const menuId = useId(),
     s = useStudioChrome({ frame: 'none' }),
     [open, setOpen] = useState(false),
-    root = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const escape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('pointerdown', close, true);
-    document.addEventListener('keydown', escape);
-    return () => {
-      document.removeEventListener('pointerdown', close, true);
-      document.removeEventListener('keydown', escape);
-    };
-  }, [open]);
+    root = useRef<HTMLDivElement>(null),
+    trigger = useRef<HTMLButtonElement>(null),
+    popover = useTransientPopover({
+      owner: 'active-layer',
+      open,
+      onClose: () => setOpen(false),
+      rootRef: root,
+      triggerRef: trigger,
+    });
   const p = s.project;
   if (!p || s.retargetMode) return null;
   const layer = activeAnimationLayer(p),
@@ -51,11 +45,18 @@ export function ActiveLayer() {
   return (
     <div className="active-layer-control" ref={root} data-editor-overlay>
       <button
+        ref={trigger}
         className="active-layer-trigger"
         aria-label={'Active layer: ' + name}
         aria-expanded={open}
         aria-controls={menuId}
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (open) setOpen(false);
+          else {
+            popover.announce();
+            setOpen(true);
+          }
+        }}
       >
         <small className="context-flair attached-flair">Editing layer</small>
         <Layers size={18} />

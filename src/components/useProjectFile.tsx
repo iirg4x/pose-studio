@@ -302,15 +302,26 @@ export function useProjectFile(
           }
           // Native Back dismisses the current dialog before it can close the editor.
           // Busy dialogs may deliberately ignore Escape while finishing an export.
-          const dialogs = document.querySelectorAll('[role="dialog"]'),
+          const dialogs = [
+              ...document.querySelectorAll('dialog[open], [role="dialog"], [role="menu"]'),
+            ].filter((element) => !element.closest('[inert]') && element.getClientRects().length),
             dialog = dialogs[dialogs.length - 1];
           if (dialog) {
-            dialog.dispatchEvent(
-              new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
-            );
+            if (dialog instanceof HTMLDialogElement)
+              dialog.dispatchEvent(new Event('cancel', { cancelable: true }));
+            else
+              dialog.dispatchEvent(
+                new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+              );
             return;
           }
-          if (!window.dispatchEvent(new Event('pose-dismiss-overlay', { cancelable: true })))
+          // Start below window so capture-phase popup handlers run before the
+          // window bubble handler that closes the enclosing workspace panel.
+          if (
+            !document.dispatchEvent(
+              new Event('pose-dismiss-overlay', { bubbles: true, cancelable: true }),
+            )
+          )
             return;
         }
         if (blocked) return;

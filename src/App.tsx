@@ -3,6 +3,7 @@ import { MenuBar, ContextMenu } from './components/MenuBar';
 import type { Menu } from './components/MenuBar';
 import { PreviewModel } from './components/PreviewModel';
 import { InstallStudio } from './components/InstallStudio';
+import { PwaUpdateIndicator } from './components/PwaUpdateIndicator';
 import { isPwaBuild } from './platform/pwa';
 import { MotionPresence, MotionOverlay } from './components/Motion';
 import { isAndroid as nativeAndroid, portablePlatform } from './platform/storage';
@@ -39,6 +40,7 @@ import {
 } from 'lucide-react';
 import { studio } from './core/store';
 import { useStudioChrome, usePresence } from './hooks';
+import { claimTransientPopover, useTransientPopover } from './hooks/transientPopover';
 import { SHORTCUTS, isTypingTarget } from './core/shortcuts';
 import { AssetLibrary } from './components/AssetLibrary';
 import { AnimationImport } from './components/AnimationImport';
@@ -89,9 +91,24 @@ export default function App() {
     [characterExport, setCharacterExport] = useState(false),
     [saved, setSaved] = useState('Recovery copy'),
     [help, setHelp] = useState(false),
-    fileInput = useRef<HTMLInputElement>(null);
+    fileInput = useRef<HTMLInputElement>(null),
+    projectMenu = useRef<HTMLDivElement>(null),
+    projectTrigger = useRef<HTMLButtonElement>(null);
+  const projectPopover = useTransientPopover({
+    owner: 'project',
+    open: menu,
+    onClose: () => setMenu(false),
+    rootRef: projectMenu,
+    triggerRef: projectTrigger,
+  });
+  const openBoxSelection = () => {
+    claimTransientPopover('box-selection');
+    setTabletPanel(null);
+    runtime.current?.beginBoxSelection();
+  };
   useEffect(() => {
     const dismiss = (event: Event) => {
+      if (event.defaultPrevented) return;
       if (menu) {
         event.preventDefault();
         setMenu(false);
@@ -109,7 +126,6 @@ export default function App() {
   useEffect(() => {
     const outside = (e: PointerEvent) => {
       const t = e.target as HTMLElement;
-      if (!t.closest('.title-menu')) setMenu(false);
       if (t.matches('.scene-canvas')) setTabletPanel(null);
       if (t.matches('.modal-backdrop') && !recording && !exporting) {
         setAssets(false);
@@ -385,7 +401,7 @@ export default function App() {
           }
           if (k === 'b') {
             e.preventDefault();
-            runtime.current?.beginBoxSelection();
+            openBoxSelection();
             return;
           }
           if (k === 'g' || k === 'r') {
@@ -578,7 +594,7 @@ export default function App() {
         {
           label: 'Box select',
           shortcut: 'B',
-          run: () => runtime.current?.beginBoxSelection(),
+          run: openBoxSelection,
           disabled: retarget,
         },
         'separator',
@@ -774,14 +790,18 @@ export default function App() {
             </div>
           </>
         )}
-        <div className="title-menu" hidden={!isAndroid}>
+        <div className="title-menu" hidden={!isAndroid} ref={projectMenu}>
           <button
+            ref={projectTrigger}
             className="brand"
             aria-label="Project menu"
             title="Project menu"
             disabled={recording || exporting}
             aria-expanded={menu}
-            onClick={() => setMenu(!menu)}
+            onClick={() => {
+              if (!menu) projectPopover.announce();
+              setMenu(!menu);
+            }}
           >
             <Waypoints size={18} />
             <span>Pose</span>
@@ -934,13 +954,21 @@ export default function App() {
             onChange={(e) => studio.renameWorkspace(e.target.value)}
           />
         )}
-        <span
-          className={'save-indicator ' + (saved === 'Saving…' ? 'saving' : '')}
-          title={saved}
-          aria-label={saved}
-        >
-          {saved === 'Saving…' ? <LoaderCircle size={14} /> : <Check size={14} />}
-        </span>
+        <PwaUpdateIndicator
+          onOpen={() => {
+            claimTransientPopover('app-update');
+            setInstallOpen(true);
+          }}
+          fallback={
+            <span
+              className={'save-indicator ' + (saved === 'Saving…' ? 'saving' : '')}
+              title={saved}
+              aria-label={saved}
+            >
+              {saved === 'Saving…' ? <LoaderCircle size={14} /> : <Check size={14} />}
+            </span>
+          }
+        />
         <div className="title-spacer" ref={setTitleSlot} />
         {nativeAndroid && (
           <Updates
@@ -1016,12 +1044,20 @@ export default function App() {
         <>
           <TabletWorkspace
             pasteMirrored={() => runtime.current?.pasteMirroredPose()}
-            boxSelect={() => runtime.current?.beginBoxSelection()}
+            boxSelect={openBoxSelection}
             mirror={() => runtime.current?.mirrorSelectedPose()}
             panel={tabletPanel}
-            toggle={(p) => setTabletPanel((current) => (current === p ? null : p))}
+            toggle={(p) => {
+              claimTransientPopover('workspace-panel');
+              setTimelineOpen(false);
+              setTabletPanel((current) => (current === p ? null : p));
+            }}
             timeline={timelineOpen}
-            toggleTimeline={() => setTimelineOpen((v) => !v)}
+            toggleTimeline={() => {
+              claimTransientPopover('timeline');
+              setTabletPanel(null);
+              setTimelineOpen((v) => !v);
+            }}
           />
           {shownPanel && (
             <TabletDrawer

@@ -106,8 +106,31 @@ export const Timeline = memo(function Timeline({
       )
         setMore(false);
     };
+    const nested = () =>
+      !!document.querySelector(
+        '.loop-panel:not([inert]), .animation-mirror-panel:not([inert]), .keyframe-menu:not([inert])',
+      );
+    const escape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || nested()) return;
+      e.preventDefault();
+      setMore(false);
+      touchBar.current
+        ?.querySelector<HTMLButtonElement>('[aria-label="More timeline options"]')
+        ?.focus();
+    };
+    const dismiss = (e: Event) => {
+      if (e.defaultPrevented || nested()) return;
+      e.preventDefault();
+      setMore(false);
+    };
     document.addEventListener('pointerdown', outside, true);
-    return () => document.removeEventListener('pointerdown', outside, true);
+    document.addEventListener('keydown', escape);
+    window.addEventListener('pose-dismiss-overlay', dismiss, true);
+    return () => {
+      document.removeEventListener('pointerdown', outside, true);
+      document.removeEventListener('keydown', escape);
+      window.removeEventListener('pose-dismiss-overlay', dismiss, true);
+    };
   }, [more]);
   useEffect(() => setReducer(null), [s.workspace?.activeId, p?.activeLayerId, p?.editing]);
   const visible = p ? timelineVisibleControls(p, s.selection, s.timelineFilter) : [],

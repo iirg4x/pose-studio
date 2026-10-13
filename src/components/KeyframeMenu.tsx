@@ -4,17 +4,35 @@ import { Diamond } from 'lucide-react';
 import { KEYING_SETS } from '../core/keying';
 import { studio } from '../core/store';
 import { useStudioChrome } from '../hooks';
+import { usePopupPlacement } from '../hooks/usePopupPlacement';
 export function KeyframeMenu() {
   const s = useStudioChrome({ frame: 'none' }),
-    menu = useRef<HTMLDivElement>(null);
+    menu = useRef<HTMLDivElement>(null),
+    position = usePopupPlacement({
+      open: !!s.keyframeMenu,
+      panel: menu,
+      point: s.keyframeMenu ? { x: s.keyframeMenu.x, y: s.keyframeMenu.y } : undefined,
+      fallbackWidth: 246,
+      fallbackHeight: 330,
+    });
   useEffect(() => {
     if (!s.keyframeMenu) return;
     menu.current?.querySelector<HTMLButtonElement>('[role=menuitem]')?.focus();
     const close = (e: PointerEvent) => {
       if (!menu.current?.contains(e.target as Node)) studio.patch({ keyframeMenu: null });
     };
+    const escape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      e.preventDefault();
+      e.stopPropagation();
+      studio.patch({ keyframeMenu: null });
+    };
     window.addEventListener('pointerdown', close, true);
-    return () => window.removeEventListener('pointerdown', close, true);
+    document.addEventListener('keydown', escape);
+    return () => {
+      window.removeEventListener('pointerdown', close, true);
+      document.removeEventListener('keydown', escape);
+    };
   }, [!!s.keyframeMenu]);
   return (
     <MotionPresence show={!!s.keyframeMenu}>
@@ -24,8 +42,10 @@ export function KeyframeMenu() {
         role="menu"
         aria-label="Insert Keyframe"
         style={{
-          left: Math.max(8, Math.min(innerWidth - 262, s.keyframeMenu?.x ?? 8)),
-          top: Math.max(8, Math.min(innerHeight - 330, s.keyframeMenu?.y ?? 8)),
+          ...position,
+          maxWidth: position.maxWidth,
+          maxHeight: position.maxHeight,
+          overflowY: 'auto',
         }}
         onKeyDown={(e) => {
           e.stopPropagation();

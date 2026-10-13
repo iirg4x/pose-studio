@@ -16,6 +16,7 @@ import {
 import { studio } from '../core/store';
 import { useStudioSelector } from '../hooks';
 import type { TransformOrientation, TransformPivot } from '../scene/transformOptions';
+import { useTransientPopover } from '../hooks/transientPopover';
 const orientations = [
   ['world', 'Global', Move3D, 'Fixed scene axes'],
   ['local', 'Local', Box, 'Active control axes'],
@@ -34,24 +35,27 @@ export function TransformOptions({ compact = false }: { compact?: boolean }) {
       (a, b) => a.transformSpace === b.transformSpace && a.transformPivot === b.transformPivot,
     ),
     [open, setOpen] = useState<'orientation' | 'pivot' | null>(null),
-    ref = useRef<HTMLDivElement>(null);
+    ref = useRef<HTMLDivElement>(null),
+    trigger = useRef<HTMLButtonElement>(null),
+    popover = useTransientPopover({
+      owner: 'transform-options',
+      open: !!open,
+      onClose: () => setOpen(null),
+      rootRef: ref,
+      triggerRef: trigger,
+    });
   const orientation = orientations.find((o) => o[0] === s.transformSpace)!,
     pivot = pivots.find((p) => p[0] === s.transformPivot)!,
     O = orientation[2],
     P = pivot[2];
   useEffect(() => {
-    if (!open) return;
-    const close = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(null);
+    const menu = (e: Event) => {
+      popover.announce();
+      setOpen((e as CustomEvent<'orientation' | 'pivot'>).detail);
     };
-    window.addEventListener('pointerdown', close, true);
-    return () => window.removeEventListener('pointerdown', close, true);
-  }, [open]);
-  useEffect(() => {
-    const menu = (e: Event) => setOpen((e as CustomEvent<'orientation' | 'pivot'>).detail);
     window.addEventListener('transform-options', menu);
     return () => window.removeEventListener('transform-options', menu);
-  }, []);
+  }, [popover]);
   useEffect(() => {
     if (open)
       ref.current?.querySelector<HTMLButtonElement>('[role=menu] [aria-checked=true]')?.focus();
@@ -65,8 +69,7 @@ export function TransformOptions({ compact = false }: { compact?: boolean }) {
         if (!open) return;
         if (e.key === 'Escape') {
           e.preventDefault();
-          setOpen(null);
-          ref.current?.querySelector<HTMLButtonElement>('[aria-expanded=true]')?.focus();
+          popover.close(true);
         }
         if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
           e.preventDefault();
@@ -83,24 +86,38 @@ export function TransformOptions({ compact = false }: { compact?: boolean }) {
       }}
     >
       <button
+        ref={open === 'pivot' ? undefined : trigger}
         className="orientation-trigger"
         aria-label="Transform orientation"
         title="Transform orientation (,) · manipulation axes only"
         aria-haspopup="menu"
         aria-expanded={open === 'orientation'}
-        onClick={() => setOpen(open === 'orientation' ? null : 'orientation')}
+        onClick={() => {
+          if (open === 'orientation') setOpen(null);
+          else {
+            popover.announce();
+            setOpen('orientation');
+          }
+        }}
       >
         <O size={18} />
         <span>{orientation[1]}</span>
         <ChevronDown size={12} />
       </button>
       <button
+        ref={open === 'pivot' ? trigger : undefined}
         className="pivot-trigger"
         aria-label="Transform pivot point"
         title={pivot[1] + ' (.)'}
         aria-haspopup="menu"
         aria-expanded={open === 'pivot'}
-        onClick={() => setOpen(open === 'pivot' ? null : 'pivot')}
+        onClick={() => {
+          if (open === 'pivot') setOpen(null);
+          else {
+            popover.announce();
+            setOpen('pivot');
+          }
+        }}
       >
         <P size={19} />
         {compact && (

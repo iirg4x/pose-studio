@@ -1,0 +1,189 @@
+/*
+ * Touch drawer geometry belongs to the drawer itself.  Older touch rules made
+ * the header an absolute, zero-height overlay and placed its close button
+ * outside the sheet.  That works only while the sheet has a large empty area
+ * beside it; at tablet widths the panel rail then wins the hit test.  Keep the
+ * phone bottom-sheet rules in phone.css, and give contextual tablet drawers a
+ * normal, self-contained header and one scroll owner.
+ */
+@media (min-width: 701px) and (min-height: 541px) {
+  :root.android .app .tablet-sheet {
+    display: flex;
+    flex-direction: column;
+    /* Tablet pose and panel rails occupy the top 80–128px band. Start the
+     * contextual drawer below that band so the rail remains tappable. */
+    top: calc(140px + env(safe-area-inset-top));
+    right: var(--touch-edge);
+    bottom: calc(var(--touch-dock) + 28px + env(safe-area-inset-bottom));
+    width: var(--touch-sheet);
+    z-index: 50;
+    overflow: hidden;
+    max-width: calc(100% - (var(--touch-edge) * 2));
+  }
+
+  :root.android .app .tablet-sheet > header {
+    position: relative;
+    inset: auto;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 0 0 56px;
+    width: auto;
+    height: 56px;
+    min-height: 56px;
+    padding: 0 8px 0 16px;
+    border: 0;
+    border-bottom: 1px solid var(--touch-divider);
+    pointer-events: auto;
+  }
+
+  :root.android .app .tablet-sheet > header h2.attached-flair {
+    position: static;
+    inset: auto;
+    transform: none;
+    display: inline-flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: calc(100% - 52px);
+    min-height: 28px;
+    margin: 0;
+    padding: 4px 8px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  :root.android .app .tablet-sheet > header > button {
+    position: static;
+    inset: auto;
+    z-index: 1;
+    display: inline-flex;
+    flex: 0 0 44px;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    pointer-events: auto;
+  }
+
+  :root.android .app .tablet-sheet > header > button:hover,
+  :root.android .app .tablet-sheet > header > button:focus-visible {
+    background: var(--selection);
+    color: var(--cyan);
+  }
+
+  :root.android .app .tablet-sheet-content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    max-height: none;
+    overflow: hidden;
+  }
+
+  :root.android .app .tablet-sheet-content > .motion-size-content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+  }
+
+  /* Embedded clips use the same structure as the side workspace: tabs and
+   * header stay fixed while the folder list owns the vertical scroll. */
+  :root.android .app .tablet-sheet-animations:has(.animation-folders) {
+    height: auto;
+    max-height: calc(
+      var(--screen-h, 100dvh) - 140px - var(--touch-dock) - 28px - env(safe-area-inset-top) -
+        env(safe-area-inset-bottom)
+    );
+  }
+
+  :root.android .app .tablet-sheet-animations .animation-bar {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+    gap: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+  }
+
+  :root.android
+    .app
+    .tablet-sheet-animations
+    .animation-bar
+    > :is(.library-toggle, .pose-toolbar, .animation-tabs-area) {
+    display: none;
+  }
+
+  :root.android .app .tablet-sheet-animations .embedded-library-tabs {
+    display: flex;
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 4px 8px;
+  }
+
+  :root.android .app .tablet-sheet-animations .animation-bar > .library-panel {
+    position: relative;
+    inset: auto;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    overflow: hidden;
+    background: transparent;
+  }
+
+  :root.android .app .tablet-sheet-animations .animation-bar > .library-panel > header {
+    flex: 0 0 auto;
+  }
+
+  :root.android .app .tablet-sheet-animations .animation-folders {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  :root.android .app .tablet-sheet-animations .animation-folder-results {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 16px;
+  }
+
+  :root.android .app .tablet-sheet-animations .preview-link {
+    flex: 0 0 auto;
+    max-height: 38%;
+    overflow-y: auto;
+  }
+}

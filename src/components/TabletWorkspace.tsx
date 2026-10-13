@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { useStudioSelector, useStudioChrome } from '../hooks';
 import { studio } from '../core/store';
+import './tablet-drawer.css';
 export type TabletPanel = 'rig' | 'properties' | 'animations' | 'tools';
 const panels = [
   ['rig', Waypoints, 'Rig'],

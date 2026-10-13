@@ -1,34 +1,25 @@
 import { MotionPresence } from './Motion';
 import { ScrubNumber } from './ScrubNumber';
 import { createPortal } from 'react-dom';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Repeat2, ChevronDown, X } from 'lucide-react';
 import { studio } from '../core/store';
 import { useStudioChrome } from '../hooks';
 import { loopRange, seamReport } from '../core/loops';
+import { usePopupPlacement } from '../hooks/usePopupPlacement';
 export function LoopControls() {
   const s = useStudioChrome({ frame: 'none' }),
     [open, setOpen] = useState(false),
     root = useRef<HTMLDivElement>(null),
     panel = useRef<HTMLElement>(null),
-    [position, setPosition] = useState({ left: 16, top: 16 });
-  useLayoutEffect(() => {
-    if (!open) return;
-    const place = () => {
-      const r = root.current?.getBoundingClientRect(),
-        el = panel.current;
-      if (!r || !el) return;
-      const width = el.offsetWidth,
-        height = el.offsetHeight;
-      setPosition({
-        left: Math.max(16, Math.min(innerWidth - width - 16, r.right - width)),
-        top: Math.max(16, Math.min(innerHeight - height - 16, r.top - height - 8)),
-      });
-    };
-    place();
-    window.addEventListener('resize', place);
-    return () => window.removeEventListener('resize', place);
-  }, [open]);
+    position = usePopupPlacement({
+      open,
+      panel,
+      anchor: root,
+      placement: 'above-end',
+      fallbackWidth: 400,
+      fallbackHeight: 420,
+    });
   useEffect(() => {
     if (!open) return;
     const close = (e: PointerEvent) => {
@@ -36,7 +27,11 @@ export function LoopControls() {
         setOpen(false);
     };
     const escape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape' && !e.defaultPrevented) {
+        e.preventDefault();
+        e.stopPropagation();
+        setOpen(false);
+      }
     };
     document.addEventListener('pointerdown', close, true);
     document.addEventListener('keydown', escape);
@@ -79,11 +74,13 @@ export function LoopControls() {
               bottom: 'auto',
               right: 'auto',
               width: 'min(400px, calc(100vw - 32px))',
-              maxHeight: 'calc(100dvh - 32px)',
+              maxWidth: position.maxWidth,
+              maxHeight: position.maxHeight,
               overflowY: 'auto',
               zIndex: 1000,
             }}
             className="loop-panel"
+            role="dialog"
             aria-label="Loop settings panel"
           >
             <header>

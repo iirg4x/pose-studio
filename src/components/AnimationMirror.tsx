@@ -8,6 +8,7 @@ import { liveMirrorLinks, mirrorDriver } from '../core/liveMirror';
 import { mirrorDestination } from '../core/mirrorPose';
 import { MotionPresence } from './Motion';
 import type { ControlId, Project } from '../core/model';
+import { usePopupPlacement } from '../hooks/usePopupPlacement';
 
 export function MirrorDriverNotice({ project, id }: { project: Project; id: ControlId }) {
   const link = mirrorDriver(project, id);
@@ -42,32 +43,24 @@ export function AnimationMirror() {
     [phase, setPhase] = useState<0 | 0.5>(0.5),
     button = useRef<HTMLButtonElement>(null),
     panel = useRef<HTMLElement>(null),
-    [placement, setPlacement] = useState({ right: 16, top: 12 });
+    placement = usePopupPlacement({
+      open,
+      panel,
+      anchor: button,
+      placement: 'above-end',
+      fallbackWidth: 352,
+      fallbackHeight: 420,
+      margin: 12,
+    });
   useEffect(() => {
     if (!open) return;
-    const place = () => {
-      const r = button.current?.getBoundingClientRect(),
-        height = panel.current?.getBoundingClientRect().height ?? 420;
-      setPlacement({
-        right: Math.max(
-          12,
-          Math.min(Math.max(12, innerWidth - 364), innerWidth - (r?.right ?? innerWidth - 12)),
-        ),
-        top: Math.max(
-          12,
-          Math.min(innerHeight - height - 12, (r?.top ?? innerHeight) - height - 8),
-        ),
-      });
-    };
-    place();
-    const observer = new ResizeObserver(place);
-    if (panel.current) observer.observe(panel.current);
     const close = (e: PointerEvent) => {
       if (!panel.current?.contains(e.target as Node) && !button.current?.contains(e.target as Node))
         setOpen(false);
     };
     const key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && !e.defaultPrevented) {
+        e.preventDefault();
         e.stopPropagation();
         setOpen(false);
         button.current?.focus();
@@ -75,12 +68,9 @@ export function AnimationMirror() {
     };
     document.addEventListener('pointerdown', close, true);
     document.addEventListener('keydown', key);
-    window.addEventListener('resize', place);
     return () => {
-      observer.disconnect();
       document.removeEventListener('pointerdown', close, true);
       document.removeEventListener('keydown', key);
-      window.removeEventListener('resize', place);
     };
   }, [open]);
   useEffect(() => setOpen(false), [s.workspace?.activeId, p.editing]);
@@ -118,7 +108,7 @@ export function AnimationMirror() {
           <section
             ref={panel}
             className="animation-mirror-panel"
-            style={placement}
+            style={{ ...placement, maxWidth: placement.maxWidth, maxHeight: placement.maxHeight }}
             aria-label="Live animation mirror"
             role="dialog"
           >

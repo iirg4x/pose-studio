@@ -1,5 +1,5 @@
 import { initializePwa } from './pwa';
-import { detectTouchKeyboard, measureTouchViewport } from './touchViewport';
+import { measureTouchViewport } from './touchViewport';
 import { randomId } from '../core/crypto';
 import { encodeProject } from '../../shared/project-codec.mjs';
 import { readProjectDocument } from './projectDocuments';
@@ -45,88 +45,13 @@ async function importModel() {
   await writeAsset('asset:' + asset, data);
   return { asset, name: file.name.replace(/\.glb$/i, ''), data };
 }
-/** Keep the touch layout inside the visible browser viewport. Installed iPhone PWAs use
- * their oriented CSS screen size while the keyboard is closed so iOS safe-area chrome
- * cannot leave a blank strip; keyboard and all other browsers use the visible viewport. */
+/** Keep the touch layout inside the currently visible CSS viewport. */
 function initializeTouchViewport() {
   const root = document.documentElement;
   if (root.dataset.touchViewportInitialized === 'true') return;
   root.dataset.touchViewportInitialized = 'true';
 
   let frame = 0;
-  const standaloneIPhone =
-    /\b(?:iPhone|iPod)\b/i.test(navigator.userAgent) &&
-    (Boolean((navigator as Navigator & { standalone?: boolean }).standalone) ||
-      window.matchMedia?.('(display-mode: standalone)').matches === true);
-  const orientation = () => {
-    const type = screen.orientation?.type;
-    if (type) return type.startsWith('landscape') ? 'landscape' : 'portrait';
-    const angle = (window as Window & { orientation?: number }).orientation;
-    if (typeof angle === 'number') return Math.abs(angle) === 90 ? 'landscape' : 'portrait';
-    if (standaloneIPhone && screen.width && screen.height)
-      return screen.width > screen.height ? 'landscape' : 'portrait';
-    return window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
-  };
-  const editableFocused = () => {
-    const element = document.activeElement;
-    if (!(element instanceof HTMLElement)) return false;
-    if (element.isContentEditable) return true;
-    if (element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) return true;
-    if (element instanceof HTMLInputElement)
-      return ![
-        'button',
-        'checkbox',
-        'file',
-        'hidden',
-        'image',
-        'radio',
-        'range',
-        'reset',
-        'submit',
-      ].includes(element.type);
-    return false;
-  };
-  const closedHeights = new Map<string, number>();
-  let previous = {
-    innerHeight: window.innerHeight,
-    visualHeight: window.visualViewport?.height ?? window.innerHeight,
-  };
-  let keyboardWasOpen = false;
-  const keyboardOpen = () => {
-    const currentOrientation = orientation();
-    const innerHeight = window.innerHeight;
-    const visualHeight = window.visualViewport?.height ?? innerHeight;
-    const storedClosedHeight = closedHeights.get(currentOrientation);
-    const provisionalClosedHeight =
-      standaloneIPhone && screen.width && screen.height
-        ? currentOrientation === 'landscape'
-          ? Math.min(screen.width, screen.height)
-          : Math.max(screen.width, screen.height)
-        : undefined;
-    const focused = editableFocused();
-    const open = detectTouchKeyboard({
-      focused,
-      wasOpen: keyboardWasOpen,
-      closedHeight: storedClosedHeight ?? provisionalClosedHeight,
-      previousInnerHeight: previous.innerHeight,
-      previousVisualHeight: previous.visualHeight,
-      innerHeight,
-      visualHeight,
-    });
-    const baselineShortfall =
-      storedClosedHeight == null
-        ? 0
-        : Math.max(0, storedClosedHeight - innerHeight, storedClosedHeight - visualHeight);
-
-    // Keep the closed baseline while the viewport is shrinking or recovering. Updating
-    // it during the keyboard animation would make the next measurement look normal.
-    if (!open && (storedClosedHeight == null || baselineShortfall === 0)) {
-      closedHeights.set(currentOrientation, innerHeight);
-    }
-    keyboardWasOpen = open;
-    previous = { innerHeight, visualHeight };
-    return open;
-  };
   const measure = () => {
     frame = 0;
     const visualViewport = window.visualViewport;
@@ -134,9 +59,6 @@ function initializeTouchViewport() {
       innerWidth: window.innerWidth,
       innerHeight: window.innerHeight,
       visualViewport,
-      standaloneIPhone,
-      fullscreenScreen: standaloneIPhone ? { width: screen.width, height: screen.height } : null,
-      keyboardOpen: keyboardOpen(),
     });
     root.style.setProperty('--touch-viewport-width', viewport.width + 'px');
     root.style.setProperty('--touch-viewport-height', viewport.height + 'px');

@@ -191,6 +191,8 @@ export function AttachmentPanel({
           <div
             ref={popup}
             className="attachment-popover"
+            role="dialog"
+            aria-label="Attachment parent"
             data-editor-overlay
             style={{
               left: bounds.left,

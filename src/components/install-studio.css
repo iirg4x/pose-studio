@@ -102,6 +102,62 @@
   font-size: 12px;
   margin-bottom: 16px;
 }
+.install-details {
+  margin: 0 0 20px;
+  border-top: 1px solid #2f3d47;
+  border-bottom: 1px solid #2f3d47;
+  color: #aebfc9;
+}
+.install-details summary {
+  padding: 12px 0;
+  color: #c4d3dc;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  list-style-position: inside;
+}
+.install-details summary::marker {
+  color: #70d6e8;
+}
+.install-diagnostics {
+  max-height: 160px;
+  margin: 0 0 12px;
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid #2d3b45;
+  border-radius: 9px;
+  background: #10171f;
+  color: #aebfc9;
+  font:
+    11px/1.55 ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.install-diagnostics-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  color: #8096a4;
+  font-size: 11px;
+}
+.install-diagnostics-actions button {
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid #3b4a55;
+  border-radius: 9px;
+  background: #202d36;
+  color: #c4d3dc;
+  font: inherit;
+  cursor: pointer;
+}
+.install-diagnostics-actions button:hover {
+  border-color: #70d6e8;
+  color: #eaf1f5;
+}
 .install-studio footer {
   display: flex;
   gap: 8px;
@@ -126,6 +182,32 @@
   border-color: #70d6e8;
   color: #102028;
   font-weight: 600;
+}
+.pwa-update-indicator {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 1px solid #70d6e8;
+  border-radius: 9px;
+  background: #203640;
+  color: #a4edf7;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+.pwa-update-indicator:hover {
+  background: #294653;
+}
+.pwa-update-indicator:active {
+  transform: translateY(1px);
 }
 @keyframes install-enter {
   from {

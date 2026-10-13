@@ -15,6 +15,7 @@ import {
 import { StudioScene } from '../scene/StudioScene';
 import { studio } from '../core/store';
 import { useStudioChrome } from '../hooks';
+import { useTransientPopover } from '../hooks/transientPopover';
 export function Viewport({
   onRuntime,
   onThumbs,
@@ -26,27 +27,16 @@ export function Viewport({
     runtime = useRef<StudioScene | null>(null),
     s = useStudioChrome(),
     [trail, setTrail] = useState(false),
-    [viewOptions, setViewOptions] = useState(false);
-  useEffect(() => {
-    if (!viewOptions) return;
-    const outside = (e: PointerEvent) => {
-      if (!(e.target as Element).closest('.touch-view-toggle,.viewport-bottom'))
-        setViewOptions(false);
-    };
-    document.addEventListener('pointerdown', outside, true);
-    return () => document.removeEventListener('pointerdown', outside, true);
-  }, [viewOptions]);
-  useEffect(() => {
-    const dismiss = (event: Event) => {
-      if (viewOptions) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        setViewOptions(false);
-      }
-    };
-    window.addEventListener('pose-dismiss-overlay', dismiss, true);
-    return () => window.removeEventListener('pose-dismiss-overlay', dismiss, true);
-  }, [viewOptions]);
+    [viewOptions, setViewOptions] = useState(false),
+    viewPanel = useRef<HTMLDivElement>(null),
+    viewTrigger = useRef<HTMLButtonElement>(null),
+    viewPopover = useTransientPopover({
+      owner: 'scene-view',
+      open: viewOptions,
+      onClose: () => setViewOptions(false),
+      rootRef: viewPanel,
+      triggerRef: viewTrigger,
+    });
   useEffect(() => {
     const r = new StudioScene(ref.current!, studio, () => {
       onThumbs(r.gripThumbnails());
@@ -77,10 +67,18 @@ export function Viewport({
       )}
       {isAndroid && (
         <button
+          ref={viewTrigger}
           className="touch-view-toggle"
           aria-label="View options"
           aria-expanded={viewOptions}
-          onClick={() => setViewOptions(!viewOptions)}
+          onClick={() => {
+            if (viewOptions) setViewOptions(false);
+            else {
+              viewPopover.announce();
+              if (s.boxSelection) studio.patch({ boxSelection: null });
+              setViewOptions(true);
+            }
+          }}
         >
           <Settings2 size={22} />
           <span>View</span>
@@ -164,7 +162,10 @@ export function Viewport({
         </svg>
         <span>10 cm · 1 m</span>
       </div>
-      <div className={'viewport-bottom' + (viewOptions ? ' view-options-open' : '')}>
+      <div
+        ref={viewPanel}
+        className={'viewport-bottom' + (viewOptions ? ' view-options-open' : '')}
+      >
         <span />
         <div>
           {isAndroid && (
@@ -175,16 +176,17 @@ export function Viewport({
               </button>
             </header>
           )}
-          <button
-            title="Box select controls (B)"
-            aria-label="Box select controls"
-            aria-pressed={!!s.boxSelection}
-            disabled={s.gameView || s.retargetMode}
-            onClick={() => runtime.current?.beginBoxSelection()}
-          >
-            <BoxSelect size={18} />
-            {isAndroid && <span>Box select</span>}
-          </button>
+          {!isAndroid && (
+            <button
+              title="Box select controls (B)"
+              aria-label="Box select controls"
+              aria-pressed={!!s.boxSelection}
+              disabled={s.gameView || s.retargetMode}
+              onClick={() => runtime.current?.beginBoxSelection()}
+            >
+              <BoxSelect size={18} />
+            </button>
+          )}
           <button
             title="Game View · hide editor overlays (Shift G)"
             aria-label="Game View"

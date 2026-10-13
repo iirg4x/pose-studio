@@ -32,9 +32,9 @@ const LAYOUT_KEY = 'pose-desktop-layout-v3';
 function loadLayout(): DesktopLayout {
   try {
     const p = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? '{}');
-    return { editors: p.editors !== false, properties: p.properties !== false };
+    return { editors: p.editors === true, properties: p.properties === true };
   } catch {
-    return { editors: true, properties: true };
+    return { editors: false, properties: false };
   }
 }
 /** Which desktop areas are shown; persisted per browser. */

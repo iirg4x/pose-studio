@@ -1,11 +1,17 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { CheckCircle2, Download, Share, PlusSquare, X, RefreshCw } from 'lucide-react';
-import { appInstallSnapshot, subscribeAppInstall, checkAppUpdate } from '../platform/pwa';
+import {
+  appInstallSnapshot,
+  subscribeAppInstall,
+  checkAppUpdate,
+  getPwaDiagnostics,
+} from '../platform/pwa';
 import './install-studio.css';
 
 export function InstallStudio({ close }: { close: () => void }) {
   const state = useSyncExternalStore(subscribeAppInstall, appInstallSnapshot),
     dialog = useRef<HTMLDialogElement>(null);
+  const [diagnosticCopy, setDiagnosticCopy] = useState<'idle' | 'copied' | 'error'>('idle');
   useEffect(() => {
     dialog.current?.showModal();
     const node = dialog.current;
@@ -29,6 +35,12 @@ export function InstallStudio({ close }: { close: () => void }) {
       data-editor-overlay
       aria-labelledby="install-title"
       onCancel={close}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+      }}
       onClick={(e) => {
         const b = e.currentTarget.getBoundingClientRect();
         if (
@@ -95,8 +107,10 @@ export function InstallStudio({ close }: { close: () => void }) {
       </div>
       {state.status === 'update' && (
         <p className="install-note">
-          Close all Pose windows and reopen to apply the update. Updates never interrupt an open
-          project.
+          Save your project first. Then close{' '}
+          <strong>all Pose tabs and any installed Pose Home Screen app</strong> before reopening
+          Pose. A browser refresh alone does not apply this update, and an open project is never
+          reloaded automatically.
         </p>
       )}
       {state.status === 'error' && (
@@ -107,8 +121,37 @@ export function InstallStudio({ close }: { close: () => void }) {
       <p className="install-note">
         Open your .pose files from Files or Drive. Use Save project to keep a separate copy.
       </p>
+      <details className="install-details">
+        <summary>App details</summary>
+        <pre className="install-diagnostics">{getPwaDiagnostics()}</pre>
+        <div className="install-diagnostics-actions">
+          <button
+            type="button"
+            onClick={() => {
+              void (async () => {
+                try {
+                  if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+                  await navigator.clipboard.writeText(getPwaDiagnostics());
+                  setDiagnosticCopy('copied');
+                } catch {
+                  setDiagnosticCopy('error');
+                }
+              })();
+            }}
+          >
+            Copy diagnostics
+          </button>
+          <span role="status" aria-live="polite">
+            {diagnosticCopy === 'copied'
+              ? 'Copied'
+              : diagnosticCopy === 'error'
+                ? 'Copy unavailable'
+                : 'Local only'}
+          </span>
+        </div>
+      </details>
       <footer>
-        <button onClick={() => void checkAppUpdate()}>
+        <button onClick={() => void checkAppUpdate({ force: true })}>
           <RefreshCw size={16} />
           {state.status === 'error' ? 'Retry download' : 'Check for updates'}
         </button>

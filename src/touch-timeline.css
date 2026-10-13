@@ -316,6 +316,145 @@
   }
 }
 
+/* Curve controls belong to the graph column, which can be much narrower than the
+ * device.  Let the toolbar make compact wrapped rows inside that column instead of
+ * growing a hidden horizontal strip that strands the right-hand actions. */
+@container curve-center (max-width: 900px) {
+  :root.android .app .timeline .curve-tools {
+    flex-wrap: wrap;
+    align-content: center;
+    height: auto;
+    min-height: 48px;
+    max-height: none;
+    overflow: visible;
+    gap: 2px;
+    padding-inline: 4px;
+  }
+  :root.android .app .timeline .curve-tools > * {
+    flex: 0 0 auto;
+  }
+  :root.android .app .timeline .curve-tools > strong {
+    flex: 1 1 auto;
+    min-width: 72px;
+    max-width: none;
+    margin-inline-end: 2px;
+  }
+  :root.android .app .timeline .curve-view-options,
+  :root.android .app .timeline .curve-view-options summary {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+  }
+  :root.android .app .timeline .curve-tools button > span,
+  :root.android .app .timeline .curve-tools .curve-key-lock span,
+  :root.android .app .timeline .curve-tools .curve-clipboard-tools span {
+    display: none;
+  }
+}
+
+@container curve-center (min-width: 500px) and (max-width: 900px) {
+  :root.android .app .timeline .curve-view-options,
+  :root.android .app .timeline .curve-view-options summary {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+}
+
+/* The sidebar can leave only a couple hundred pixels for the curve.  Keep the
+ * graph controls and selected-key fields usable there, while the More menu holds
+ * the secondary actions that do not need a permanent slot. */
+@container curve-center (max-width: 300px) {
+  :root.android .app .timeline .curve-tools > .curve-compact-secondary,
+  :root.android .app .timeline .curve-tools > .curve-cleanup,
+  :root.android .app .timeline .curve-tools > .curve-clipboard-tools {
+    display: none;
+  }
+  :root.android .app .timeline .curve-tools > .curve-cleanup {
+    display: none !important;
+  }
+  :root.android .app .timeline .curve-tools > strong {
+    flex: 0 1 72px;
+    min-width: 48px;
+    max-width: 72px;
+  }
+  :root.android .app .timeline .curve-tools > .curve-modifier-trigger {
+    order: 1;
+  }
+  :root.android .app .timeline .curve-tools > .curve-gesture-tools {
+    order: 2;
+  }
+  :root.android .app .timeline .curve-tools > :is(.curve-view-options, .curve-inspector-trigger) {
+    order: 3;
+  }
+  :root.android .app .timeline .curve-view-options,
+  :root.android .app .timeline .curve-view-options summary {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+  :root.android .app .timeline .curve-selection-tools {
+    display: none;
+  }
+}
+
+.timeline .curve-property-actions {
+  display: flex;
+  margin: 0 0 10px;
+}
+.timeline .curve-property-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 5px 9px;
+  color: var(--track-text);
+  background: color-mix(in srgb, var(--track-key) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--track-key) 35%, transparent);
+}
+.timeline .curve-property-actions button:hover {
+  background: color-mix(in srgb, var(--track-key) 26%, transparent);
+}
+
+:root.android .curve-view-menu {
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* On the smallest phones the key inspector is an optional inset sheet inside
+ * the curve editor.  Give it the whole curve body so its existing scroll area
+ * can reach frame, value, interpolation and delete without covering the scene. */
+@media (max-width: 700px) and (orientation: portrait),
+  (max-height: 540px) and (orientation: landscape) {
+  :root.android .app .timeline .curve-editor.inspecting .curve-properties {
+    inset: 0;
+    width: auto;
+    max-width: none;
+    max-height: 100%;
+    border-radius: 0;
+  }
+  :root.android .app .timeline .curve-editor.inspecting .curve-property-tabs {
+    min-height: 48px;
+    height: 48px;
+  }
+  :root.android
+    .app
+    .timeline
+    .curve-editor.inspecting
+    .curve-property-tabs
+    .curve-inspector-close {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+}
+
 /* Orientation and pivot remain flat parts of the pose strip. */
 :root.android .app .touch-pose-rail .transform-options > button {
   border: 0;

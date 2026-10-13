@@ -208,7 +208,10 @@ export const TimelineGrid = memo(function TimelineGrid({
   // A few tracks share the panel height instead of leaving it empty; once they no longer
   // fit, rows return to their normal height and scroll.
   const fill = rows.length ? Math.floor((viewport.height - rulerHeight) / rows.length) : 0,
-    rowHeight = Math.max(baseRowHeight, fill);
+    // A nearly empty track list should use the available space without turning one
+    // control into a giant lane.  Keep the grid easy to read and leave the rest of
+    // the panel available for the graph; larger track lists still use normal scroll.
+    rowHeight = Math.max(baseRowHeight, Math.min(isAndroid ? 48 : 40, fill));
   useEffect(() => {
     const el = scroll.current;
     if (!el) return;
@@ -624,8 +627,16 @@ export const TimelineGrid = memo(function TimelineGrid({
                 <div
                   ref={toolsMenu}
                   className="track-options-menu"
+                  role="menu"
                   aria-label="Track display options"
                   data-editor-overlay
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Escape') return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setToolsOpen(false);
+                    toolsButton.current?.focus();
+                  }}
                   style={{ left: toolsPosition.left, top: toolsPosition.top }}
                 >
                   <button
