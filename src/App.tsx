@@ -1,4 +1,7 @@
-import { DesktopWorkspace } from './components/DesktopWorkspace';
+import { DesktopWorkspace, useDesktopLayout } from './components/DesktopWorkspace';
+import { MenuBar } from './components/MenuBar';
+import type { Menu } from './components/MenuBar';
+import { PreviewModel } from './components/PreviewModel';
 import { InstallStudio } from './components/InstallStudio';
 import { isPwaBuild } from './platform/pwa';
 import { MotionPresence, MotionOverlay } from './components/Motion';
@@ -77,6 +80,8 @@ export default function App() {
     [thumbs, setThumbs] = useState<string[]>([]),
     [menu, setMenu] = useState(false),
     [titleSlot, setTitleSlot] = useState<HTMLDivElement | null>(null),
+    [desktopLayout, setDesktopLayout] = useDesktopLayout(),
+    [trail, setTrail] = useState(false),
     [exporting, setExporting] = useState(false),
     [recording, setRecording] = useState(false),
     [characterExport, setCharacterExport] = useState(false),
@@ -478,6 +483,230 @@ export default function App() {
       switchLimb={(limb, mode) => runtime.current?.switchLimb(limb, mode)}
     />
   );
+  const newProject = () => {
+    const data = library(blankProject(runtime.current?.restControls ?? {}));
+    data.name = 'Untitled project';
+    file.requestOpen(data);
+  };
+  const openExample = async () => {
+    try {
+      const data = await window.studioDesktop?.openExample();
+      if (data) file.requestOpen(data);
+    } catch (e) {
+      studio.patch({ message: (e as Error).message });
+    }
+  };
+  const busy = !s.ready || recording || exporting,
+    selected = s.selection.length > 0,
+    keyLocked = selected && !!s.project && s.selection.every((id) => s.project!.tracks[id].keyLock);
+  const desktopMenus: Menu[] = [
+    {
+      label: 'File',
+      items: [
+        { label: 'New project', run: newProject, disabled: !s.ready },
+        {
+          label: 'New animation…',
+          shortcut: 'Ctrl N',
+          run: () => newClip(false),
+          disabled: !s.ready,
+        },
+        { label: 'Open project…', run: () => void open(), disabled: !s.ready },
+        { label: 'Save project', shortcut: 'Ctrl S', run: save, disabled: !s.ready },
+        'separator',
+        { label: 'Import animation…', run: () => setImporting(true), disabled: !s.ready },
+        { label: 'Models, props and animations…', run: () => setAssets(true), disabled: !s.ready },
+        'separator',
+        {
+          label: characterPreview ? 'Export character animation…' : 'Export to Unreal…',
+          run: () => (characterPreview ? setCharacterExport(true) : setExporting(true)),
+          disabled: busy,
+        },
+        { label: 'Record video…', run: () => setRecording(true), disabled: busy },
+        'separator',
+        isPwaBuild
+          ? { label: 'Install app and offline status…', run: () => setInstallOpen(true) }
+          : { label: 'Open Axe studio example…', run: () => void openExample() },
+      ],
+      footer: <RecentProjects open={(p) => receive(p, false)} />,
+    },
+    {
+      label: 'Edit',
+      items: [
+        { label: 'Undo', shortcut: 'Ctrl Z', run: () => studio.undo() },
+        { label: 'Redo', shortcut: 'Ctrl Y', run: () => studio.redo() },
+        'separator',
+        { label: 'Select all controls', shortcut: 'A', run: () => studio.selectAll() },
+        { label: 'Deselect all', shortcut: 'Alt A', run: () => studio.deselectAll() },
+        { label: 'Invert selection', shortcut: 'Ctrl I', run: () => studio.invertSelection() },
+        {
+          label: 'Box select',
+          shortcut: 'B',
+          run: () => runtime.current?.beginBoxSelection(),
+          disabled: retarget,
+        },
+        'separator',
+        {
+          label: 'Hide selected',
+          shortcut: 'H',
+          run: () => studio.hideSelected(false),
+          disabled: !selected,
+        },
+        {
+          label: 'Hide others',
+          shortcut: 'Shift H',
+          run: () => studio.hideSelected(true),
+          disabled: !selected,
+        },
+        { label: 'Show all controls', shortcut: 'Alt H', run: () => studio.showControls(true) },
+      ],
+    },
+    {
+      label: 'Pose',
+      items: [
+        {
+          label: 'Copy pose',
+          shortcut: 'Ctrl C',
+          run: () => studio.copySelectedPose(),
+          disabled: !selected,
+        },
+        {
+          label: 'Copy whole-rig pose',
+          shortcut: 'Ctrl Shift C',
+          run: () => studio.copyPose('rig'),
+        },
+        {
+          label: 'Paste pose',
+          shortcut: 'Ctrl V',
+          run: () => studio.pastePose(),
+          disabled: !s.clipboard,
+        },
+        {
+          label: 'Paste mirrored',
+          run: () => runtime.current?.pasteMirroredPose(),
+          disabled: !s.clipboard,
+        },
+        {
+          label: 'Mirror to other side',
+          run: () => runtime.current?.mirrorSelectedPose(),
+          disabled: !selected,
+        },
+        'separator',
+        {
+          label: 'Reset location',
+          shortcut: 'Alt G',
+          run: () => studio.resetSelected('location'),
+          disabled: !selected,
+        },
+        {
+          label: 'Reset rotation',
+          shortcut: 'Alt R',
+          run: () => studio.resetSelected('rotation'),
+          disabled: !selected,
+        },
+        {
+          label: 'Ground and key',
+          run: () => window.dispatchEvent(new Event('pose-ground-selection')),
+          disabled: !selected,
+        },
+      ],
+    },
+    {
+      label: 'Key',
+      items: [
+        {
+          label: 'Insert keyframe…',
+          shortcut: 'I',
+          run: () => studio.showKeyframeMenu(innerWidth * 0.5, innerHeight * 0.35),
+          disabled: !selected,
+        },
+        {
+          label: 'Delete key at frame',
+          shortcut: 'Delete',
+          run: () => studio.removeKey(),
+          disabled: !selected,
+        },
+        'separator',
+        { label: 'Auto key', checked: s.autoKey, run: () => studio.patch({ autoKey: !s.autoKey }) },
+        {
+          label: 'Lock new keys on selection',
+          checked: keyLocked,
+          disabled: !selected,
+          run: () => studio.setControlKeyLock(s.selection, !keyLocked),
+        },
+        'separator',
+        ...(['smooth', 'linear', 'step', 'spring', 'bounce'] as const).map((v) => ({
+          label: 'Interpolation: ' + v[0].toUpperCase() + v.slice(1),
+          run: () => studio.setInterpolation(v),
+          disabled: !s.project,
+        })),
+      ],
+    },
+    {
+      label: 'View',
+      items: [
+        { label: 'Animate workspace', checked: !retarget, run: () => setRetarget(false) },
+        { label: 'Character setup workspace', checked: retarget, run: () => setRetarget(true) },
+        'separator',
+        {
+          label: 'Dope sheet and graph editor',
+          checked: desktopLayout.editors,
+          disabled: retarget,
+          run: () => setDesktopLayout({ editors: !desktopLayout.editors }),
+        },
+        {
+          label: 'Properties',
+          checked: desktopLayout.properties,
+          disabled: retarget,
+          run: () => setDesktopLayout({ properties: !desktopLayout.properties }),
+        },
+        'separator',
+        { label: 'Frame selected', shortcut: 'F', run: () => runtime.current?.frameSelected() },
+        { label: 'Reset view', shortcut: 'Home', run: () => runtime.current?.resetView() },
+        {
+          label: 'Player camera',
+          shortcut: 'Numpad 0',
+          checked: s.playerView,
+          disabled: retarget,
+          run: () => studio.patch({ playerView: !s.playerView }),
+        },
+        {
+          label: 'Game view',
+          shortcut: 'Shift G',
+          checked: s.gameView,
+          run: () => runtime.current?.toggleGameView(),
+        },
+        {
+          label: 'Cinematic lighting',
+          checked: s.cinematic,
+          run: () => studio.setCinematic(!s.cinematic),
+        },
+        {
+          label: 'Camera preview',
+          checked: s.cameraPreview,
+          run: () => studio.patch({ cameraPreview: !s.cameraPreview }),
+        },
+        {
+          label: 'Motion trail',
+          checked: trail,
+          disabled: retarget,
+          run: () => {
+            runtime.current?.toggleTrail();
+            setTrail(!trail);
+          },
+        },
+      ],
+      footer: (
+        <div className="menu-field">
+          <span>Preview character</span>
+          <PreviewModel runtime={runtime.current} configure={() => setRetarget(true)} />
+        </div>
+      ),
+    },
+    {
+      label: 'Help',
+      items: [{ label: 'Keyboard shortcuts', run: () => setHelp(true) }],
+    },
+  ];
   return (
     <div
       className={
@@ -492,7 +721,23 @@ export default function App() {
       style={panels.style}
     >
       <header className="titlebar">
-        <div className="title-menu">
+        {!isAndroid && (
+          <>
+            <span className="brand-mark" aria-hidden="true">
+              <Waypoints size={16} />
+            </span>
+            <MenuBar menus={desktopMenus} disabled={recording || exporting} />
+            <div className="workspace-tabs" role="group" aria-label="Workspace">
+              <button aria-pressed={!retarget} onClick={() => setRetarget(false)}>
+                Animate
+              </button>
+              <button aria-pressed={retarget} onClick={() => setRetarget(true)}>
+                Setup
+              </button>
+            </div>
+          </>
+        )}
+        <div className="title-menu" hidden={!isAndroid}>
           <button
             className="brand"
             aria-label="Project menu"
@@ -638,9 +883,20 @@ export default function App() {
             </div>
           </MotionPresence>
         </div>
-        <span className="project-title" title={s.workspace?.name}>
-          {s.workspace?.name}
-        </span>
+        {isAndroid ? (
+          <span className="project-title" title={s.workspace?.name}>
+            {s.workspace?.name}
+          </span>
+        ) : (
+          <input
+            className="project-title-input"
+            aria-label="Project name"
+            disabled={!s.ready}
+            maxLength={100}
+            value={s.workspace?.name ?? ''}
+            onChange={(e) => studio.renameWorkspace(e.target.value)}
+          />
+        )}
         <span
           className={'save-indicator ' + (saved === 'Saving…' ? 'saving' : '')}
           title={saved}
@@ -663,31 +919,35 @@ export default function App() {
             }
           />
         )}
-        <button
-          className="export-button"
-          aria-label="Export recording"
-          title="Export recording"
-          disabled={!s.ready || recording || exporting}
-          onClick={() => {
-            setMenu(false);
-            setRecording(true);
-          }}
-        >
-          <Video size={18} />
-        </button>
-        <button
-          className="export-button"
-          aria-label={isAndroid ? 'Export' : 'Export to Unreal'}
-          title={isAndroid ? 'Export' : 'Export to Unreal'}
-          disabled={!s.ready || recording || exporting}
-          onClick={() => {
-            setMenu(false);
-            if (characterPreview) setCharacterExport(true);
-            else setExporting(true);
-          }}
-        >
-          <Upload size={18} />
-        </button>
+        {isAndroid && (
+          <>
+            <button
+              className="export-button"
+              aria-label="Export recording"
+              title="Export recording"
+              disabled={!s.ready || recording || exporting}
+              onClick={() => {
+                setMenu(false);
+                setRecording(true);
+              }}
+            >
+              <Video size={18} />
+            </button>
+            <button
+              className="export-button"
+              aria-label={isAndroid ? 'Export' : 'Export to Unreal'}
+              title={isAndroid ? 'Export' : 'Export to Unreal'}
+              disabled={!s.ready || recording || exporting}
+              onClick={() => {
+                setMenu(false);
+                if (characterPreview) setCharacterExport(true);
+                else setExporting(true);
+              }}
+            >
+              <Upload size={18} />
+            </button>
+          </>
+        )}
         <WindowControls />
       </header>
       {installOpen && <InstallStudio close={() => setInstallOpen(false)} />}
@@ -703,21 +963,12 @@ export default function App() {
               importClips={() => setImporting(true)}
             />
           }
-          tools={
-            <TabletSettings
-              retarget={retarget}
-              setRetarget={setRetarget}
-              chooseAction={chooseAction}
-              openAssets={() => setAssets(true)}
-              runtime={runtime.current}
-              save={save}
-              help={() => setHelp(true)}
-            />
-          }
           sizes={panels.sizes}
           resize={panels.change}
           retarget={retarget}
           toolbarSlot={titleSlot}
+          layout={desktopLayout}
+          chooseAction={chooseAction}
         />
       ) : (
         <div className="workspace">
