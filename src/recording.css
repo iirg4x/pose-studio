@@ -1,11 +1,91 @@
-.recording-modal{width:480px;max-width:calc(100vw - 48px)}
-.recording-modal h2{display:flex;align-items:center;gap:9px}.recording-modal h2 svg{color:var(--cyan)}
-.recording-modal header p{margin:6px 0 0;color:var(--muted);font-size:12px}
-.recording-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;margin:8px 0 20px}
-.recording-fields label,.recording-quality{display:flex;flex-direction:column;gap:7px;min-width:0;font-size:12px;color:var(--muted)}
-.recording-fields select,.recording-fields input{width:100%;height:34px;font-size:12px;color:var(--text)}
-.recording-fields input{padding:0 12px;text-align:right;font-variant-numeric:tabular-nums}
-.recording-quality strong{display:flex;align-items:center;height:34px;font-weight:500;color:var(--text)}
-.recording-duration{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);background:var(--inset);border-radius:3px;font-size:12px;color:var(--muted)}
-.recording-duration svg{color:var(--cyan);flex:none}.recording-duration strong{margin-left:auto;white-space:nowrap;color:var(--text);font-variant-numeric:tabular-nums}
-.recording-success>svg{color:var(--green)}.recording-success h3{margin:10px 0}.recording-success p{color:var(--muted);font-size:12px}.recording-success code{display:block;overflow-wrap:anywhere;padding:12px;background:var(--inset);border:1px solid var(--line);margin:16px 0;font-size:11px}
+.recording-modal {
+  width: 480px;
+  max-width: calc(100vw - 48px);
+}
+.recording-modal h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.recording-modal h2 svg {
+  color: var(--cyan);
+}
+.recording-modal header p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.recording-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 20px;
+  margin: 8px 0 20px;
+}
+.recording-fields label,
+.recording-quality {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.recording-fields select,
+.recording-fields input {
+  width: 100%;
+  height: 34px;
+  font-size: 12px;
+  color: var(--text);
+}
+.recording-fields input {
+  padding: 0 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.recording-quality strong {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  font-weight: 500;
+  color: var(--text);
+}
+.recording-duration {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: var(--inset);
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.recording-duration svg {
+  color: var(--cyan);
+  flex: none;
+}
+.recording-duration strong {
+  margin-left: auto;
+  white-space: nowrap;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.recording-success > svg {
+  color: var(--green);
+}
+.recording-success h3 {
+  margin: 10px 0;
+}
+.recording-success p {
+  color: var(--muted);
+  font-size: 12px;
+}
+.recording-success code {
+  display: block;
+  overflow-wrap: anywhere;
+  padding: 12px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+  margin: 16px 0;
+  font-size: 11px;
+}

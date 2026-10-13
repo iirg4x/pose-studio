@@ -1,7 +1,36 @@
-import {test} from 'vitest';import assert from 'node:assert/strict';import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';import {gzipSync} from 'node:zlib';import {createHost} from './server.mjs';
-test('direct link serves the project without login and rejects invalid file paths',async()=>{
- const dir=await fs.mkdtemp(path.join(os.tmpdir(),'pose-host-test-'));await fs.mkdir(path.join(dir,'clips'));await fs.mkdir(path.join(dir,'assets'));await fs.writeFile(path.join(dir,'index.html'),'<h1>Pose test</h1>');await fs.writeFile(path.join(dir,'clips','example.json.gz'),gzipSync('{"clips":[1]}'));await fs.writeFile(path.join(dir,'assets','builtin-rifle.glb'),'model');
- const server=createHost({cache:dir,dist:dir,catalog:{clips:[{id:'example'}]}});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
- try{assert.equal((await fetch(base)).status,200);assert.equal((await fetch(base+'/api/catalog')).status,200);const headers={};assert.equal(await(await fetch(base,{headers})).text(),'<h1>Pose test</h1>');assert.deepEqual(await(await fetch(base+'/api/clips/example',{headers})).json(),{clips:[1]});assert.equal((await fetch(base+'/api/clips/missing',{headers})).status,404);assert.equal((await fetch(base+'/api/assets/%2e%2e%2fsettings.json',{headers})).status,404);assert.equal((await fetch(base+'/api/catalog',{method:'POST',headers})).status,405);
- }finally{await new Promise(r=>server.close(r));await fs.rm(dir,{recursive:true,force:true});}
+import { test } from 'vitest';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { gzipSync } from 'node:zlib';
+import { createHost } from './server.mjs';
+test('direct link serves the project without login and rejects invalid file paths', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'pose-host-test-'));
+  await fs.mkdir(path.join(dir, 'clips'));
+  await fs.mkdir(path.join(dir, 'assets'));
+  await fs.writeFile(path.join(dir, 'index.html'), '<h1>Pose test</h1>');
+  await fs.writeFile(path.join(dir, 'clips', 'example.json.gz'), gzipSync('{"clips":[1]}'));
+  await fs.writeFile(path.join(dir, 'assets', 'builtin-rifle.glb'), 'model');
+  const server = createHost({ cache: dir, dist: dir, catalog: { clips: [{ id: 'example' }] } });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const base = 'http://127.0.0.1:' + server.address().port;
+  try {
+    assert.equal((await fetch(base)).status, 200);
+    assert.equal((await fetch(base + '/api/catalog')).status, 200);
+    const headers = {};
+    assert.equal(await (await fetch(base, { headers })).text(), '<h1>Pose test</h1>');
+    assert.deepEqual(await (await fetch(base + '/api/clips/example', { headers })).json(), {
+      clips: [1],
+    });
+    assert.equal((await fetch(base + '/api/clips/missing', { headers })).status, 404);
+    assert.equal(
+      (await fetch(base + '/api/assets/%2e%2e%2fsettings.json', { headers })).status,
+      404,
+    );
+    assert.equal((await fetch(base + '/api/catalog', { method: 'POST', headers })).status, 405);
+  } finally {
+    await new Promise((r) => server.close(r));
+    await fs.rm(dir, { recursive: true, force: true });
+  }
 });

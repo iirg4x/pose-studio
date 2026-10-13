@@ -1,19 +1,72 @@
 /* Depth belongs to floating surfaces, not to every button inside them. */
-:root{
- --shadow-tools:0 2px 5px #060a1030,0 6px 18px #060a1040;
- --shadow-panel:0 3px 10px #05090f45,0 18px 44px -10px #05090f80;
- --shadow-popover:0 4px 12px #05090f55,0 16px 36px -6px #05090f80;
- --shadow-dialog:0 8px 24px #03070d55,0 28px 80px -12px #03070da0;
+:root {
+  --shadow-tools: 0 2px 5px #060a1030, 0 6px 18px #060a1040;
+  --shadow-panel: 0 3px 10px #05090f45, 0 18px 44px -10px #05090f80;
+  --shadow-popover: 0 4px 12px #05090f55, 0 16px 36px -6px #05090f80;
+  --shadow-dialog: 0 8px 24px #03070d55, 0 28px 80px -12px #03070da0;
 }
-.selection-pose-tools,.scene-selection-tools,.desktop-pose-context>.active-layer-control>.active-layer-trigger{box-shadow:var(--shadow-tools)}
-.android .app>.titlebar,.android .touch-pose-rail,.android .touch-panel-rail,.android .touch-transport,.android .touch-view-toggle,.android .app>.active-layer-control>.active-layer-trigger{box-shadow:var(--shadow-tools)}
-.android .tablet-sheet,.android .app>.timeline,.asset-library{box-shadow:var(--shadow-panel)}
-.app>.control-list,.app>.character-panel{position:relative;z-index:1;box-shadow:6px 0 18px -8px #05090f70}
-.workspace>.inspector,.workspace>.retarget-inspector{position:relative;z-index:1;box-shadow:-6px 0 18px -8px #05090f70}
-.app>.timeline{box-shadow:0 -6px 22px -10px #05090f80}
-.file-menu,.animation-context-menu,.keyframe-menu,.keyframe-settings,.transform-popover,.active-layer-menu,.track-options-menu,.curve-view-menu,.library-panel{box-shadow:var(--shadow-popover)}
-.android .touch-pose-rail .transform-popover,.android .viewport-bottom.view-options-open>div{box-shadow:var(--shadow-popover)}
-.modal,.android .modal{box-shadow:var(--shadow-dialog)}
-@media(max-width:900px){.timeline .curve-properties{box-shadow:var(--shadow-popover)}}
+.selection-pose-tools,
+.scene-selection-tools,
+.desktop-pose-context > .active-layer-control > .active-layer-trigger {
+  box-shadow: var(--shadow-tools);
+}
+.android .app > .titlebar,
+.android .touch-pose-rail,
+.android .touch-panel-rail,
+.android .touch-transport,
+.android .touch-view-toggle,
+.android .app > .active-layer-control > .active-layer-trigger {
+  box-shadow: var(--shadow-tools);
+}
+.android .tablet-sheet,
+.android .app > .timeline,
+.asset-library {
+  box-shadow: var(--shadow-panel);
+}
+.app > .control-list,
+.app > .character-panel {
+  position: relative;
+  z-index: 1;
+  box-shadow: 6px 0 18px -8px #05090f70;
+}
+.workspace > .inspector,
+.workspace > .retarget-inspector {
+  position: relative;
+  z-index: 1;
+  box-shadow: -6px 0 18px -8px #05090f70;
+}
+.app > .timeline {
+  box-shadow: 0 -6px 22px -10px #05090f80;
+}
+.file-menu,
+.animation-context-menu,
+.keyframe-menu,
+.keyframe-settings,
+.transform-popover,
+.active-layer-menu,
+.track-options-menu,
+.curve-view-menu,
+.library-panel {
+  box-shadow: var(--shadow-popover);
+}
+.android .touch-pose-rail .transform-popover,
+.android .viewport-bottom.view-options-open > div {
+  box-shadow: var(--shadow-popover);
+}
+.modal,
+.android .modal {
+  box-shadow: var(--shadow-dialog);
+}
+@media (max-width: 900px) {
+  .timeline .curve-properties {
+    box-shadow: var(--shadow-popover);
+  }
+}
 /* Embedded content shares its sheet's elevation. */
-.android .tablet-sheet .library-panel,.android .tablet-sheet .inspector,.android .tablet-sheet .retarget-inspector,.android .tablet-sheet .control-list,.android .tablet-sheet .character-panel{box-shadow:none}
+.android .tablet-sheet .library-panel,
+.android .tablet-sheet .inspector,
+.android .tablet-sheet .retarget-inspector,
+.android .tablet-sheet .control-list,
+.android .tablet-sheet .character-panel {
+  box-shadow: none;
+}

@@ -1,247 +1,1986 @@
 /* Raised controls, a distinct bone tree and a recessed editing surface. */
-.timeline{--track-ink:#111821;--track-surface:#252f3b;--track-raised:#354252;--track-rule:#ffffff12;--track-text:#e2e8f0;--track-muted:#8f9baa;--track-clock:#70d4e6;--track-key:#edc783;--track-row:32px;--track-label-width:218px;--track-selected:#253e4d;background:var(--track-surface);color:var(--track-text);border-top:1px solid #3b4654}
-.timeline button{transition:background-color 160ms ease,color 160ms ease,border-color 160ms ease}
-.timeline button:focus-visible{outline:2px solid var(--track-clock);outline-offset:-2px}
-.timeline button:disabled{opacity:.32}
-.timeline .timeline-tabs{height:40px;min-height:40px;padding:4px 12px;gap:16px;border-bottom:1px solid #ffffff18;background:#303b49}
-.timeline .timeline-tab-group{gap:2px;background:#10151b;padding:3px;border:1px solid #ffffff08;border-radius:7px}
-.timeline .timeline-tab-group button{min-width:72px;height:28px;min-height:28px;width:auto;gap:7px;padding:4px 10px;border-radius:4px;font-size:11px;color:var(--track-muted);border:0}
-.timeline .timeline-tab-group button.active{background:var(--track-raised);color:var(--track-text);box-shadow:0 1px 2px #0003}
-.timeline .timeline-tab-group button.active:after{display:none}
-.timeline .timeline-context{font-size:11px;color:var(--track-muted);font-weight:400;padding:0}
-.timeline .active-layer-control,.android .timeline .active-layer-control{position:relative;left:auto;top:auto;flex:none;max-width:240px}
-.timeline .active-layer-trigger,.android .timeline .active-layer-trigger{height:30px;min-height:30px;width:auto;min-width:0;max-width:240px;padding:4px 8px;gap:7px;border-radius:5px;background:#ffffff04;border:1px solid var(--track-rule);color:var(--track-text)}
-.timeline .active-layer-trigger strong{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.timeline .active-layer-trigger>.context-flair{display:none}
-.timeline .active-layer-trigger>svg{width:14px;height:14px;color:var(--track-clock)}
-.timeline .active-layer-menu{top:calc(100% + 6px);bottom:auto;left:auto;right:0;max-height:min(300px,32dvh);overflow-y:auto;overscroll-behavior:contain}
-.timeline .active-layer-menu>button{display:flex;width:100%;height:auto;min-height:44px;min-width:0;border-radius:5px;gap:8px;padding:8px;text-align:left}.timeline .active-layer-menu>button[aria-pressed=true]{background:var(--track-selected);color:var(--track-clock)}.timeline .active-layer-menu>button>svg{flex:none}.timeline .active-layer-menu strong{font-size:11px}.timeline .active-layer-menu small{font-size:10px}.timeline .active-layer-menu footer button{width:auto;min-width:0;height:auto;min-height:40px;font-size:10px;flex:1;gap:4px}.timeline .active-layer-menu{overflow-x:hidden}
-@media(max-height:540px){.android .timeline .active-layer-menu{max-height:calc(100dvh - 136px)}}
-.timeline .timeline-window-tools{margin:0}
-.timeline .timeline-window-tools button{min-width:28px;width:28px;height:28px;min-height:28px;border-radius:5px}
-.timeline .transport{height:auto;min-height:44px;padding:5px 12px;gap:12px;border-bottom:1px solid var(--track-rule);background:#242e3a}
-.timeline .playback-controls{gap:2px}
-.timeline .playback-controls button{width:30px;height:30px;min-height:30px;padding:4px;color:var(--track-muted)}
-.timeline .playback-controls button:nth-child(2){width:36px;background:var(--track-clock);color:#132029;border-radius:6px}
-.timeline .playback-controls button:nth-child(2):hover{background:#a8e5ef}
-.timeline .frame-label{gap:6px;color:var(--track-muted);font-size:11px}
-.timeline .frame-label input{width:46px;min-height:28px;height:28px;background:#ffffff04;border:1px solid transparent;border-radius:5px;font-variant-numeric:tabular-nums;color:var(--track-text);padding:4px}
-.timeline .frame-label input:hover,.timeline .frame-label input:focus{border-color:var(--track-rule)}
-.timeline .frame-label input[aria-label="Current frame"]{color:var(--track-clock);font-weight:600}
-.timeline .auto-key{background:transparent;border:1px solid var(--track-rule);min-height:30px;height:30px}
-.timeline .auto-key.enabled{border-color:#69414c;background:#35232d;color:#ffb2bc}
-.timeline .transport select{border-color:var(--track-rule);background-color:transparent;min-height:30px;height:30px}
-.timeline .transport select,.timeline .auto-key{border-radius:6px}
-.timeline .loop-controls{gap:0;border:1px solid var(--track-rule);border-radius:6px;background:#ffffff04;overflow:hidden}
-.timeline .loop-controls>button{border:0;border-radius:0;background:transparent;color:var(--track-muted)}
-.timeline .loop-controls>button[aria-pressed=true]{background:#70d4e619;color:var(--track-clock)}
-.timeline .loop-controls>.loop-settings-toggle{border-left:1px solid var(--track-rule)}
-.timeline .insert-key-group{border-color:#6a5940;background:#3a3023;border-radius:6px}
-.timeline .insert-key-group button{color:var(--track-key);height:30px;min-height:30px;font-size:11px}
-.timeline .key-edit-tools{min-height:34px;padding:2px 12px;background:#1c2530;border-bottom:1px solid #0006}
-.timeline .key-edit-tools button{height:28px;min-height:28px;border-radius:5px;color:var(--track-muted);font-size:11px}
-.timeline .key-edit-tools button.active,.timeline .curve-tools button[aria-pressed=true],.timeline .curve-selection-tools button[aria-pressed=true]{color:var(--track-clock);background:#70d4e61a}
-.timeline .key-edit-tools .key-selection-count{color:var(--track-muted);font-variant-numeric:tabular-nums}
-.timeline .selected-key-actions{animation:timeline-reveal 160ms ease-out}
-.timeline .dope-sheet .timeline-grid{grid-template-columns:var(--track-label-width) minmax(0,calc((100% - var(--track-label-width))*var(--timeline-zoom)));padding:0 16px 6px 0;overflow:auto;scrollbar-width:thin;scrollbar-color:#3d4653 transparent;background:var(--track-ink)}
-.timeline .track-labels{padding-right:0;position:sticky;left:0;background:var(--track-surface);z-index:7;border-right:1px solid var(--track-rule)}
-.timeline .track-ruler-label{position:sticky;top:0;z-index:8;height:30px;background:var(--track-surface)}
-.timeline .timeline-search{height:30px;display:flex;align-items:center;gap:6px;padding:0 10px;color:var(--track-muted);border-bottom:1px solid var(--track-rule)}
-.timeline .timeline-search input{width:100%;border:0;background:transparent;height:26px;padding:4px 0;font-size:11px;outline-offset:-1px}
-.timeline .timeline-search button{width:20px;min-width:20px;height:24px;min-height:24px;padding:0;font-size:16px}
-.timeline .time-ruler{position:sticky;top:0;background:#354252;z-index:6;border-bottom:1px solid #637386;box-shadow:0 3px 8px #0004}
-.timeline .time-ruler>span{top:5px;color:#d3dde8;font-size:10px}
-.timeline .ruler-minors{height:4px;opacity:.28}
-.timeline .key-track{height:var(--track-row);min-height:var(--track-row);border:0;border-bottom:1px solid #ffffff04;background-color:var(--track-ink);background-image:linear-gradient(to right,#ffffff04 1px,transparent 1px);background-size:var(--beat-width) 100%;transition:background-color 160ms ease}
-.timeline .key-track[data-alternate=true]{background-color:#161e29}
-.timeline .key-track.summary-track{background-color:#293747;border-bottom:1px solid #526070}
-.timeline .key-track.summary-track{border-bottom-color:var(--track-rule)}
-.timeline .key-track.selected-channel{background-color:var(--track-selected);box-shadow:inset 0 1px #70d4e625,inset 0 -1px #70d4e625}
-.timeline .keyframe{top:5px;width:20px;height:22px;min-height:22px;color:#aebdca;background:none;opacity:1}
-.timeline .keyframe[aria-pressed],.timeline .keyframe:hover,.timeline .keyframe:active,.timeline .keyframe:focus-visible{background:transparent;border:0;box-shadow:none;outline:none}
-.timeline .keyframe:not(.selected):not(.partial){color:#aebdca}
-.timeline .keyframe svg{width:10px;height:10px;stroke:var(--track-ink);stroke-width:1.5;transition:color 160ms ease,filter 160ms ease}
-.timeline .keyframe.selected,.android .timeline .keyframe.selected{color:var(--track-key)}
-.timeline .keyframe.selected svg{width:13px;height:13px;stroke:#ffe5b5;stroke-width:1;filter:drop-shadow(0 0 3px #edc78340)}
-.timeline .keyframe:focus-visible svg{stroke:var(--track-clock);stroke-width:2;filter:drop-shadow(0 0 3px #70d4e660)}
-.timeline .keyframe.partial{color:#b39b72}
-.timeline .keyframe:hover{color:#fff;background:none}
-.timeline .keyframe:hover svg{filter:drop-shadow(0 0 3px #ffffff50)}
-.timeline .timeline-interpolation{position:absolute;top:50%;height:24px;transform:translateY(-50%);z-index:1;container-type:inline-size;color:#a7bac9;opacity:.82;transition:opacity 160ms ease;pointer-events:auto}
-.timeline .timeline-interpolation:hover,.timeline .selected-channel .timeline-interpolation{opacity:1}
-:is(.timeline-interpolation,.key-interpolation-option)[data-interpolation=linear]{--interpolation-color:#abc0d0;color:var(--interpolation-color)}
-:is(.timeline-interpolation,.key-interpolation-option)[data-interpolation=bezier]{--interpolation-color:#78cfc7;color:var(--interpolation-color)}
-:is(.timeline-interpolation,.key-interpolation-option)[data-interpolation=step]{--interpolation-color:#e4b57b;color:var(--interpolation-color)}
-:is(.timeline-interpolation,.key-interpolation-option)[data-interpolation=spring]{--interpolation-color:#b9a3e3;color:var(--interpolation-color)}
-:is(.timeline-interpolation,.key-interpolation-option)[data-interpolation=bounce]{--interpolation-color:#dca38f;color:var(--interpolation-color)}
-.timeline-interpolation[data-interpolation=hold]{color:#8796a8}
-.timeline-interpolation[data-interpolation=mixed]{color:#b5bcca}
-.interpolation-connector{display:block;width:100%;height:100%;fill:none;pointer-events:none;overflow:visible}
-.interpolation-connector path{stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.timeline-interpolation[data-interpolation=hold] .interpolation-line{stroke-dasharray:2 5;stroke-width:1.6}
-.timeline-interpolation[data-interpolation=mixed] .interpolation-line{stroke-dasharray:5 3}
-.interpolation-caption{position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);font-size:9px;line-height:10px;font-weight:500;letter-spacing:.02em;white-space:nowrap;pointer-events:none}
-.interpolation-connector .interpolation-modifier-line{stroke:#aaa0cb;stroke-dasharray:1 5;stroke-width:1;opacity:.5}
-@container(max-width:80px){.interpolation-caption{display:none}}
-@container(max-width:24px){.interpolation-connector .interpolation-modifier-line{display:none}}
-.keyframe-settings{background:#202832;border:1px solid #ffffff1c;border-radius:10px;padding:10px;animation:timeline-reveal 160ms ease-out}
-.keyframe-settings header{padding:2px 3px 9px;margin-bottom:6px;border-bottom:1px solid #ffffff0e}
-.keyframe-settings header>svg{color:#edc783}.keyframe-settings header strong{font-size:12px;font-weight:500}
-.keyframe-settings header button{margin-left:auto;border-radius:5px}
-.key-interpolation-options{display:flex;flex-direction:column;gap:3px}
-.keyframe-settings .key-interpolation-option{display:flex;gap:12px;align-items:center;width:100%;height:36px;min-height:36px;padding:4px 9px;border:1px solid transparent;border-radius:6px;text-align:left;background:transparent;transition:background-color 140ms ease,border-color 140ms ease}
-.keyframe-settings .key-interpolation-option>span:nth-child(2){flex:1;font-size:12px;color:#d6dfe9}
-.keyframe-settings .key-interpolation-option:hover{background:#ffffff06}
-.keyframe-settings .key-interpolation-option[aria-pressed=true]{background:color-mix(in srgb,var(--interpolation-color) 10%,transparent);border-color:color-mix(in srgb,var(--interpolation-color) 32%,transparent);color:var(--interpolation-color)}
-.key-interpolation-preview{width:68px;height:24px;flex:none;position:relative}
-.key-interpolation-preview .interpolation-caption{display:none}
-.keyframe-settings .key-setting{padding:8px 3px;margin:5px 0;border-top:1px solid #ffffff0e}
-.keyframe-settings .key-setting select{border:1px solid #ffffff16;border-radius:5px;background-color:#171e27}
-.keyframe-settings .key-setting-note{padding:0 3px;color:#97a5b5;font-size:10px;line-height:1.5}
-.keyframe-settings .keyframe-context-actions{border-color:#ffffff0e;margin-top:8px;padding-top:8px}
-.keyframe-settings .keyframe-context-actions button{border-radius:5px}
-.android .keyframe-settings .key-interpolation-option{height:44px;min-height:44px}
-@media(prefers-reduced-motion:reduce){.keyframe-settings{animation:none}.keyframe-settings .key-interpolation-option{transition:none}}
-.timeline .reference-key{top:50%;transform:translate(-50%,-50%);opacity:.28}
-.timeline .playhead,.timeline .playhead-cap{background:var(--track-clock)}
-.timeline .playhead{width:1px;box-shadow:none}
-.timeline .playhead-cap output{background:var(--track-clock);color:#132029;font-weight:600;font-size:11px;border-radius:4px;padding:2px 6px}
-.timeline-track-label{display:flex;align-items:center;height:var(--track-row);min-height:var(--track-row);padding-left:calc(5px + var(--track-depth)*9px);gap:1px;border-bottom:1px solid #ffffff04;background:var(--track-surface);overflow:hidden;transition:background-color 160ms ease}
-.timeline-track-label.selected{background:var(--track-selected);box-shadow:inset 2px 0 var(--track-clock)}
-.timeline-track-label .track-name{display:flex;flex:1;justify-content:flex-start;gap:6px;min-width:0;height:var(--track-row);min-height:var(--track-row);border:0;padding:0 6px 0 2px;color:var(--track-text);font-size:11px;text-align:left;background:none;white-space:nowrap}
-.timeline .timeline-track-label .track-name[aria-pressed=true]{background:transparent;color:var(--track-text)}
-.timeline .timeline-track-label.axis-label-row .track-name[aria-pressed=true]{color:var(--track-color)}
-.timeline-track-label .track-name span{overflow:hidden;text-overflow:ellipsis}
-.timeline-track-label .track-name small{margin-left:auto;flex:none;color:var(--track-muted);font-size:10px;padding:0}
-.timeline-track-label .track-disclosure{min-width:24px;width:24px;height:28px;min-height:28px;padding:0;color:var(--track-muted);border-radius:4px}
-.timeline-track-label .track-disclosure svg{transition:color 160ms ease}
-.timeline-track-label .track-disclosure[aria-expanded=true]{color:var(--track-text)}
-.timeline-track-label .track-disclosure:hover{background:var(--track-raised);color:var(--track-text)}
-.timeline-track-label .track-children{gap:3px;min-width:28px;min-height:26px;height:26px;padding:0 5px;color:var(--track-muted);border-radius:4px;font-size:9px;opacity:.65}
-.timeline-track-label .track-children.folded{opacity:1;background:var(--track-raised)}
-.track-summary-icon{margin:0 6px;color:var(--track-muted);flex:none}
-.timeline-track-label.axis-label-row{background:var(--track-surface);border-left:0}
-.timeline-track-label.axis-label-row.selected{background:var(--track-selected);box-shadow:inset 2px 0 var(--track-color)}
-.timeline-track-label.axis-label-row .track-name{color:var(--track-muted)}
-.axis-letter{display:grid;place-items:center;width:19px;height:19px;flex:none;font-size:10px;font-weight:600;color:var(--track-color);background:transparent;border-radius:4px;margin:0 4px}
-.axis-curve-strip{position:relative;width:100%;height:100%;color:var(--axis-color);background:transparent}
-.timeline .axis-curve-open{position:absolute;inset:0;width:100%;height:100%;min-height:0;padding:0;border-radius:0;color:inherit;background:none}
-.axis-curve-open svg{width:100%;height:100%;opacity:.72}
-.timeline .axis-curve-open:hover{background:#ffffff04}
-.timeline .axis-curve-key{position:absolute;transform:translate(-50%,-50%);width:18px;min-width:18px;height:22px;min-height:22px;padding:0;color:inherit;z-index:2;background:none}
-.axis-curve-key i{width:6px;height:6px;background:currentColor;transform:rotate(45deg);border:1px solid var(--track-ink)}
-.axis-curve-key:hover i{background:var(--track-key)}
-.timeline-empty{padding:16px;font-size:11px;color:var(--track-muted)}
-.timeline .contact-track,.timeline .contact-label{background:var(--track-surface);border-top:1px solid var(--track-rule)}
-.timeline .contact-segment{clip-path:none;border-radius:4px;background:#2b3539;border:1px solid #405451;border-top:2px solid #75998b;color:#a6bcb5}
-.timeline .contact-segment.now{background:#31423e;color:#d6e8df}
-.timeline .curve-editor{position:relative;grid-template-columns:var(--track-label-width) minmax(160px,1fr);border-top:0;background:var(--track-ink);overflow:hidden}
-.timeline .curve-editor.inspecting{grid-template-columns:var(--track-label-width) minmax(160px,1fr) 226px}
-.curve-track-tree{min-height:0;min-width:0;display:flex;flex-direction:column;background:var(--track-surface);border-right:1px solid var(--track-rule)}
-.curve-track-scroll{overflow:auto;flex:1;min-height:0;scrollbar-width:thin;scrollbar-color:#3d4653 transparent}
-.timeline .curve-center{background:var(--track-ink)}
-.timeline .curve-tools{height:auto;min-height:38px;flex-wrap:wrap;padding:4px 8px;gap:3px;background:var(--track-surface);border-color:var(--track-rule)}
-.timeline .curve-tools strong{display:flex;align-items:center;gap:4px;font-size:11px;max-width:170px;overflow:hidden;text-overflow:ellipsis;margin-right:8px;font-weight:500;white-space:nowrap}
-.timeline .curve-tools strong small{color:var(--track-muted);font-size:10px}
-.curve-gesture-tools{display:flex;align-items:center;gap:2px;border-left:1px solid var(--track-rule);padding-left:6px}
-.timeline .curve-tools button,.timeline .curve-selection-tools button{min-width:28px;min-height:28px;height:28px;padding:4px;border-radius:5px;color:var(--track-muted)}
-.timeline .curve-tools button:hover,.timeline .curve-selection-tools button:hover{background:var(--track-raised);color:var(--track-text)}
-.timeline .curve-canvas text{fill:#8492a2;font-size:10px;font-family:inherit}
-.timeline .curve-grid-line{stroke:#ffffff0c;stroke-width:1;stroke-dasharray:none;vector-effect:non-scaling-stroke;pointer-events:none}
-.timeline .curve-grid-line.quiet{stroke:#ffffff05}
-.curve-zero-line{stroke:#ffffff10;stroke-width:1;vector-effect:non-scaling-stroke;pointer-events:none}
-.timeline .curve-playhead{stroke:var(--track-clock);opacity:.75}
-.timeline .curve-key{fill:#b9c6d4;stroke:var(--track-ink);stroke-width:2;rx:1;vector-effect:non-scaling-stroke;transition:fill 140ms ease,stroke 140ms ease}
-.timeline .curve-key-target:hover .curve-key,.timeline .curve-key-target:focus-visible .curve-key{fill:white;stroke:var(--track-clock)}
-.timeline .curve-key.selected{fill:var(--track-key);stroke:#ffdfab;stroke-width:1}
-.timeline .curve-tangent{animation:timeline-fade 160ms ease-out}
-.timeline .tangent-line{stroke:var(--track-key);opacity:.55;stroke-dasharray:none;vector-effect:non-scaling-stroke;pointer-events:none}
-.timeline .tangent-handle{fill:var(--track-ink);stroke:var(--track-key);stroke-width:1.5;transition:fill 140ms ease,stroke 140ms ease;vector-effect:non-scaling-stroke}
-.timeline .tangent-handle:hover,.timeline .tangent-handle:focus-visible{fill:var(--track-key);stroke:#fff0d6}
-.curve-marquee{fill:#70d4e615;stroke:var(--track-clock);stroke-width:1;pointer-events:none}
-.timeline .curve-help{font-size:10px;color:var(--track-muted);padding:5px 12px;border:0;min-height:24px;background:var(--track-surface)}
-.timeline .curve-help span{color:var(--track-muted)}
-.timeline .curve-selection-tools{display:flex;flex:none;align-items:center;flex-wrap:nowrap;height:42px;min-height:42px;overflow-x:auto;scrollbar-width:none;gap:6px;padding:5px 10px;background:var(--track-surface);border-bottom:1px solid var(--track-rule);animation:timeline-reveal 180ms ease-out}
-.curve-selection-count{font-size:10px;color:var(--track-key);white-space:nowrap}
-.curve-selection-tools label{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--track-muted)}
-.timeline .curve-selection-tools input{width:58px;height:28px;min-height:28px;border:1px solid var(--track-rule);border-radius:5px;background:#ffffff04;font-size:11px;font-variant-numeric:tabular-nums;padding:3px 5px;text-align:right}
-.timeline .curve-selection-tools select{height:28px;min-height:28px;width:90px;font-size:11px;background-color:#ffffff04;border-color:var(--track-rule);border-radius:5px}
-.timeline .curve-properties{background:var(--track-surface);border-color:var(--track-rule);animation:timeline-reveal 180ms ease-out}
-.timeline .curve-property-tabs{background:var(--track-surface);border-color:var(--track-rule)}
-.timeline .curve-property-tabs button{font-size:11px;color:var(--track-muted);min-height:36px}
-.timeline .curve-property-tabs button.active{background:var(--track-raised);color:var(--track-text)}
-.timeline .curve-field{color:#b5c0cc;font-size:10px;margin-bottom:10px}
-.timeline .curve-field input,.timeline .curve-field select{height:32px;background:#ffffff04;border-color:var(--track-rule);color:var(--track-text);border-radius:5px;font-variant-numeric:tabular-nums}
-.timeline .curve-note{color:var(--track-muted);font-size:10px;line-height:1.5}
-.tangent-numbers{margin:4px 0 10px;border-top:1px solid var(--track-rule);padding-top:8px;font-size:11px;color:var(--track-muted)}
-.tangent-numbers summary{cursor:pointer;padding:4px 0 10px;color:var(--track-text)}
-.tangent-numbers>div>span{display:block;font-size:10px;margin-bottom:6px;color:var(--track-text)}
-.timeline .curve-property-scroll{padding:12px}
-.timeline .curve-editor.tracks-hidden{grid-template-columns:minmax(160px,1fr)}
-.timeline .curve-editor.tracks-hidden.inspecting{grid-template-columns:minmax(160px,1fr) 226px}
-.curve-bone-flair{font-size:10px;color:var(--track-muted);margin-right:4px;max-width:140px;overflow:hidden;text-overflow:ellipsis;display:none}
-.tracks-hidden .curve-bone-flair{display:inline-block;vertical-align:middle}
-.timeline .curve-property-tabs .curve-inspector-close{flex:none;width:32px;min-width:32px;padding:4px}
-@keyframes timeline-reveal{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-@keyframes timeline-fade{from{opacity:0}to{opacity:1}}
-@media(max-width:1100px){.timeline{--track-label-width:190px}.timeline .curve-editor.inspecting{grid-template-columns:var(--track-label-width) minmax(160px,1fr) 210px}.timeline .curve-tools strong{max-width:160px}}
-.android .timeline{--track-row:44px;--track-label-width:204px}
-.android .timeline .timeline-tabs{height:48px;min-height:48px;gap:8px;padding:4px 8px}
-.android .timeline .timeline-tab-group button{height:36px;min-height:36px;min-width:76px}
-.android .timeline .active-layer-trigger{min-height:40px;height:40px;max-width:180px}
-.android .timeline .timeline-context{padding:0;border:0;background:none;flex:1;max-width:none}
-.android .timeline .timeline-window-tools button{width:40px;min-width:40px;height:40px;min-height:40px}
-.android .timeline .transport{gap:8px;min-height:52px}
-.android .timeline .transport button,.android .timeline .transport select{min-height:40px;height:40px}
-.android .timeline .playback-controls button{width:40px;min-width:40px}
-.android .timeline .frame-label input{height:40px;min-height:40px}
-.android .timeline .key-edit-tools{min-height:44px;padding:0 8px}
-.android .timeline .key-edit-tools button{height:40px;min-height:40px;min-width:40px}
-.android .timeline .track-ruler-label,.android .timeline .timeline-search{height:40px}
-.android .timeline .timeline-search input{height:36px;font-size:12px}
-.android .timeline .timeline-track-label .track-name{height:44px;min-height:44px;font-size:12px}
-.android .timeline .timeline-track-label .track-disclosure{width:32px;min-width:32px;height:40px;min-height:40px}
-.android .timeline .timeline-track-label .track-children{min-width:32px;min-height:40px;height:40px}
-.android .timeline .key-track{height:44px;min-height:44px}
-.android .timeline .keyframe{top:8px;width:28px;height:28px;min-height:28px}
-.android .timeline .axis-curve-key{width:30px;min-width:30px;height:30px;min-height:30px}
-.android .timeline .curve-tools button,.android .timeline .curve-selection-tools button{height:40px;min-height:40px;min-width:40px}
-.android .timeline .curve-selection-tools input,.android .timeline .curve-selection-tools select{height:36px;min-height:36px}
-.android .timeline .curve-field input,.android .timeline .curve-field select{height:40px;min-height:40px}
-.android .timeline .curve-property-tabs button{min-height:40px}
-@media(max-width:900px){.timeline .curve-editor.inspecting{grid-template-columns:var(--track-label-width) minmax(160px,1fr)}.timeline .curve-editor.tracks-hidden.inspecting{grid-template-columns:minmax(160px,1fr)}.timeline .curve-properties{position:absolute;right:8px;bottom:8px;width:226px;max-height:calc(100% - 60px);z-index:10;border:1px solid #46505e;border-radius:8px;box-shadow:0 8px 24px #0004}.timeline .curve-help span:last-child{display:none}}
-@media(max-width:700px){.timeline{--track-label-width:148px}.android .timeline{--track-label-width:148px}.android .timeline .timeline-tabs{gap:4px}.android .timeline .timeline-tab-group button{min-width:60px;padding:4px 7px;gap:4px}.android .timeline .timeline-tab-group svg{width:14px}.android .timeline .active-layer-control{max-width:124px;flex:1;min-width:0}.android .timeline .active-layer-trigger{width:100%;max-width:124px;gap:4px;padding:4px 6px}.android .timeline .active-layer-trigger>svg:first-of-type{display:none}.android .timeline .active-layer-menu{width:260px}.android .timeline .timeline-window-tools{gap:0}.android .timeline .timeline-window-tools button{width:32px;min-width:32px}.android .timeline .transport{padding:4px 8px;gap:4px}.android .timeline .playback-options{padding-top:0;border-top:0}.android .timeline .timeline-track-label{padding-left:4px}.android .timeline .timeline-track-label .track-children{display:none}.android .timeline .axis-letter{width:16px;margin:0 2px}.android .timeline .timeline-track-label .track-name{font-size:10px}.android .timeline .curve-tools{padding:4px;gap:2px}.android .timeline .curve-tools strong{font-size:11px;margin:0;padding:2px 4px;flex:1;max-width:none}.android .timeline .curve-tools .title-spacer{display:none}.android .timeline .curve-tools button{height:38px;min-height:38px;min-width:36px;padding:3px}.android .timeline .curve-gesture-tools{border:0;padding:0;gap:0}.android .timeline .curve-properties{max-height:calc(100% - 96px);width:230px}.android .timeline .curve-help{display:none}.android .timeline .key-edit-tools>button>span{display:none}.android .timeline .curve-selection-tools{gap:4px;padding:4px 8px}.android .timeline .curve-selection-tools label{gap:3px}.android .timeline .curve-selection-tools input{width:54px}.android .timeline .curve-selection-tools .title-spacer{display:none}.android .timeline .curve-selection-tools button{min-width:38px;height:38px;min-height:38px}.android .app.timeline-expanded .touch-pose-rail,.android .app.timeline-expanded .touch-panel-rail{visibility:hidden;pointer-events:none}.android .timeline .curve-bone-flair{max-width:130px}}
-.curve-view-options{position:relative;display:none}.curve-view-options summary{list-style:none;cursor:pointer;display:grid;place-items:center;border-radius:5px;color:var(--track-muted)}.curve-view-options summary::-webkit-details-marker{display:none}.curve-view-options[open] summary{background:var(--track-raised);color:var(--track-clock)}.curve-view-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:25;width:190px;padding:5px;border:1px solid #46505e;border-radius:7px;background:#232b35;box-shadow:0 6px 20px #0005;animation:timeline-reveal 160ms ease-out}.timeline .curve-view-menu button{width:100%;justify-content:flex-start;gap:10px;font-size:11px;padding:8px}
-@media(max-width:700px){.android .timeline .curve-tools strong{flex:1 0 calc(100% - 50px);min-height:28px;max-width:calc(100% - 50px)}.android .timeline .curve-tools .curve-secondary-view,.android .timeline .curve-selection-tools .curve-secondary-action{display:none}.android .timeline .curve-view-options{display:block}.android .timeline .curve-view-options summary{width:36px;height:38px}.android .timeline .curve-tools{gap:2px 3px}.android .timeline .curve-selection-tools .curve-selection-count{display:none}.android .timeline .curve-selection-tools input[aria-label="Selected key frame"]{width:38px}.android .timeline .curve-selection-tools input[aria-label="Selected key value"]{width:54px}.android .timeline .curve-selection-tools select{width:78px}.android .timeline .curve-selection-tools button{min-width:34px;padding:3px}.android .timeline .curve-selection-tools{gap:5px}.android .timeline .curve-selection-placeholder{font-size:10px}}
-@media(min-width:701px) and (max-width:1100px){.android .timeline .playback-options{order:0;width:auto;padding-top:0;border:0;margin-left:auto}.android .timeline .insert-key-group{margin-left:0}.android .timeline .transport{gap:6px}.android .timeline .frame-label input{width:40px}.android .timeline .transport .auto-key{min-width:78px;padding:4px 6px}}
-@media(max-height:540px){.android .timeline .curve-tools .curve-secondary-view,.android .timeline .curve-selection-tools .curve-secondary-action{display:none}.android .timeline .curve-view-options{display:block}.android .timeline .curve-view-options summary{width:40px;height:40px}}
+.timeline {
+  --track-ink: #111821;
+  --track-surface: #252f3b;
+  --track-raised: #354252;
+  --track-rule: #ffffff12;
+  --track-text: #e2e8f0;
+  --track-muted: #8f9baa;
+  --track-clock: #70d4e6;
+  --track-key: #edc783;
+  --track-row: 32px;
+  --track-label-width: 218px;
+  --track-selected: #253e4d;
+  background: var(--track-surface);
+  color: var(--track-text);
+  border-top: 1px solid #3b4654;
+}
+.timeline button {
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease;
+}
+.timeline button:focus-visible {
+  outline: 2px solid var(--track-clock);
+  outline-offset: -2px;
+}
+.timeline button:disabled {
+  opacity: 0.32;
+}
+.timeline .timeline-tabs {
+  height: 40px;
+  min-height: 40px;
+  padding: 4px 12px;
+  gap: 16px;
+  border-bottom: 1px solid #ffffff18;
+  background: #303b49;
+}
+.timeline .timeline-tab-group {
+  gap: 2px;
+  background: #10151b;
+  padding: 3px;
+  border: 1px solid #ffffff08;
+  border-radius: 7px;
+}
+.timeline .timeline-tab-group button {
+  min-width: 72px;
+  height: 28px;
+  min-height: 28px;
+  width: auto;
+  gap: 7px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--track-muted);
+  border: 0;
+}
+.timeline .timeline-tab-group button.active {
+  background: var(--track-raised);
+  color: var(--track-text);
+  box-shadow: 0 1px 2px #0003;
+}
+.timeline .timeline-tab-group button.active:after {
+  display: none;
+}
+.timeline .timeline-context {
+  font-size: 11px;
+  color: var(--track-muted);
+  font-weight: 400;
+  padding: 0;
+}
+.timeline .active-layer-control,
+.android .timeline .active-layer-control {
+  position: relative;
+  left: auto;
+  top: auto;
+  flex: none;
+  max-width: 240px;
+}
+.timeline .active-layer-trigger,
+.android .timeline .active-layer-trigger {
+  height: 30px;
+  min-height: 30px;
+  width: auto;
+  min-width: 0;
+  max-width: 240px;
+  padding: 4px 8px;
+  gap: 7px;
+  border-radius: 5px;
+  background: #ffffff04;
+  border: 1px solid var(--track-rule);
+  color: var(--track-text);
+}
+.timeline .active-layer-trigger strong {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timeline .active-layer-trigger > .context-flair {
+  display: none;
+}
+.timeline .active-layer-trigger > svg {
+  width: 14px;
+  height: 14px;
+  color: var(--track-clock);
+}
+.timeline .active-layer-menu {
+  top: calc(100% + 6px);
+  bottom: auto;
+  left: auto;
+  right: 0;
+  max-height: min(300px, 32dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.timeline .active-layer-menu > button {
+  display: flex;
+  width: 100%;
+  height: auto;
+  min-height: 44px;
+  min-width: 0;
+  border-radius: 5px;
+  gap: 8px;
+  padding: 8px;
+  text-align: left;
+}
+.timeline .active-layer-menu > button[aria-pressed='true'] {
+  background: var(--track-selected);
+  color: var(--track-clock);
+}
+.timeline .active-layer-menu > button > svg {
+  flex: none;
+}
+.timeline .active-layer-menu strong {
+  font-size: 11px;
+}
+.timeline .active-layer-menu small {
+  font-size: 10px;
+}
+.timeline .active-layer-menu footer button {
+  width: auto;
+  min-width: 0;
+  height: auto;
+  min-height: 40px;
+  font-size: 10px;
+  flex: 1;
+  gap: 4px;
+}
+.timeline .active-layer-menu {
+  overflow-x: hidden;
+}
+@media (max-height: 540px) {
+  .android .timeline .active-layer-menu {
+    max-height: calc(100dvh - 136px);
+  }
+}
+.timeline .timeline-window-tools {
+  margin: 0;
+}
+.timeline .timeline-window-tools button {
+  min-width: 28px;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  border-radius: 5px;
+}
+.timeline .transport {
+  height: auto;
+  min-height: 44px;
+  padding: 5px 12px;
+  gap: 12px;
+  border-bottom: 1px solid var(--track-rule);
+  background: #242e3a;
+}
+.timeline .playback-controls {
+  gap: 2px;
+}
+.timeline .playback-controls button {
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 4px;
+  color: var(--track-muted);
+}
+.timeline .playback-controls button:nth-child(2) {
+  width: 36px;
+  background: var(--track-clock);
+  color: #132029;
+  border-radius: 6px;
+}
+.timeline .playback-controls button:nth-child(2):hover {
+  background: #a8e5ef;
+}
+.timeline .frame-label {
+  gap: 6px;
+  color: var(--track-muted);
+  font-size: 11px;
+}
+.timeline .frame-label input {
+  width: 46px;
+  min-height: 28px;
+  height: 28px;
+  background: #ffffff04;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--track-text);
+  padding: 4px;
+}
+.timeline .frame-label input:hover,
+.timeline .frame-label input:focus {
+  border-color: var(--track-rule);
+}
+.timeline .frame-label input[aria-label='Current frame'] {
+  color: var(--track-clock);
+  font-weight: 600;
+}
+.timeline .auto-key {
+  background: transparent;
+  border: 1px solid var(--track-rule);
+  min-height: 30px;
+  height: 30px;
+}
+.timeline .auto-key.enabled {
+  border-color: #69414c;
+  background: #35232d;
+  color: #ffb2bc;
+}
+.timeline .transport select {
+  border-color: var(--track-rule);
+  background-color: transparent;
+  min-height: 30px;
+  height: 30px;
+}
+.timeline .transport select,
+.timeline .auto-key {
+  border-radius: 6px;
+}
+.timeline .loop-controls {
+  gap: 0;
+  border: 1px solid var(--track-rule);
+  border-radius: 6px;
+  background: #ffffff04;
+  overflow: hidden;
+}
+.timeline .loop-controls > button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--track-muted);
+}
+.timeline .loop-controls > button[aria-pressed='true'] {
+  background: #70d4e619;
+  color: var(--track-clock);
+}
+.timeline .loop-controls > .loop-settings-toggle {
+  border-left: 1px solid var(--track-rule);
+}
+.timeline .insert-key-group {
+  border-color: #6a5940;
+  background: #3a3023;
+  border-radius: 6px;
+}
+.timeline .insert-key-group button {
+  color: var(--track-key);
+  height: 30px;
+  min-height: 30px;
+  font-size: 11px;
+}
+.timeline .key-edit-tools {
+  min-height: 34px;
+  padding: 2px 12px;
+  background: #1c2530;
+  border-bottom: 1px solid #0006;
+}
+.timeline .key-edit-tools button {
+  height: 28px;
+  min-height: 28px;
+  border-radius: 5px;
+  color: var(--track-muted);
+  font-size: 11px;
+}
+.timeline .key-edit-tools button.active,
+.timeline .curve-tools button[aria-pressed='true'],
+.timeline .curve-selection-tools button[aria-pressed='true'] {
+  color: var(--track-clock);
+  background: #70d4e61a;
+}
+.timeline .key-edit-tools .key-selection-count {
+  color: var(--track-muted);
+  font-variant-numeric: tabular-nums;
+}
+.timeline .selected-key-actions {
+  animation: timeline-reveal 160ms ease-out;
+}
+.timeline .dope-sheet .timeline-grid {
+  grid-template-columns: var(--track-label-width) minmax(
+      0,
+      calc((100% - var(--track-label-width)) * var(--timeline-zoom))
+    );
+  padding: 0 16px 6px 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #3d4653 transparent;
+  background: var(--track-ink);
+}
+.timeline .track-labels {
+  padding-right: 0;
+  position: sticky;
+  left: 0;
+  background: var(--track-surface);
+  z-index: 7;
+  border-right: 1px solid var(--track-rule);
+}
+.timeline .track-ruler-label {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  height: 30px;
+  background: var(--track-surface);
+}
+.timeline .timeline-search {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  color: var(--track-muted);
+  border-bottom: 1px solid var(--track-rule);
+}
+.timeline .timeline-search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  height: 26px;
+  padding: 4px 0;
+  font-size: 11px;
+  outline-offset: -1px;
+}
+.timeline .timeline-search button {
+  width: 20px;
+  min-width: 20px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  font-size: 16px;
+}
+.timeline .time-ruler {
+  position: sticky;
+  top: 0;
+  background: #354252;
+  z-index: 6;
+  border-bottom: 1px solid #637386;
+  box-shadow: 0 3px 8px #0004;
+}
+.timeline .time-ruler > span {
+  top: 5px;
+  color: #d3dde8;
+  font-size: 10px;
+}
+.timeline .ruler-minors {
+  height: 4px;
+  opacity: 0.28;
+}
+.timeline .key-track {
+  height: var(--track-row);
+  min-height: var(--track-row);
+  border: 0;
+  border-bottom: 1px solid #ffffff04;
+  background-color: var(--track-ink);
+  background-image: linear-gradient(to right, #ffffff04 1px, transparent 1px);
+  background-size: var(--beat-width) 100%;
+  transition: background-color 160ms ease;
+}
+.timeline .key-track[data-alternate='true'] {
+  background-color: #161e29;
+}
+.timeline .key-track.summary-track {
+  background-color: #293747;
+  border-bottom: 1px solid #526070;
+}
+.timeline .key-track.summary-track {
+  border-bottom-color: var(--track-rule);
+}
+.timeline .key-track.selected-channel {
+  background-color: var(--track-selected);
+  box-shadow:
+    inset 0 1px #70d4e625,
+    inset 0 -1px #70d4e625;
+}
+.timeline .keyframe {
+  top: 5px;
+  width: 20px;
+  height: 22px;
+  min-height: 22px;
+  color: #aebdca;
+  background: none;
+  opacity: 1;
+}
+.timeline .keyframe[aria-pressed],
+.timeline .keyframe:hover,
+.timeline .keyframe:active,
+.timeline .keyframe:focus-visible {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  outline: none;
+}
+.timeline .keyframe:not(.selected):not(.partial) {
+  color: #aebdca;
+}
+.timeline .keyframe svg {
+  width: 10px;
+  height: 10px;
+  stroke: var(--track-ink);
+  stroke-width: 1.5;
+  transition:
+    color 160ms ease,
+    filter 160ms ease;
+}
+.timeline .keyframe.selected,
+.android .timeline .keyframe.selected {
+  color: var(--track-key);
+}
+.timeline .keyframe.selected svg {
+  width: 13px;
+  height: 13px;
+  stroke: #ffe5b5;
+  stroke-width: 1;
+  filter: drop-shadow(0 0 3px #edc78340);
+}
+.timeline .keyframe:focus-visible svg {
+  stroke: var(--track-clock);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 3px #70d4e660);
+}
+.timeline .keyframe.partial {
+  color: #b39b72;
+}
+.timeline .keyframe:hover {
+  color: #fff;
+  background: none;
+}
+.timeline .keyframe:hover svg {
+  filter: drop-shadow(0 0 3px #ffffff50);
+}
+.timeline .timeline-interpolation {
+  position: absolute;
+  top: 50%;
+  height: 24px;
+  transform: translateY(-50%);
+  z-index: 1;
+  container-type: inline-size;
+  color: #a7bac9;
+  opacity: 0.82;
+  transition: opacity 160ms ease;
+  pointer-events: auto;
+}
+.timeline .timeline-interpolation:hover,
+.timeline .selected-channel .timeline-interpolation {
+  opacity: 1;
+}
+:is(.timeline-interpolation, .key-interpolation-option)[data-interpolation='linear'] {
+  --interpolation-color: #abc0d0;
+  color: var(--interpolation-color);
+}
+:is(.timeline-interpolation, .key-interpolation-option)[data-interpolation='bezier'] {
+  --interpolation-color: #78cfc7;
+  color: var(--interpolation-color);
+}
+:is(.timeline-interpolation, .key-interpolation-option)[data-interpolation='step'] {
+  --interpolation-color: #e4b57b;
+  color: var(--interpolation-color);
+}
+:is(.timeline-interpolation, .key-interpolation-option)[data-interpolation='spring'] {
+  --interpolation-color: #b9a3e3;
+  color: var(--interpolation-color);
+}
+:is(.timeline-interpolation, .key-interpolation-option)[data-interpolation='bounce'] {
+  --interpolation-color: #dca38f;
+  color: var(--interpolation-color);
+}
+.timeline-interpolation[data-interpolation='hold'] {
+  color: #8796a8;
+}
+.timeline-interpolation[data-interpolation='mixed'] {
+  color: #b5bcca;
+}
+.interpolation-connector {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  pointer-events: none;
+  overflow: visible;
+}
+.interpolation-connector path {
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.timeline-interpolation[data-interpolation='hold'] .interpolation-line {
+  stroke-dasharray: 2 5;
+  stroke-width: 1.6;
+}
+.timeline-interpolation[data-interpolation='mixed'] .interpolation-line {
+  stroke-dasharray: 5 3;
+}
+.interpolation-caption {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  line-height: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.interpolation-connector .interpolation-modifier-line {
+  stroke: #aaa0cb;
+  stroke-dasharray: 1 5;
+  stroke-width: 1;
+  opacity: 0.5;
+}
+@container (max-width:80px) {
+  .interpolation-caption {
+    display: none;
+  }
+}
+@container (max-width:24px) {
+  .interpolation-connector .interpolation-modifier-line {
+    display: none;
+  }
+}
+.keyframe-settings {
+  background: #202832;
+  border: 1px solid #ffffff1c;
+  border-radius: 10px;
+  padding: 10px;
+  animation: timeline-reveal 160ms ease-out;
+}
+.keyframe-settings header {
+  padding: 2px 3px 9px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #ffffff0e;
+}
+.keyframe-settings header > svg {
+  color: #edc783;
+}
+.keyframe-settings header strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.keyframe-settings header button {
+  margin-left: auto;
+  border-radius: 5px;
+}
+.key-interpolation-options {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.keyframe-settings .key-interpolation-option {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  height: 36px;
+  min-height: 36px;
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  text-align: left;
+  background: transparent;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+.keyframe-settings .key-interpolation-option > span:nth-child(2) {
+  flex: 1;
+  font-size: 12px;
+  color: #d6dfe9;
+}
+.keyframe-settings .key-interpolation-option:hover {
+  background: #ffffff06;
+}
+.keyframe-settings .key-interpolation-option[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--interpolation-color) 10%, transparent);
+  border-color: color-mix(in srgb, var(--interpolation-color) 32%, transparent);
+  color: var(--interpolation-color);
+}
+.key-interpolation-preview {
+  width: 68px;
+  height: 24px;
+  flex: none;
+  position: relative;
+}
+.key-interpolation-preview .interpolation-caption {
+  display: none;
+}
+.keyframe-settings .key-setting {
+  padding: 8px 3px;
+  margin: 5px 0;
+  border-top: 1px solid #ffffff0e;
+}
+.keyframe-settings .key-setting select {
+  border: 1px solid #ffffff16;
+  border-radius: 5px;
+  background-color: #171e27;
+}
+.keyframe-settings .key-setting-note {
+  padding: 0 3px;
+  color: #97a5b5;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.keyframe-settings .keyframe-context-actions {
+  border-color: #ffffff0e;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.keyframe-settings .keyframe-context-actions button {
+  border-radius: 5px;
+}
+.android .keyframe-settings .key-interpolation-option {
+  height: 44px;
+  min-height: 44px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .keyframe-settings {
+    animation: none;
+  }
+  .keyframe-settings .key-interpolation-option {
+    transition: none;
+  }
+}
+.timeline .reference-key {
+  top: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.28;
+}
+.timeline .playhead,
+.timeline .playhead-cap {
+  background: var(--track-clock);
+}
+.timeline .playhead {
+  width: 1px;
+  box-shadow: none;
+}
+.timeline .playhead-cap output {
+  background: var(--track-clock);
+  color: #132029;
+  font-weight: 600;
+  font-size: 11px;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+.timeline-track-label {
+  display: flex;
+  align-items: center;
+  height: var(--track-row);
+  min-height: var(--track-row);
+  padding-left: calc(5px + var(--track-depth) * 9px);
+  gap: 1px;
+  border-bottom: 1px solid #ffffff04;
+  background: var(--track-surface);
+  overflow: hidden;
+  transition: background-color 160ms ease;
+}
+.timeline-track-label.selected {
+  background: var(--track-selected);
+  box-shadow: inset 2px 0 var(--track-clock);
+}
+.timeline-track-label .track-name {
+  display: flex;
+  flex: 1;
+  justify-content: flex-start;
+  gap: 6px;
+  min-width: 0;
+  height: var(--track-row);
+  min-height: var(--track-row);
+  border: 0;
+  padding: 0 6px 0 2px;
+  color: var(--track-text);
+  font-size: 11px;
+  text-align: left;
+  background: none;
+  white-space: nowrap;
+}
+.timeline .timeline-track-label .track-name[aria-pressed='true'] {
+  background: transparent;
+  color: var(--track-text);
+}
+.timeline .timeline-track-label.axis-label-row .track-name[aria-pressed='true'] {
+  color: var(--track-color);
+}
+.timeline-track-label .track-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.timeline-track-label .track-name small {
+  margin-left: auto;
+  flex: none;
+  color: var(--track-muted);
+  font-size: 10px;
+  padding: 0;
+}
+.timeline-track-label .track-disclosure {
+  min-width: 24px;
+  width: 24px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  color: var(--track-muted);
+  border-radius: 4px;
+}
+.timeline-track-label .track-disclosure svg {
+  transition: color 160ms ease;
+}
+.timeline-track-label .track-disclosure[aria-expanded='true'] {
+  color: var(--track-text);
+}
+.timeline-track-label .track-disclosure:hover {
+  background: var(--track-raised);
+  color: var(--track-text);
+}
+.timeline-track-label .track-children {
+  gap: 3px;
+  min-width: 28px;
+  min-height: 26px;
+  height: 26px;
+  padding: 0 5px;
+  color: var(--track-muted);
+  border-radius: 4px;
+  font-size: 9px;
+  opacity: 0.65;
+}
+.timeline-track-label .track-children.folded {
+  opacity: 1;
+  background: var(--track-raised);
+}
+.track-summary-icon {
+  margin: 0 6px;
+  color: var(--track-muted);
+  flex: none;
+}
+.timeline-track-label.axis-label-row {
+  background: var(--track-surface);
+  border-left: 0;
+}
+.timeline-track-label.axis-label-row.selected {
+  background: var(--track-selected);
+  box-shadow: inset 2px 0 var(--track-color);
+}
+.timeline-track-label.axis-label-row .track-name {
+  color: var(--track-muted);
+}
+.axis-letter {
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  flex: none;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--track-color);
+  background: transparent;
+  border-radius: 4px;
+  margin: 0 4px;
+}
+.axis-curve-strip {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  color: var(--axis-color);
+  background: transparent;
+}
+.timeline .axis-curve-open {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+  color: inherit;
+  background: none;
+}
+.axis-curve-open svg {
+  width: 100%;
+  height: 100%;
+  opacity: 0.72;
+}
+.timeline .axis-curve-open:hover {
+  background: #ffffff04;
+}
+.timeline .axis-curve-key {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  min-width: 18px;
+  height: 22px;
+  min-height: 22px;
+  padding: 0;
+  color: inherit;
+  z-index: 2;
+  background: none;
+}
+.axis-curve-key i {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  transform: rotate(45deg);
+  border: 1px solid var(--track-ink);
+}
+.axis-curve-key:hover i {
+  background: var(--track-key);
+}
+.timeline-empty {
+  padding: 16px;
+  font-size: 11px;
+  color: var(--track-muted);
+}
+.timeline .contact-track,
+.timeline .contact-label {
+  background: var(--track-surface);
+  border-top: 1px solid var(--track-rule);
+}
+.timeline .contact-segment {
+  clip-path: none;
+  border-radius: 4px;
+  background: #2b3539;
+  border: 1px solid #405451;
+  border-top: 2px solid #75998b;
+  color: #a6bcb5;
+}
+.timeline .contact-segment.now {
+  background: #31423e;
+  color: #d6e8df;
+}
+.timeline .curve-editor {
+  position: relative;
+  grid-template-columns: var(--track-label-width) minmax(160px, 1fr);
+  border-top: 0;
+  background: var(--track-ink);
+  overflow: hidden;
+}
+.timeline .curve-editor.inspecting {
+  grid-template-columns: var(--track-label-width) minmax(160px, 1fr) 226px;
+}
+.curve-track-tree {
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--track-surface);
+  border-right: 1px solid var(--track-rule);
+}
+.curve-track-scroll {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #3d4653 transparent;
+}
+.timeline .curve-center {
+  background: var(--track-ink);
+}
+.timeline .curve-tools {
+  height: auto;
+  min-height: 38px;
+  flex-wrap: wrap;
+  padding: 4px 8px;
+  gap: 3px;
+  background: var(--track-surface);
+  border-color: var(--track-rule);
+}
+.timeline .curve-tools strong {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 8px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.timeline .curve-tools strong small {
+  color: var(--track-muted);
+  font-size: 10px;
+}
+.curve-gesture-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-left: 1px solid var(--track-rule);
+  padding-left: 6px;
+}
+.timeline .curve-tools button,
+.timeline .curve-selection-tools button {
+  min-width: 28px;
+  min-height: 28px;
+  height: 28px;
+  padding: 4px;
+  border-radius: 5px;
+  color: var(--track-muted);
+}
+.timeline .curve-tools button:hover,
+.timeline .curve-selection-tools button:hover {
+  background: var(--track-raised);
+  color: var(--track-text);
+}
+.timeline .curve-canvas text {
+  fill: #8492a2;
+  font-size: 10px;
+  font-family: inherit;
+}
+.timeline .curve-grid-line {
+  stroke: #ffffff0c;
+  stroke-width: 1;
+  stroke-dasharray: none;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.timeline .curve-grid-line.quiet {
+  stroke: #ffffff05;
+}
+.curve-zero-line {
+  stroke: #ffffff10;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.timeline .curve-playhead {
+  stroke: var(--track-clock);
+  opacity: 0.75;
+}
+.timeline .curve-key {
+  fill: #b9c6d4;
+  stroke: var(--track-ink);
+  stroke-width: 2;
+  rx: 1;
+  vector-effect: non-scaling-stroke;
+  transition:
+    fill 140ms ease,
+    stroke 140ms ease;
+}
+.timeline .curve-key-target:hover .curve-key,
+.timeline .curve-key-target:focus-visible .curve-key {
+  fill: white;
+  stroke: var(--track-clock);
+}
+.timeline .curve-key.selected {
+  fill: var(--track-key);
+  stroke: #ffdfab;
+  stroke-width: 1;
+}
+.timeline .curve-tangent {
+  animation: timeline-fade 160ms ease-out;
+}
+.timeline .tangent-line {
+  stroke: var(--track-key);
+  opacity: 0.55;
+  stroke-dasharray: none;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.timeline .tangent-handle {
+  fill: var(--track-ink);
+  stroke: var(--track-key);
+  stroke-width: 1.5;
+  transition:
+    fill 140ms ease,
+    stroke 140ms ease;
+  vector-effect: non-scaling-stroke;
+}
+.timeline .tangent-handle:hover,
+.timeline .tangent-handle:focus-visible {
+  fill: var(--track-key);
+  stroke: #fff0d6;
+}
+.curve-marquee {
+  fill: #70d4e615;
+  stroke: var(--track-clock);
+  stroke-width: 1;
+  pointer-events: none;
+}
+.timeline .curve-help {
+  font-size: 10px;
+  color: var(--track-muted);
+  padding: 5px 12px;
+  border: 0;
+  min-height: 24px;
+  background: var(--track-surface);
+}
+.timeline .curve-help span {
+  color: var(--track-muted);
+}
+.timeline .curve-selection-tools {
+  display: flex;
+  flex: none;
+  align-items: center;
+  flex-wrap: nowrap;
+  height: 42px;
+  min-height: 42px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--track-surface);
+  border-bottom: 1px solid var(--track-rule);
+  animation: timeline-reveal 180ms ease-out;
+}
+.curve-selection-count {
+  font-size: 10px;
+  color: var(--track-key);
+  white-space: nowrap;
+}
+.curve-selection-tools label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--track-muted);
+}
+.timeline .curve-selection-tools input {
+  width: 58px;
+  height: 28px;
+  min-height: 28px;
+  border: 1px solid var(--track-rule);
+  border-radius: 5px;
+  background: #ffffff04;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 5px;
+  text-align: right;
+}
+.timeline .curve-selection-tools select {
+  height: 28px;
+  min-height: 28px;
+  width: 90px;
+  font-size: 11px;
+  background-color: #ffffff04;
+  border-color: var(--track-rule);
+  border-radius: 5px;
+}
+.timeline .curve-properties {
+  background: var(--track-surface);
+  border-color: var(--track-rule);
+  animation: timeline-reveal 180ms ease-out;
+}
+.timeline .curve-property-tabs {
+  background: var(--track-surface);
+  border-color: var(--track-rule);
+}
+.timeline .curve-property-tabs button {
+  font-size: 11px;
+  color: var(--track-muted);
+  min-height: 36px;
+}
+.timeline .curve-property-tabs button.active {
+  background: var(--track-raised);
+  color: var(--track-text);
+}
+.timeline .curve-field {
+  color: #b5c0cc;
+  font-size: 10px;
+  margin-bottom: 10px;
+}
+.timeline .curve-field input,
+.timeline .curve-field select {
+  height: 32px;
+  background: #ffffff04;
+  border-color: var(--track-rule);
+  color: var(--track-text);
+  border-radius: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.timeline .curve-note {
+  color: var(--track-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.tangent-numbers {
+  margin: 4px 0 10px;
+  border-top: 1px solid var(--track-rule);
+  padding-top: 8px;
+  font-size: 11px;
+  color: var(--track-muted);
+}
+.tangent-numbers summary {
+  cursor: pointer;
+  padding: 4px 0 10px;
+  color: var(--track-text);
+}
+.tangent-numbers > div > span {
+  display: block;
+  font-size: 10px;
+  margin-bottom: 6px;
+  color: var(--track-text);
+}
+.timeline .curve-property-scroll {
+  padding: 12px;
+}
+.timeline .curve-editor.tracks-hidden {
+  grid-template-columns: minmax(160px, 1fr);
+}
+.timeline .curve-editor.tracks-hidden.inspecting {
+  grid-template-columns: minmax(160px, 1fr) 226px;
+}
+.curve-bone-flair {
+  font-size: 10px;
+  color: var(--track-muted);
+  margin-right: 4px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: none;
+}
+.tracks-hidden .curve-bone-flair {
+  display: inline-block;
+  vertical-align: middle;
+}
+.timeline .curve-property-tabs .curve-inspector-close {
+  flex: none;
+  width: 32px;
+  min-width: 32px;
+  padding: 4px;
+}
+@keyframes timeline-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes timeline-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (max-width: 1100px) {
+  .timeline {
+    --track-label-width: 190px;
+  }
+  .timeline .curve-editor.inspecting {
+    grid-template-columns: var(--track-label-width) minmax(160px, 1fr) 210px;
+  }
+  .timeline .curve-tools strong {
+    max-width: 160px;
+  }
+}
+.android .timeline {
+  --track-row: 44px;
+  --track-label-width: 204px;
+}
+.android .timeline .timeline-tabs {
+  height: 48px;
+  min-height: 48px;
+  gap: 8px;
+  padding: 4px 8px;
+}
+.android .timeline .timeline-tab-group button {
+  height: 36px;
+  min-height: 36px;
+  min-width: 76px;
+}
+.android .timeline .active-layer-trigger {
+  min-height: 40px;
+  height: 40px;
+  max-width: 180px;
+}
+.android .timeline .timeline-context {
+  padding: 0;
+  border: 0;
+  background: none;
+  flex: 1;
+  max-width: none;
+}
+.android .timeline .timeline-window-tools button {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+}
+.android .timeline .transport {
+  gap: 8px;
+  min-height: 52px;
+}
+.android .timeline .transport button,
+.android .timeline .transport select {
+  min-height: 40px;
+  height: 40px;
+}
+.android .timeline .playback-controls button {
+  width: 40px;
+  min-width: 40px;
+}
+.android .timeline .frame-label input {
+  height: 40px;
+  min-height: 40px;
+}
+.android .timeline .key-edit-tools {
+  min-height: 44px;
+  padding: 0 8px;
+}
+.android .timeline .key-edit-tools button {
+  height: 40px;
+  min-height: 40px;
+  min-width: 40px;
+}
+.android .timeline .track-ruler-label,
+.android .timeline .timeline-search {
+  height: 40px;
+}
+.android .timeline .timeline-search input {
+  height: 36px;
+  font-size: 12px;
+}
+.android .timeline .timeline-track-label .track-name {
+  height: 44px;
+  min-height: 44px;
+  font-size: 12px;
+}
+.android .timeline .timeline-track-label .track-disclosure {
+  width: 32px;
+  min-width: 32px;
+  height: 40px;
+  min-height: 40px;
+}
+.android .timeline .timeline-track-label .track-children {
+  min-width: 32px;
+  min-height: 40px;
+  height: 40px;
+}
+.android .timeline .key-track {
+  height: 44px;
+  min-height: 44px;
+}
+.android .timeline .keyframe {
+  top: 8px;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+}
+.android .timeline .axis-curve-key {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+}
+.android .timeline .curve-tools button,
+.android .timeline .curve-selection-tools button {
+  height: 40px;
+  min-height: 40px;
+  min-width: 40px;
+}
+.android .timeline .curve-selection-tools input,
+.android .timeline .curve-selection-tools select {
+  height: 36px;
+  min-height: 36px;
+}
+.android .timeline .curve-field input,
+.android .timeline .curve-field select {
+  height: 40px;
+  min-height: 40px;
+}
+.android .timeline .curve-property-tabs button {
+  min-height: 40px;
+}
+@media (max-width: 900px) {
+  .timeline .curve-editor.inspecting {
+    grid-template-columns: var(--track-label-width) minmax(160px, 1fr);
+  }
+  .timeline .curve-editor.tracks-hidden.inspecting {
+    grid-template-columns: minmax(160px, 1fr);
+  }
+  .timeline .curve-properties {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 226px;
+    max-height: calc(100% - 60px);
+    z-index: 10;
+    border: 1px solid #46505e;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px #0004;
+  }
+  .timeline .curve-help span:last-child {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .timeline {
+    --track-label-width: 148px;
+  }
+  .android .timeline {
+    --track-label-width: 148px;
+  }
+  .android .timeline .timeline-tabs {
+    gap: 4px;
+  }
+  .android .timeline .timeline-tab-group button {
+    min-width: 60px;
+    padding: 4px 7px;
+    gap: 4px;
+  }
+  .android .timeline .timeline-tab-group svg {
+    width: 14px;
+  }
+  .android .timeline .active-layer-control {
+    max-width: 124px;
+    flex: 1;
+    min-width: 0;
+  }
+  .android .timeline .active-layer-trigger {
+    width: 100%;
+    max-width: 124px;
+    gap: 4px;
+    padding: 4px 6px;
+  }
+  .android .timeline .active-layer-trigger > svg:first-of-type {
+    display: none;
+  }
+  .android .timeline .active-layer-menu {
+    width: 260px;
+  }
+  .android .timeline .timeline-window-tools {
+    gap: 0;
+  }
+  .android .timeline .timeline-window-tools button {
+    width: 32px;
+    min-width: 32px;
+  }
+  .android .timeline .transport {
+    padding: 4px 8px;
+    gap: 4px;
+  }
+  .android .timeline .playback-options {
+    padding-top: 0;
+    border-top: 0;
+  }
+  .android .timeline .timeline-track-label {
+    padding-left: 4px;
+  }
+  .android .timeline .timeline-track-label .track-children {
+    display: none;
+  }
+  .android .timeline .axis-letter {
+    width: 16px;
+    margin: 0 2px;
+  }
+  .android .timeline .timeline-track-label .track-name {
+    font-size: 10px;
+  }
+  .android .timeline .curve-tools {
+    padding: 4px;
+    gap: 2px;
+  }
+  .android .timeline .curve-tools strong {
+    font-size: 11px;
+    margin: 0;
+    padding: 2px 4px;
+    flex: 1;
+    max-width: none;
+  }
+  .android .timeline .curve-tools .title-spacer {
+    display: none;
+  }
+  .android .timeline .curve-tools button {
+    height: 38px;
+    min-height: 38px;
+    min-width: 36px;
+    padding: 3px;
+  }
+  .android .timeline .curve-gesture-tools {
+    border: 0;
+    padding: 0;
+    gap: 0;
+  }
+  .android .timeline .curve-properties {
+    max-height: calc(100% - 96px);
+    width: 230px;
+  }
+  .android .timeline .curve-help {
+    display: none;
+  }
+  .android .timeline .key-edit-tools > button > span {
+    display: none;
+  }
+  .android .timeline .curve-selection-tools {
+    gap: 4px;
+    padding: 4px 8px;
+  }
+  .android .timeline .curve-selection-tools label {
+    gap: 3px;
+  }
+  .android .timeline .curve-selection-tools input {
+    width: 54px;
+  }
+  .android .timeline .curve-selection-tools .title-spacer {
+    display: none;
+  }
+  .android .timeline .curve-selection-tools button {
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+  }
+  .android .app.timeline-expanded .touch-pose-rail,
+  .android .app.timeline-expanded .touch-panel-rail {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .android .timeline .curve-bone-flair {
+    max-width: 130px;
+  }
+}
+.curve-view-options {
+  position: relative;
+  display: none;
+}
+.curve-view-options summary {
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  color: var(--track-muted);
+}
+.curve-view-options summary::-webkit-details-marker {
+  display: none;
+}
+.curve-view-options[open] summary {
+  background: var(--track-raised);
+  color: var(--track-clock);
+}
+.curve-view-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 25;
+  width: 190px;
+  padding: 5px;
+  border: 1px solid #46505e;
+  border-radius: 7px;
+  background: #232b35;
+  box-shadow: 0 6px 20px #0005;
+  animation: timeline-reveal 160ms ease-out;
+}
+.timeline .curve-view-menu button {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 10px;
+  font-size: 11px;
+  padding: 8px;
+}
+@media (max-width: 700px) {
+  .android .timeline .curve-tools strong {
+    flex: 1 0 calc(100% - 50px);
+    min-height: 28px;
+    max-width: calc(100% - 50px);
+  }
+  .android .timeline .curve-tools .curve-secondary-view,
+  .android .timeline .curve-selection-tools .curve-secondary-action {
+    display: none;
+  }
+  .android .timeline .curve-view-options {
+    display: block;
+  }
+  .android .timeline .curve-view-options summary {
+    width: 36px;
+    height: 38px;
+  }
+  .android .timeline .curve-tools {
+    gap: 2px 3px;
+  }
+  .android .timeline .curve-selection-tools .curve-selection-count {
+    display: none;
+  }
+  .android .timeline .curve-selection-tools input[aria-label='Selected key frame'] {
+    width: 38px;
+  }
+  .android .timeline .curve-selection-tools input[aria-label='Selected key value'] {
+    width: 54px;
+  }
+  .android .timeline .curve-selection-tools select {
+    width: 78px;
+  }
+  .android .timeline .curve-selection-tools button {
+    min-width: 34px;
+    padding: 3px;
+  }
+  .android .timeline .curve-selection-tools {
+    gap: 5px;
+  }
+  .android .timeline .curve-selection-placeholder {
+    font-size: 10px;
+  }
+}
+@media (min-width: 701px) and (max-width: 1100px) {
+  .android .timeline .playback-options {
+    order: 0;
+    width: auto;
+    padding-top: 0;
+    border: 0;
+    margin-left: auto;
+  }
+  .android .timeline .insert-key-group {
+    margin-left: 0;
+  }
+  .android .timeline .transport {
+    gap: 6px;
+  }
+  .android .timeline .frame-label input {
+    width: 40px;
+  }
+  .android .timeline .transport .auto-key {
+    min-width: 78px;
+    padding: 4px 6px;
+  }
+}
+@media (max-height: 540px) {
+  .android .timeline .curve-tools .curve-secondary-view,
+  .android .timeline .curve-selection-tools .curve-secondary-action {
+    display: none;
+  }
+  .android .timeline .curve-view-options {
+    display: block;
+  }
+  .android .timeline .curve-view-options summary {
+    width: 40px;
+    height: 40px;
+  }
+}
 /* Short landscape screens give timing its own workspace until Close is tapped. */
-@media(max-height:540px){.android .app.timeline-open>.timeline{top:8px;bottom:8px;left:8px;right:8px;height:auto;z-index:70;border-radius:10px}.android .app.timeline-open>.titlebar,.android .app.timeline-open>.active-layer-control,.android .app.timeline-open .touch-view-toggle,.android .app.timeline-open .touch-pose-rail,.android .app.timeline-open .touch-panel-rail,.android .app.timeline-open .touch-transport,.android .app.timeline-open .selection-pose-tools{visibility:hidden;pointer-events:none}.android .timeline .timeline-window-tools button[aria-label="Expand timeline"],.android .timeline .timeline-window-tools button[aria-label="Collapse timeline"]{display:none}.android .timeline .curve-help{display:none}.android .timeline .curve-properties{top:auto;max-height:calc(100% - 8px);bottom:4px}}
-@media(prefers-reduced-motion:reduce){.timeline *{animation:none!important;transition:none!important}}
+@media (max-height: 540px) {
+  .android .app.timeline-open > .timeline {
+    top: 8px;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    height: auto;
+    z-index: 70;
+    border-radius: 10px;
+  }
+  .android .app.timeline-open > .titlebar,
+  .android .app.timeline-open > .active-layer-control,
+  .android .app.timeline-open .touch-view-toggle,
+  .android .app.timeline-open .touch-pose-rail,
+  .android .app.timeline-open .touch-panel-rail,
+  .android .app.timeline-open .touch-transport,
+  .android .app.timeline-open .selection-pose-tools {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .android .timeline .timeline-window-tools button[aria-label='Expand timeline'],
+  .android .timeline .timeline-window-tools button[aria-label='Collapse timeline'] {
+    display: none;
+  }
+  .android .timeline .curve-help {
+    display: none;
+  }
+  .android .timeline .curve-properties {
+    top: auto;
+    max-height: calc(100% - 8px);
+    bottom: 4px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timeline * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
 
-.curve-key-hit{fill:transparent;stroke:none}.curve-key-target{cursor:move;outline:none}.curve-selection-placeholder{font-size:11px;color:var(--track-muted)}.curve-selection-tools>*{flex-shrink:0}.curve-selection-tools .title-spacer{flex:1}.android .timeline .curve-selection-tools{height:48px;min-height:48px}
+.curve-key-hit {
+  fill: transparent;
+  stroke: none;
+}
+.curve-key-target {
+  cursor: move;
+  outline: none;
+}
+.curve-selection-placeholder {
+  font-size: 11px;
+  color: var(--track-muted);
+}
+.curve-selection-tools > * {
+  flex-shrink: 0;
+}
+.curve-selection-tools .title-spacer {
+  flex: 1;
+}
+.android .timeline .curve-selection-tools {
+  height: 48px;
+  min-height: 48px;
+}
 
 /* Curve reduction stays contextual, with analysis separate from application. */
-.reducer-backdrop{z-index:1500}
-.curve-reducer{width:min(720px,calc(100vw - 24px));max-height:calc(100dvh - 32px);display:flex;flex-direction:column;padding:0;overflow:hidden;background:#151e28;border:1px solid #3b4d60;border-radius:12px;box-shadow:0 24px 100px #0009}
-.curve-reducer:focus{outline:none}.curve-reducer header{padding:18px 20px;border-bottom:1px solid #354454;flex:none}.curve-reducer h2{display:flex;align-items:center;gap:9px;margin:0;font-size:17px}.curve-reducer header p{margin:7px 0 0;color:#98aabe;font-size:12px;max-width:560px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.curve-reducer header>button{flex:none;width:36px;height:36px;min-width:36px}.reducer-scroll{overflow:auto;min-height:0;padding:18px 20px;overscroll-behavior:contain}.reducer-settings,.reducer-preview-select{display:grid;grid-template-columns:1fr 1fr;gap:12px}.curve-reducer label{display:flex;flex-direction:column;gap:7px;min-width:0;color:#b9c6d4;font-size:12px}.curve-reducer select,.curve-reducer input[type=number]{height:36px;width:100%;min-width:0;background:#0d141c;border:1px solid #354454;color:#edf3f9;border-radius:5px;font-variant-numeric:tabular-nums}.reducer-tolerances{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}.reducer-tolerances label{position:relative}.reducer-tolerances small{position:absolute;right:0;color:#7891a8}.reducer-options{display:flex;gap:16px;flex-wrap:wrap}.reducer-options label{flex-direction:row;align-items:center;gap:7px;min-height:28px}.reducer-options input{accent-color:#60cfe9;width:16px;height:16px;margin:0}.reducer-range{display:flex;gap:12px;margin-top:12px}.reducer-range label{max-width:140px}.reducer-note{display:flex;gap:5px;align-items:flex-start;font-size:11px;color:#94a8bc;line-height:1.6;margin:14px 0 0}.reducer-note svg{flex:none;margin-top:2px}.reducer-progress{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:16px}.reducer-progress progress{width:100%;grid-column:1}.reducer-progress button{grid-column:2;grid-row:1/3}.reducer-results{margin-top:18px;padding-top:16px;border-top:1px solid #354454}.reducer-summary{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px}.reducer-summary>div{display:flex;gap:10px;align-items:center}.reducer-summary strong{font-size:24px;font-variant-numeric:tabular-nums}.reducer-summary strong:first-child{color:#8c9cae}.reducer-summary strong:last-of-type{color:#f2cb7b}.reducer-summary span{color:#93a7bc;font-size:11px}.reducer-summary b{font-size:13px;color:#79d5bf}.reducer-graph{margin:12px 0;background:#0b1119;border:1px solid #28384a;border-radius:7px;padding:8px}.reducer-graph svg{display:block;width:100%;height:auto;min-height:100px}.reducer-graph text{fill:#8ca0b5;font-size:11px}.reducer-graph figcaption{display:flex;justify-content:center;gap:16px;color:#9aaabc;font-size:10px;padding:6px 0 2px}.curve-reducer table{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}.curve-reducer th,.curve-reducer td{text-align:right;border-bottom:1px solid #293749;padding:6px}.curve-reducer th:first-child{text-align:left}.curve-reducer thead{color:#91a6bd}.curve-reducer table button{height:28px;min-height:28px;background:none;border:0;padding:3px;text-align:left}.curve-reducer tr.selected{background:#243448}.curve-reducer footer{padding:12px 20px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #354454;flex:none}.curve-reducer footer button{min-height:36px}.android .curve-reducer button,.android .curve-reducer select,.android .curve-reducer input[type=number]{min-height:44px}.android .curve-reducer .reducer-options label{min-height:44px}.android .curve-reducer{max-height:calc(100dvh - 24px)}
-@media(max-width:700px){.curve-reducer header,.reducer-scroll{padding:14px}.curve-reducer header p{max-width:280px}.reducer-settings{grid-template-columns:1fr}.reducer-tolerances{gap:8px}.reducer-tolerances label{font-size:11px}.reducer-options{gap:0 12px}.reducer-summary strong{font-size:20px}.reducer-summary span{display:none}.reducer-graph figcaption{gap:8px;font-size:9px}.curve-reducer footer{padding:12px;gap:6px}.curve-reducer footer button{padding:6px 10px;font-size:11px}.reducer-preview-select{gap:8px}.android .timeline .active-layer-control{max-width:112px}.android .timeline .timeline-window-tools{gap:0}.android .timeline .timeline-window-tools button{min-width:30px;width:30px}}
+.reducer-backdrop {
+  z-index: 1500;
+}
+.curve-reducer {
+  width: min(720px, calc(100vw - 24px));
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  background: #151e28;
+  border: 1px solid #3b4d60;
+  border-radius: 12px;
+  box-shadow: 0 24px 100px #0009;
+}
+.curve-reducer:focus {
+  outline: none;
+}
+.curve-reducer header {
+  padding: 18px 20px;
+  border-bottom: 1px solid #354454;
+  flex: none;
+}
+.curve-reducer h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  font-size: 17px;
+}
+.curve-reducer header p {
+  margin: 7px 0 0;
+  color: #98aabe;
+  font-size: 12px;
+  max-width: 560px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.curve-reducer header > button {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+}
+.reducer-scroll {
+  overflow: auto;
+  min-height: 0;
+  padding: 18px 20px;
+  overscroll-behavior: contain;
+}
+.reducer-settings,
+.reducer-preview-select {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.curve-reducer label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  color: #b9c6d4;
+  font-size: 12px;
+}
+.curve-reducer select,
+.curve-reducer input[type='number'] {
+  height: 36px;
+  width: 100%;
+  min-width: 0;
+  background: #0d141c;
+  border: 1px solid #354454;
+  color: #edf3f9;
+  border-radius: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.reducer-tolerances {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 18px 0;
+}
+.reducer-tolerances label {
+  position: relative;
+}
+.reducer-tolerances small {
+  position: absolute;
+  right: 0;
+  color: #7891a8;
+}
+.reducer-options {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.reducer-options label {
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+}
+.reducer-options input {
+  accent-color: #60cfe9;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.reducer-range {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+.reducer-range label {
+  max-width: 140px;
+}
+.reducer-note {
+  display: flex;
+  gap: 5px;
+  align-items: flex-start;
+  font-size: 11px;
+  color: #94a8bc;
+  line-height: 1.6;
+  margin: 14px 0 0;
+}
+.reducer-note svg {
+  flex: none;
+  margin-top: 2px;
+}
+.reducer-progress {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-top: 16px;
+}
+.reducer-progress progress {
+  width: 100%;
+  grid-column: 1;
+}
+.reducer-progress button {
+  grid-column: 2;
+  grid-row: 1/3;
+}
+.reducer-results {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #354454;
+}
+.reducer-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+.reducer-summary > div {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.reducer-summary strong {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+.reducer-summary strong:first-child {
+  color: #8c9cae;
+}
+.reducer-summary strong:last-of-type {
+  color: #f2cb7b;
+}
+.reducer-summary span {
+  color: #93a7bc;
+  font-size: 11px;
+}
+.reducer-summary b {
+  font-size: 13px;
+  color: #79d5bf;
+}
+.reducer-graph {
+  margin: 12px 0;
+  background: #0b1119;
+  border: 1px solid #28384a;
+  border-radius: 7px;
+  padding: 8px;
+}
+.reducer-graph svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 100px;
+}
+.reducer-graph text {
+  fill: #8ca0b5;
+  font-size: 11px;
+}
+.reducer-graph figcaption {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  color: #9aaabc;
+  font-size: 10px;
+  padding: 6px 0 2px;
+}
+.curve-reducer table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.curve-reducer th,
+.curve-reducer td {
+  text-align: right;
+  border-bottom: 1px solid #293749;
+  padding: 6px;
+}
+.curve-reducer th:first-child {
+  text-align: left;
+}
+.curve-reducer thead {
+  color: #91a6bd;
+}
+.curve-reducer table button {
+  height: 28px;
+  min-height: 28px;
+  background: none;
+  border: 0;
+  padding: 3px;
+  text-align: left;
+}
+.curve-reducer tr.selected {
+  background: #243448;
+}
+.curve-reducer footer {
+  padding: 12px 20px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  border-top: 1px solid #354454;
+  flex: none;
+}
+.curve-reducer footer button {
+  min-height: 36px;
+}
+.android .curve-reducer button,
+.android .curve-reducer select,
+.android .curve-reducer input[type='number'] {
+  min-height: 44px;
+}
+.android .curve-reducer .reducer-options label {
+  min-height: 44px;
+}
+.android .curve-reducer {
+  max-height: calc(100dvh - 24px);
+}
+@media (max-width: 700px) {
+  .curve-reducer header,
+  .reducer-scroll {
+    padding: 14px;
+  }
+  .curve-reducer header p {
+    max-width: 280px;
+  }
+  .reducer-settings {
+    grid-template-columns: 1fr;
+  }
+  .reducer-tolerances {
+    gap: 8px;
+  }
+  .reducer-tolerances label {
+    font-size: 11px;
+  }
+  .reducer-options {
+    gap: 0 12px;
+  }
+  .reducer-summary strong {
+    font-size: 20px;
+  }
+  .reducer-summary span {
+    display: none;
+  }
+  .reducer-graph figcaption {
+    gap: 8px;
+    font-size: 9px;
+  }
+  .curve-reducer footer {
+    padding: 12px;
+    gap: 6px;
+  }
+  .curve-reducer footer button {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  .reducer-preview-select {
+    gap: 8px;
+  }
+  .android .timeline .active-layer-control {
+    max-width: 112px;
+  }
+  .android .timeline .timeline-window-tools {
+    gap: 0;
+  }
+  .android .timeline .timeline-window-tools button {
+    min-width: 30px;
+    width: 30px;
+  }
+}
 
 /* Bone groups and axes stay readable without painting each lane a loud color. */
-.timeline .track-labels,.timeline .curve-track-tree{border-right:1px solid #506073;box-shadow:4px 0 12px #0003}
-.timeline .track-ruler-label,.timeline .timeline-search{background:#303e4d}
-.timeline-track-label[data-group=true] .track-name{font-weight:600}
-.timeline-track-label.bone-label-row .track-name:before{content:"";width:5px;height:5px;flex:none;border-radius:50%;background:var(--track-color);opacity:.8;margin-right:3px}
-.timeline-track-label.axis-label-row{background:#1c2632;box-shadow:inset 18px 0 #0002}
-.timeline-track-label[data-depth="0"]{background:#293747;border-bottom-color:#526070}
-.timeline-track-label.selected,.timeline-track-label[data-depth="0"].selected{background:#2e4c60;box-shadow:inset 3px 0 var(--track-clock)}
-.timeline-track-label.selected .track-name{color:#f0f8ff}
-.timeline-track-label .track-disclosure svg{rotate:-90deg;transition:rotate 200ms cubic-bezier(.2,.8,.2,1),color 130ms ease}
-.timeline-track-label .track-disclosure[aria-expanded=true] svg{rotate:0deg}
-.timeline .axis-letter{background:color-mix(in srgb,var(--track-color) 14%,transparent)}
-.timeline .curve-tools{background:#303e4d;border-bottom:1px solid #637386}
-.timeline .curve-properties{background:#27333f;border-left:1px solid #526070;box-shadow:-5px 0 14px #0003}
-.timeline .curve-selection-tools{background:#202d39}
-.timeline .time-ruler .playhead-cap{box-shadow:0 2px 7px #0005}
-.timeline .playhead{box-shadow:0 0 6px #70d4e640}
-
+.timeline .track-labels,
+.timeline .curve-track-tree {
+  border-right: 1px solid #506073;
+  box-shadow: 4px 0 12px #0003;
+}
+.timeline .track-ruler-label,
+.timeline .timeline-search {
+  background: #303e4d;
+}
+.timeline-track-label[data-group='true'] .track-name {
+  font-weight: 600;
+}
+.timeline-track-label.bone-label-row .track-name:before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--track-color);
+  opacity: 0.8;
+  margin-right: 3px;
+}
+.timeline-track-label.axis-label-row {
+  background: #1c2632;
+  box-shadow: inset 18px 0 #0002;
+}
+.timeline-track-label[data-depth='0'] {
+  background: #293747;
+  border-bottom-color: #526070;
+}
+.timeline-track-label.selected,
+.timeline-track-label[data-depth='0'].selected {
+  background: #2e4c60;
+  box-shadow: inset 3px 0 var(--track-clock);
+}
+.timeline-track-label.selected .track-name {
+  color: #f0f8ff;
+}
+.timeline-track-label .track-disclosure svg {
+  rotate: -90deg;
+  transition:
+    rotate 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 130ms ease;
+}
+.timeline-track-label .track-disclosure[aria-expanded='true'] svg {
+  rotate: 0deg;
+}
+.timeline .axis-letter {
+  background: color-mix(in srgb, var(--track-color) 14%, transparent);
+}
+.timeline .curve-tools {
+  background: #303e4d;
+  border-bottom: 1px solid #637386;
+}
+.timeline .curve-properties {
+  background: #27333f;
+  border-left: 1px solid #526070;
+  box-shadow: -5px 0 14px #0003;
+}
+.timeline .curve-selection-tools {
+  background: #202d39;
+}
+.timeline .time-ruler .playhead-cap {
+  box-shadow: 0 2px 7px #0005;
+}
+.timeline .playhead {
+  box-shadow: 0 0 6px #70d4e640;
+}

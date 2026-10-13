@@ -1,23 +1,249 @@
-import {ActiveLayer,PoseActions} from './PoseActions';
-import {isTouch as isAndroid} from '../platform/storage';
-import {useEffect,useRef,useState} from 'react';
-import {BoxSelect,Camera,Scan,Route,Clapperboard,Gamepad2,Settings2,PictureInPicture2,X} from 'lucide-react';
-import {StudioScene} from '../scene/StudioScene';
-import {studio} from '../core/store';
-import {useStudioChrome} from '../hooks';
-export function Viewport({onRuntime,onThumbs}:{onRuntime:(r:StudioScene|null)=>void;onThumbs:(t:string[])=>void}){
- const ref=useRef<HTMLDivElement>(null),runtime=useRef<StudioScene|null>(null),s=useStudioChrome(),[trail,setTrail]=useState(false),[viewOptions,setViewOptions]=useState(false);
- useEffect(()=>{if(!viewOptions)return;const outside=(e:PointerEvent)=>{if(!(e.target as Element).closest('.touch-view-toggle,.viewport-bottom'))setViewOptions(false);};document.addEventListener('pointerdown',outside,true);return()=>document.removeEventListener('pointerdown',outside,true);},[viewOptions]);
- useEffect(()=>{const dismiss=(event:Event)=>{if(viewOptions){event.preventDefault();event.stopImmediatePropagation();setViewOptions(false);}};window.addEventListener('pose-dismiss-overlay',dismiss,true);return()=>window.removeEventListener('pose-dismiss-overlay',dismiss,true);},[viewOptions]);
- useEffect(()=>{const r=new StudioScene(ref.current!,studio,()=>{onThumbs(r.gripThumbnails());});runtime.current=r;onRuntime(r);return()=>{r.dispose();onRuntime(null);};},[onRuntime,onThumbs]);
- return <main className={"viewport"+(s.gameView?" game-view":"")+(s.retargetMode?" retarget-viewport":"")} ref={ref}>
-  {!isAndroid&&<div className="desktop-pose-context"><ActiveLayer/><PoseActions pasteMirrored={()=>runtime.current?.pasteMirroredPose()} timeline mirror={()=>runtime.current?.mirrorSelectedPose()}/></div>}
-  {isAndroid&&<button className="touch-view-toggle" aria-label="View options" aria-expanded={viewOptions} onClick={()=>setViewOptions(!viewOptions)}><Settings2 size={22}/><span>View</span></button>}
-  {s.boxSelection&&<div className="scene-selection-tools" role="group" aria-label="Box selection"><span className="context-flair">Drag around controls</span>{(['replace','add','subtract'] as const).map(mode=><button key={mode} aria-pressed={s.boxSelection===mode} onClick={()=>studio.patch({boxSelection:mode})}>{mode==='replace'?'Replace':mode==='add'?'Add':'Remove'}</button>)}<button aria-label="Cancel box selection" onClick={()=>runtime.current?.beginBoxSelection()}><X size={18}/></button></div>}
-  <span className="pose-view-label">{s.retargetMode?'Character setup':s.playerView?'Player camera · Numpad 0 to return':'Pose view'}{(s.workspace?.previewCharacterId||s.retargetMode)&&<small>{s.retargetLoading?'Preparing model…':s.workspace?.characters?.find(c=>c.id===(s.retargetMode?s.workspace?.activeCharacterId:s.workspace?.previewCharacterId))?.name}</small>}</span>
-  <div className="preview-border" hidden={!s.cameraPreview||s.playerView||s.gameView||s.retargetMode}><span>Player camera <small>(16:9)</small></span><button title="Select player camera" aria-label="Select player camera" onClick={()=>{studio.setLayer('firstPerson');studio.patch({selected:'camera'});}}><Camera size={13}/></button></div>
-  {!s.ready&&<div className="loading-overlay"><div className="spinner"/><strong>Preparing Manny</strong><span>Loading the character and animation controls…</span></div>}
-  <div className="viewport-orientation"><svg viewBox="0 0 80 80" aria-label="Unreal orientation axes">{['X','Y','Z'].map(axis=><g key={axis} data-axis={axis}><line x1="40" y1="40" x2="40" y2="40"/><text x="40" y="40">{axis}</text></g>)}</svg><span>10 cm · 1 m</span></div>
-  <div className={"viewport-bottom"+(viewOptions?" view-options-open":"")}><span/><div>{isAndroid&&<header><strong className="context-flair">Scene view</strong><button aria-label="Close view options" onClick={()=>setViewOptions(false)}><X size={20}/></button></header>}<button title="Box select controls (B)" aria-label="Box select controls" aria-pressed={!!s.boxSelection} disabled={s.gameView||s.retargetMode} onClick={()=>runtime.current?.beginBoxSelection()}><BoxSelect size={18}/>{isAndroid&&<span>Box select</span>}</button><button title="Game View · hide editor overlays (Shift G)" aria-label="Game View" aria-pressed={s.gameView} onClick={()=>runtime.current?.toggleGameView()}><Gamepad2 size={18}/>{isAndroid&&<span>Game view</span>}</button><button title="Cinematic view · reflections, ambient occlusion and antialiasing" aria-label="Cinematic view" aria-pressed={s.cinematic} onClick={()=>studio.setCinematic(!s.cinematic)}><Clapperboard size={18}/>{isAndroid&&<span>Cinematic</span>}</button><button title="Player camera view (Numpad 0)" disabled={s.retargetMode} aria-label="Player camera view" aria-pressed={s.playerView} onClick={()=>studio.patch({playerView:!s.playerView})}><Camera size={18}/>{isAndroid&&<span>Player camera</span>}</button><button aria-label="Camera preview" aria-pressed={s.cameraPreview} onClick={()=>studio.patch({cameraPreview:!s.cameraPreview})}><PictureInPicture2 size={18}/>{isAndroid&&<span>Camera preview</span>}</button><button disabled={s.retargetMode} title="Show motion trail for selected control" className={trail?'active':''} onClick={()=>{runtime.current?.toggleTrail();setTrail(!trail);}}><Route size={18}/>{isAndroid&&<span>Motion trail</span>}</button><button title="Reset view" onClick={()=>isAndroid?runtime.current?.frameScene():runtime.current?.resetView()}><Scan size={18}/>{isAndroid&&<span>Frame scene</span>}</button></div></div>
- </main>;
+import { ActiveLayer, PoseActions } from './PoseActions';
+import { isTouch as isAndroid } from '../platform/storage';
+import { useEffect, useRef, useState } from 'react';
+import {
+  BoxSelect,
+  Camera,
+  Scan,
+  Route,
+  Clapperboard,
+  Gamepad2,
+  Settings2,
+  PictureInPicture2,
+  X,
+} from 'lucide-react';
+import { StudioScene } from '../scene/StudioScene';
+import { studio } from '../core/store';
+import { useStudioChrome } from '../hooks';
+export function Viewport({
+  onRuntime,
+  onThumbs,
+}: {
+  onRuntime: (r: StudioScene | null) => void;
+  onThumbs: (t: string[]) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null),
+    runtime = useRef<StudioScene | null>(null),
+    s = useStudioChrome(),
+    [trail, setTrail] = useState(false),
+    [viewOptions, setViewOptions] = useState(false);
+  useEffect(() => {
+    if (!viewOptions) return;
+    const outside = (e: PointerEvent) => {
+      if (!(e.target as Element).closest('.touch-view-toggle,.viewport-bottom'))
+        setViewOptions(false);
+    };
+    document.addEventListener('pointerdown', outside, true);
+    return () => document.removeEventListener('pointerdown', outside, true);
+  }, [viewOptions]);
+  useEffect(() => {
+    const dismiss = (event: Event) => {
+      if (viewOptions) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        setViewOptions(false);
+      }
+    };
+    window.addEventListener('pose-dismiss-overlay', dismiss, true);
+    return () => window.removeEventListener('pose-dismiss-overlay', dismiss, true);
+  }, [viewOptions]);
+  useEffect(() => {
+    const r = new StudioScene(ref.current!, studio, () => {
+      onThumbs(r.gripThumbnails());
+    });
+    runtime.current = r;
+    onRuntime(r);
+    return () => {
+      r.dispose();
+      onRuntime(null);
+    };
+  }, [onRuntime, onThumbs]);
+  return (
+    <main
+      className={
+        'viewport' + (s.gameView ? ' game-view' : '') + (s.retargetMode ? ' retarget-viewport' : '')
+      }
+      ref={ref}
+    >
+      {!isAndroid && (
+        <div className="desktop-pose-context">
+          <ActiveLayer />
+          <PoseActions
+            pasteMirrored={() => runtime.current?.pasteMirroredPose()}
+            timeline
+            mirror={() => runtime.current?.mirrorSelectedPose()}
+          />
+        </div>
+      )}
+      {isAndroid && (
+        <button
+          className="touch-view-toggle"
+          aria-label="View options"
+          aria-expanded={viewOptions}
+          onClick={() => setViewOptions(!viewOptions)}
+        >
+          <Settings2 size={22} />
+          <span>View</span>
+        </button>
+      )}
+      {s.boxSelection && (
+        <div className="scene-selection-tools" role="group" aria-label="Box selection">
+          <span className="context-flair">Drag around controls</span>
+          {(['replace', 'add', 'subtract'] as const).map((mode) => (
+            <button
+              key={mode}
+              aria-pressed={s.boxSelection === mode}
+              onClick={() => studio.patch({ boxSelection: mode })}
+            >
+              {mode === 'replace' ? 'Replace' : mode === 'add' ? 'Add' : 'Remove'}
+            </button>
+          ))}
+          <button
+            aria-label="Cancel box selection"
+            onClick={() => runtime.current?.beginBoxSelection()}
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
+      <span className="pose-view-label">
+        {s.retargetMode
+          ? 'Character setup'
+          : s.playerView
+            ? 'Player camera · Numpad 0 to return'
+            : 'Pose view'}
+        {(s.workspace?.previewCharacterId || s.retargetMode) && (
+          <small>
+            {s.retargetLoading
+              ? 'Preparing model…'
+              : s.workspace?.characters?.find(
+                  (c) =>
+                    c.id ===
+                    (s.retargetMode
+                      ? s.workspace?.activeCharacterId
+                      : s.workspace?.previewCharacterId),
+                )?.name}
+          </small>
+        )}
+      </span>
+      <div
+        className="preview-border"
+        hidden={!s.cameraPreview || s.playerView || s.gameView || s.retargetMode}
+      >
+        <span>
+          Player camera <small>(16:9)</small>
+        </span>
+        <button
+          title="Select player camera"
+          aria-label="Select player camera"
+          onClick={() => {
+            studio.setLayer('firstPerson');
+            studio.patch({ selected: 'camera' });
+          }}
+        >
+          <Camera size={13} />
+        </button>
+      </div>
+      {!s.ready && (
+        <div className="loading-overlay">
+          <div className="spinner" />
+          <strong>Preparing Manny</strong>
+          <span>Loading the character and animation controls…</span>
+        </div>
+      )}
+      <div className="viewport-orientation">
+        <svg viewBox="0 0 80 80" aria-label="Unreal orientation axes">
+          {['X', 'Y', 'Z'].map((axis) => (
+            <g key={axis} data-axis={axis}>
+              <line x1="40" y1="40" x2="40" y2="40" />
+              <text x="40" y="40">
+                {axis}
+              </text>
+            </g>
+          ))}
+        </svg>
+        <span>10 cm · 1 m</span>
+      </div>
+      <div className={'viewport-bottom' + (viewOptions ? ' view-options-open' : '')}>
+        <span />
+        <div>
+          {isAndroid && (
+            <header>
+              <strong className="context-flair">Scene view</strong>
+              <button aria-label="Close view options" onClick={() => setViewOptions(false)}>
+                <X size={20} />
+              </button>
+            </header>
+          )}
+          <button
+            title="Box select controls (B)"
+            aria-label="Box select controls"
+            aria-pressed={!!s.boxSelection}
+            disabled={s.gameView || s.retargetMode}
+            onClick={() => runtime.current?.beginBoxSelection()}
+          >
+            <BoxSelect size={18} />
+            {isAndroid && <span>Box select</span>}
+          </button>
+          <button
+            title="Game View · hide editor overlays (Shift G)"
+            aria-label="Game View"
+            aria-pressed={s.gameView}
+            onClick={() => runtime.current?.toggleGameView()}
+          >
+            <Gamepad2 size={18} />
+            {isAndroid && <span>Game view</span>}
+          </button>
+          <button
+            title="Cinematic view · reflections, ambient occlusion and antialiasing"
+            aria-label="Cinematic view"
+            aria-pressed={s.cinematic}
+            onClick={() => studio.setCinematic(!s.cinematic)}
+          >
+            <Clapperboard size={18} />
+            {isAndroid && <span>Cinematic</span>}
+          </button>
+          <button
+            title="Player camera view (Numpad 0)"
+            disabled={s.retargetMode}
+            aria-label="Player camera view"
+            aria-pressed={s.playerView}
+            onClick={() => studio.patch({ playerView: !s.playerView })}
+          >
+            <Camera size={18} />
+            {isAndroid && <span>Player camera</span>}
+          </button>
+          <button
+            aria-label="Camera preview"
+            aria-pressed={s.cameraPreview}
+            onClick={() => studio.patch({ cameraPreview: !s.cameraPreview })}
+          >
+            <PictureInPicture2 size={18} />
+            {isAndroid && <span>Camera preview</span>}
+          </button>
+          <button
+            disabled={s.retargetMode}
+            title="Show motion trail for selected control"
+            className={trail ? 'active' : ''}
+            onClick={() => {
+              runtime.current?.toggleTrail();
+              setTrail(!trail);
+            }}
+          >
+            <Route size={18} />
+            {isAndroid && <span>Motion trail</span>}
+          </button>
+          <button
+            title="Reset view"
+            onClick={() =>
+              isAndroid ? runtime.current?.frameScene() : runtime.current?.resetView()
+            }
+          >
+            <Scan size={18} />
+            {isAndroid && <span>Frame scene</span>}
+          </button>
+        </div>
+      </div>
+    </main>
+  );
 }

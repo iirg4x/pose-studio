@@ -1,43 +1,211 @@
-.animation-folders{min-width:0;min-height:0;display:flex;flex-direction:column;flex:1}
-.animation-folders>.library-search,.animation-folders>.animation-folder-path,.animation-folders>.animation-search-summary{flex:none}
-.animation-folder-path{display:flex;align-items:center;gap:4px;padding:8px 0;border-bottom:1px solid var(--border)}
-.animation-folder-path>button{flex:none;width:28px;height:28px}
-.animation-folder-path>div{display:flex;align-items:center;min-width:0;overflow-x:auto;scrollbar-width:none}
-.animation-folder-path span{display:flex;align-items:center;flex:none}
-.animation-folder-path button{display:flex;align-items:center;gap:4px;padding:4px 6px;border-radius:4px;white-space:nowrap;font-size:11px;color:var(--muted)}
-.animation-folder-path button[aria-current=location]{color:var(--text)}
-.animation-folder-path button:disabled{opacity:.3}
-.animation-folder-results{height:min(560px,65dvh);flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding-bottom:8px}
-.animation-folder-row{display:flex;min-width:0}
-.animation-folder-item{display:flex;align-items:center;min-width:0;flex:1;gap:12px;padding:8px 12px;text-align:left;border-radius:4px}
-.animation-folder-item>svg{flex:none;color:var(--muted)}
-.folder-row .animation-folder-item>svg:first-child{color:var(--cyan)}
-.animation-folder-item>span{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
-.animation-folder-item strong{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.animation-folder-item small{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.animation-folder-item .folder-count{flex:none;font-variant-numeric:tabular-nums}
-.animation-folder-item[aria-current=true]{background:var(--selection);color:var(--cyan)}
-.animation-search-summary{font-size:11px;color:var(--muted);padding:8px 12px}
-.android .animation-folder-path>button{width:40px;height:40px}
-.android .animation-folder-path button{min-height:40px;font-size:12px}
-.android .animation-folder-results{height:auto}
-.android .animation-folder-item strong{font-size:13px}
-.android .animation-folder-item small{font-size:11px}
-.android .animation-folder-item{padding:8px;gap:12px}
-.android .animation-folder-row .animation-actions{min-width:44px}
+.animation-folders {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.animation-folders > .library-search,
+.animation-folders > .animation-folder-path,
+.animation-folders > .animation-search-summary {
+  flex: none;
+}
+.animation-folder-path {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.animation-folder-path > button {
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
+.animation-folder-path > div {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.animation-folder-path span {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+.animation-folder-path button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--muted);
+}
+.animation-folder-path button[aria-current='location'] {
+  color: var(--text);
+}
+.animation-folder-path button:disabled {
+  opacity: 0.3;
+}
+.animation-folder-results {
+  height: min(560px, 65dvh);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding-bottom: 8px;
+}
+.animation-folder-row {
+  display: flex;
+  min-width: 0;
+}
+.animation-folder-item {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+  gap: 12px;
+  padding: 8px 12px;
+  text-align: left;
+  border-radius: 4px;
+}
+.animation-folder-item > svg {
+  flex: none;
+  color: var(--muted);
+}
+.folder-row .animation-folder-item > svg:first-child {
+  color: var(--cyan);
+}
+.animation-folder-item > span {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+.animation-folder-item strong {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.animation-folder-item small {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.animation-folder-item .folder-count {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.animation-folder-item[aria-current='true'] {
+  background: var(--selection);
+  color: var(--cyan);
+}
+.animation-search-summary {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 8px 12px;
+}
+.android .animation-folder-path > button {
+  width: 40px;
+  height: 40px;
+}
+.android .animation-folder-path button {
+  min-height: 40px;
+  font-size: 12px;
+}
+.android .animation-folder-results {
+  height: auto;
+}
+.android .animation-folder-item strong {
+  font-size: 13px;
+}
+.android .animation-folder-item small {
+  font-size: 11px;
+}
+.android .animation-folder-item {
+  padding: 8px;
+  gap: 12px;
+}
+.android .animation-folder-row .animation-actions {
+  min-width: 44px;
+}
 /* One scroll viewport fills the sheet; nested scrolling could hide its last rows. */
-.android .tablet-sheet-animations:has(.animation-folders){height:calc(100dvh - 80px - var(--touch-dock) - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
-.android .tablet-sheet-animations:has(.animation-folders) .tablet-sheet-content{flex:1;min-height:0;max-height:none;overflow:hidden}
-.android .tablet-sheet-animations:has(.animation-folders) .animation-bar{display:grid;grid-template-columns:auto 1fr;grid-template-rows:44px minmax(0,1fr);align-content:stretch;flex:1;min-height:0;overflow:hidden}
-.android .tablet-sheet-animations:has(.animation-folders) .animation-bar>.library-toggle{grid-column:1;grid-row:1}
-.android .tablet-sheet-animations:has(.animation-folders) .animation-bar>.pose-toolbar{grid-column:2;grid-row:1;margin:0}
-.android .tablet-sheet-animations:has(.animation-folders) .library-panel{grid-column:1/-1;grid-row:2;min-height:0;margin:0;padding:0}
-.android .tablet-sheet-animations:has(.hosted-library) .animation-bar{grid-template-rows:minmax(0,1fr)}
-.android .tablet-sheet-animations:has(.hosted-library) .animation-bar>.library-toggle,.android .tablet-sheet-animations:has(.hosted-library) .animation-bar>.pose-toolbar{display:none}
-.android .tablet-sheet-animations:has(.hosted-library) .library-panel{grid-row:1}
-.android .tablet-sheet-animations .hosted-source{display:none}
-@media(max-height:540px){
- .android .app.sheet-open .tablet-sheet-animations:has(.animation-folders),.android .app.sheet-open:has(.selection-pose-tools:not([data-state=closing])) .tablet-sheet-animations:has(.animation-folders){top:52px;right:72px;height:calc(100dvh - 140px);max-height:calc(100dvh - 140px)}
- .android .app.sheet-open:has(.tablet-sheet-animations) .touch-panel-rail{top:104px;bottom:auto;flex-direction:column}
- .android .app.sheet-open:has(.tablet-sheet-animations) .selection-pose-tools,.android .app.sheet-open:has(.tablet-sheet-animations) .touch-pose-rail{visibility:hidden}
+.android .tablet-sheet-animations:has(.animation-folders) {
+  height: calc(
+    100dvh - 80px - var(--touch-dock) - 28px - env(safe-area-inset-top) -
+      env(safe-area-inset-bottom)
+  );
+}
+.android .tablet-sheet-animations:has(.animation-folders) .tablet-sheet-content {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+}
+.android .tablet-sheet-animations:has(.animation-folders) .animation-bar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: 44px minmax(0, 1fr);
+  align-content: stretch;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.android .tablet-sheet-animations:has(.animation-folders) .animation-bar > .library-toggle {
+  grid-column: 1;
+  grid-row: 1;
+}
+.android .tablet-sheet-animations:has(.animation-folders) .animation-bar > .pose-toolbar {
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+}
+.android .tablet-sheet-animations:has(.animation-folders) .library-panel {
+  grid-column: 1/-1;
+  grid-row: 2;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+.android .tablet-sheet-animations:has(.hosted-library) .animation-bar {
+  grid-template-rows: minmax(0, 1fr);
+}
+.android .tablet-sheet-animations:has(.hosted-library) .animation-bar > .library-toggle,
+.android .tablet-sheet-animations:has(.hosted-library) .animation-bar > .pose-toolbar {
+  display: none;
+}
+.android .tablet-sheet-animations:has(.hosted-library) .library-panel {
+  grid-row: 1;
+}
+.android .tablet-sheet-animations .hosted-source {
+  display: none;
+}
+@media (max-height: 540px) {
+  .android .app.sheet-open .tablet-sheet-animations:has(.animation-folders),
+  .android
+    .app.sheet-open:has(.selection-pose-tools:not([data-state='closing']))
+    .tablet-sheet-animations:has(.animation-folders) {
+    top: 52px;
+    right: 72px;
+    height: calc(100dvh - 140px);
+    max-height: calc(100dvh - 140px);
+  }
+  .android .app.sheet-open:has(.tablet-sheet-animations) .touch-panel-rail {
+    top: 104px;
+    bottom: auto;
+    flex-direction: column;
+  }
+  .android .app.sheet-open:has(.tablet-sheet-animations) .selection-pose-tools,
+  .android .app.sheet-open:has(.tablet-sheet-animations) .touch-pose-rail {
+    visibility: hidden;
+  }
 }

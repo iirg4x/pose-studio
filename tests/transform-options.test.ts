@@ -1,9 +1,41 @@
-import {it,expect} from 'vitest';
-import {Matrix4,Quaternion,Vector3} from 'three';
-import {pivotPoint,transformedControl,orientationQuaternion} from '../src/scene/transformOptions';
-it('uses selection mean, bounds, active or cursor for distinct pivots',()=>{const p=[new Vector3(0,0,0),new Vector3(1,0,0),new Vector3(5,0,0)],active=p[1],cursor=new Vector3(7,8,9);expect(pivotPoint(p,active,'median',cursor).x).toBe(2);expect(pivotPoint(p,active,'bounds',cursor).x).toBe(2.5);expect(pivotPoint(p,active,'active',cursor).x).toBe(1);expect(pivotPoint(p,active,'cursor',cursor).toArray()).toEqual([7,8,9]);expect(p.map(v=>v.x)).toEqual([0,1,5]);});
-it('rotates a selection around a shared pivot or each origin without translating individual controls',()=>{const m=new Matrix4().makeTranslation(2,0,0),delta=new Matrix4().makeRotationZ(Math.PI/2);const group=transformedControl(m,delta,'rotate','median'),individual=transformedControl(m,delta,'rotate','individual');expect(new Vector3().setFromMatrixPosition(group).y).toBeCloseTo(2);expect(new Vector3().setFromMatrixPosition(individual).toArray()).toEqual([2,0,0]);expect(individual.elements.slice(0,12)).toEqual(group.elements.slice(0,12));});
-it('uses the active control for local axes and camera for view axes',()=>{const active=new Quaternion().setFromAxisAngle(new Vector3(0,1,0),.8),view=new Quaternion().setFromAxisAngle(new Vector3(1,0,0),.4);expect(orientationQuaternion('world',active,view)).toBeUndefined();expect(orientationQuaternion('local',active,view)?.equals(active)).toBe(true);expect(orientationQuaternion('view',active,view)?.equals(view)).toBe(true);});
+import { it, expect } from 'vitest';
+import { Matrix4, Quaternion, Vector3 } from 'three';
+import {
+  pivotPoint,
+  transformedControl,
+  orientationQuaternion,
+} from '../src/scene/transformOptions';
+it('uses selection mean, bounds, active or cursor for distinct pivots', () => {
+  const p = [new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(5, 0, 0)],
+    active = p[1],
+    cursor = new Vector3(7, 8, 9);
+  expect(pivotPoint(p, active, 'median', cursor).x).toBe(2);
+  expect(pivotPoint(p, active, 'bounds', cursor).x).toBe(2.5);
+  expect(pivotPoint(p, active, 'active', cursor).x).toBe(1);
+  expect(pivotPoint(p, active, 'cursor', cursor).toArray()).toEqual([7, 8, 9]);
+  expect(p.map((v) => v.x)).toEqual([0, 1, 5]);
+});
+it('rotates a selection around a shared pivot or each origin without translating individual controls', () => {
+  const m = new Matrix4().makeTranslation(2, 0, 0),
+    delta = new Matrix4().makeRotationZ(Math.PI / 2);
+  const group = transformedControl(m, delta, 'rotate', 'median'),
+    individual = transformedControl(m, delta, 'rotate', 'individual');
+  expect(new Vector3().setFromMatrixPosition(group).y).toBeCloseTo(2);
+  expect(new Vector3().setFromMatrixPosition(individual).toArray()).toEqual([2, 0, 0]);
+  expect(individual.elements.slice(0, 12)).toEqual(group.elements.slice(0, 12));
+});
+it('uses the active control for local axes and camera for view axes', () => {
+  const active = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), 0.8),
+    view = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), 0.4);
+  expect(orientationQuaternion('world', active, view)).toBeUndefined();
+  expect(orientationQuaternion('local', active, view)?.equals(active)).toBe(true);
+  expect(orientationQuaternion('view', active, view)?.equals(view)).toBe(true);
+});
 
-import {framePointer} from '../src/scene/ViewportTransformControls';
-it('maps canvas pointers into the letterboxed camera frame for gizmo picking',()=>{const rect={x:0,y:100,w:800,h:450};expect(framePointer({x:0,y:0},800,650,rect)).toEqual({x:0,y:0});expect(framePointer({x:-1,y:1-200/650},800,650,rect).y).toBeCloseTo(1);expect(framePointer({x:1,y:1-1100/650},800,650,rect).y).toBeCloseTo(-1);});
+import { framePointer } from '../src/scene/ViewportTransformControls';
+it('maps canvas pointers into the letterboxed camera frame for gizmo picking', () => {
+  const rect = { x: 0, y: 100, w: 800, h: 450 };
+  expect(framePointer({ x: 0, y: 0 }, 800, 650, rect)).toEqual({ x: 0, y: 0 });
+  expect(framePointer({ x: -1, y: 1 - 200 / 650 }, 800, 650, rect).y).toBeCloseTo(1);
+  expect(framePointer({ x: 1, y: 1 - 1100 / 650 }, 800, 650, rect).y).toBeCloseTo(-1);
+});

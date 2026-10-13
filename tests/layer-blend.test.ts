@@ -1,41 +1,247 @@
-import {describe,it,expect} from 'vitest';
-import {Euler,Matrix4,Quaternion,Vector3} from 'three';
-import {createProject,pose,clone,evaluate,putKey,rawForWorld,matrix,validateProject} from '../src/core/model';
-import type {ControlId} from '../src/core/model';
-import {addAnimationLayer,activeAnimationLayer,captureControlLayerReference,selectAnimationLayer,syncLayers} from '../src/core/layers';
-import {blendChannel} from '../src/core/blendChannels';
-import type {BlendChannel} from '../src/core/blendChannels';
-import {ensureCurve,channelSample} from '../src/core/curves';
-import {StudioStore} from '../src/core/store';
-import {library} from '../src/core/library';
-import {mirrorTimelineClipboard} from '../src/core/mirrorTimeline';
-import {copyTimelineKeys,pasteTimelineKeys,moveTimelineKeys,deleteTimelineKeys,trackFrames} from '../src/core/timelineKeys';
-const near=(a:number[],b:number[],digits=6)=>a.forEach((v,i)=>expect(v).toBeCloseTo(b[i],digits));
-const set=(p:ReturnType<typeof createProject>,id:ControlId,c:BlendChannel,v:number)=>{captureControlLayerReference(p,id,0);ensureCurve(p.tracks[id],c).keys=[{frame:0,value:v,interpolation:'linear',handle:'vector'}];};
-function scene(){const b=createProject({},false);b.end=30;b.tracks.hand_l.spaces=[];b.tracks.hand_l.keys=[{...pose([.2,1,.3],undefined,[0,0,0,0,0]),frame:0},{...pose([.5,1.6,.8],new Quaternion().setFromEuler(new Euler(.2,.3,.4)).toArray(),[0,0,0,0,0]),frame:30}];b.tracks.hand_l.interpolation='linear';const p=addAnimationLayer(b,'pose');activeAnimationLayer(p)!.space='world';activeAnimationLayer(p)!.contacts=false;return {b,p};}
-describe('animated control layer blending',()=>{
- it('mixes replacement XY position, additive Z position and all additive rotation',()=>{const {b,p}=scene();p.tracks.hand_l.keys[0].p=[.1,-.2,.3];set(p,'hand_l','blendReplace_px',100);set(p,'hand_l','blendReplace_py',100);for(const f of [0,3.5,15,30]){const a=evaluate(b,f).hand_l,v=evaluate(p,f).hand_l;near(v.p,[.3,.8,a.p[2]+.3]);near(v.q,a.q);}});
- it('weights each axis independently and multiplies overall and layer weights',()=>{const {b,p}=scene();p.tracks.hand_l.keys[0].p=[.2,.4,.6];set(p,'hand_l','blendWeight_px',50);set(p,'hand_l','blendWeight_py',25);set(p,'hand_l','blendWeight_pz',0);set(p,'hand_l','blendWeight',50);activeAnimationLayer(p)!.weight=.5;const a=evaluate(b,15).hand_l;near(evaluate(p,15).hand_l.p,[a.p[0]+.025,a.p[1]+.025,a.p[2]]);});
- it('retains quaternion additive evaluation when only overall influence is changed',()=>{const {p}=scene();p.tracks.hand_l.keys[0].q=new Quaternion().setFromEuler(new Euler(.4,-.3,.7)).toArray();const old=clone(p);activeAnimationLayer(old)!.weight=.3;set(p,'hand_l','blendWeight',30);for(const f of [0,8.4,30])near(matrix(evaluate(p,f).hand_l).elements,matrix(evaluate(old,f).hand_l).elements);});
- it('independently weights and replaces rotation axes in parent space',()=>{const {p}=scene();activeAnimationLayer(p)!.space='parent';set(p,'hand_l','blendReplace_rx',100);set(p,'hand_l','blendWeight_ry',0);p.tracks.hand_l.keys[0].q=new Quaternion().setFromEuler(new Euler(.15,.2,.1)).toArray();const a=new Euler().setFromQuaternion(new Quaternion(...evaluate(p,30).hand_l.q));expect(a.x).toBeCloseTo(.15,6);expect(a.y).toBeCloseTo(.3,6);});
- it('captures world replacement against animated root motion',()=>{const {p}=scene();p.layers![0].tracks.root.keys=[{...pose(),frame:0},{...pose([1,0,0],new Quaternion().setFromAxisAngle(new Vector3(0,1,0),.5).toArray()),frame:30}];for(const axis of ['px','py','pz','rx','ry','rz'] as const)set(p,'hand_l',blendChannel(axis,'Replace'),100);const a=evaluate(p,0).hand_l;near(matrix(evaluate(p,30).hand_l).elements,matrix(a).elements);});
- it('round trips edits in local, parent and world space with mixed channels and influence',()=>{for(const space of ['local','parent','world'] as const){const {p}=scene();activeAnimationLayer(p)!.space=space;set(p,'hand_l','blendReplace_px',100);set(p,'hand_l','blendReplace_ry',60);set(p,'hand_l','blendWeight_rz',40);set(p,'hand_l','blendWeight',65);const target=clone(evaluate(p,12).hand_l);target.p[0]+=.03;target.p[1]-=.04;target.q=new Quaternion().setFromEuler(new Euler(.12,.24,-.08)).multiply(new Quaternion(...target.q)).toArray();putKey(p.tracks.hand_l,0,rawForWorld(p,'hand_l',12,target));near(matrix(evaluate(p,12).hand_l).elements,matrix(target).elements,5);}});
- it('can pose lower layers through partial replacement without corrupting the upper channels',()=>{const {p}=scene();set(p,'hand_l','blendReplace_px',40);set(p,'hand_l','blendReplace_ry',40);const settings=JSON.stringify(p.tracks.hand_l.curves);selectAnimationLayer(p,p.layers![0].id);const target=clone(evaluate(p,12).hand_l);target.p[0]+=.03;target.q=new Quaternion().setFromEuler(new Euler(.12,.1,-.08)).multiply(new Quaternion(...target.q)).toArray();putKey(p.tracks.hand_l,12,rawForWorld(p,'hand_l',12,target));near(matrix(evaluate(p,12).hand_l).elements,matrix(target).elements,5);expect(JSON.stringify(p.layers![1].tracks.hand_l.curves)).toBe(settings);});
- it('animates a static pose layer blend without collapsing settings to frame zero or stopping playback',()=>{const {p}=scene(),s=new StudioStore();s.open(library(p));s.selectControl('hand_l');s.setFrame(10);s.patch({playing:true});s.setControlLayerSetting('blendReplace_py',100,true,10,'bezier');const next=s.state.project!;expect(next.tracks.hand_l.curves!.blendReplace_py!.keys.map(k=>k.frame)).toEqual([0,10,20]);expect(channelSample(next.tracks.hand_l,'blendReplace_py',15)).toBeCloseTo(50);expect(next.tracks.hand_l.keys.map(k=>k.frame)).toEqual([0]);expect(s.state.playing).toBe(true);const original=evaluate(p,10).hand_l.p[1];expect(evaluate(next,20).hand_l.p[1]).toBeCloseTo(original);const curve=JSON.stringify(next.tracks.hand_l.curves!.blendReplace_py);putKey(next.tracks.hand_l,0,pose([0,-.2,0]));expect(JSON.stringify(next.tracks.hand_l.curves!.blendReplace_py)).toBe(curve);s.undo();expect(s.state.project!.tracks.hand_l.curves?.blendReplace_py).toBeUndefined();});
- it('persists blend settings and their reference, with timeline copy, paste and retiming',()=>{const {p}=scene(),s=new StudioStore();s.open(library(p));s.selectControl('hand_l');s.setFrame(8);s.setControlLayerSetting('blendWeight',20,true,8,'linear');const next=validateProject(JSON.parse(JSON.stringify(syncLayers(s.state.project!))));expect(trackFrames(next.tracks.hand_l)).toContain(16);const clip=copyTimelineKeys(next,[{id:'hand_l',frame:8},{id:'hand_l',frame:16}])!;const pasted=pasteTimelineKeys(next,clip,12).project;expect(pasted.tracks.hand_l.curves!.blendWeight!.keys.find(k=>k.frame===20)?.value).toBe(20);const moved=moveTimelineKeys(pasted,[{id:'hand_l',frame:20}],2).project;expect(moved.tracks.hand_l.curves!.blendWeight!.keys.at(-1)!.frame).toBe(22);const removed=deleteTimelineKeys(moved,[{id:'hand_l',frame:22}]).project;expect(trackFrames(removed.tracks.hand_l)).not.toContain(22);});
- it('rejects malformed references and lets a zero-weight control be re-enabled',()=>{const {p}=scene(),s=new StudioStore();s.open(library(p));s.selectControl('hand_l');s.setControlLayerSetting('blendWeight',0,false);s.setControlLayerSetting('blendWeight',100,false);expect(channelSample(s.state.project!.tracks.hand_l,'blendWeight',0)).toBe(100);const bad=clone(s.state.project!);bad.tracks.hand_l.layerReference!.value.q=[0,0,0,0];expect(()=>validateProject(bad)).toThrow(/reference/);});
+import { describe, it, expect } from 'vitest';
+import { Euler, Matrix4, Quaternion, Vector3 } from 'three';
+import {
+  createProject,
+  pose,
+  clone,
+  evaluate,
+  putKey,
+  rawForWorld,
+  matrix,
+  validateProject,
+} from '../src/core/model';
+import type { ControlId } from '../src/core/model';
+import {
+  addAnimationLayer,
+  activeAnimationLayer,
+  captureControlLayerReference,
+  selectAnimationLayer,
+  syncLayers,
+} from '../src/core/layers';
+import { blendChannel } from '../src/core/blendChannels';
+import type { BlendChannel } from '../src/core/blendChannels';
+import { ensureCurve, channelSample } from '../src/core/curves';
+import { StudioStore } from '../src/core/store';
+import { library } from '../src/core/library';
+import { mirrorTimelineClipboard } from '../src/core/mirrorTimeline';
+import {
+  copyTimelineKeys,
+  pasteTimelineKeys,
+  moveTimelineKeys,
+  deleteTimelineKeys,
+  trackFrames,
+} from '../src/core/timelineKeys';
+const near = (a: number[], b: number[], digits = 6) =>
+  a.forEach((v, i) => expect(v).toBeCloseTo(b[i], digits));
+const set = (p: ReturnType<typeof createProject>, id: ControlId, c: BlendChannel, v: number) => {
+  captureControlLayerReference(p, id, 0);
+  ensureCurve(p.tracks[id], c).keys = [
+    { frame: 0, value: v, interpolation: 'linear', handle: 'vector' },
+  ];
+};
+function scene() {
+  const b = createProject({}, false);
+  b.end = 30;
+  b.tracks.hand_l.spaces = [];
+  b.tracks.hand_l.keys = [
+    { ...pose([0.2, 1, 0.3], undefined, [0, 0, 0, 0, 0]), frame: 0 },
+    {
+      ...pose(
+        [0.5, 1.6, 0.8],
+        new Quaternion().setFromEuler(new Euler(0.2, 0.3, 0.4)).toArray(),
+        [0, 0, 0, 0, 0],
+      ),
+      frame: 30,
+    },
+  ];
+  b.tracks.hand_l.interpolation = 'linear';
+  const p = addAnimationLayer(b, 'pose');
+  activeAnimationLayer(p)!.space = 'world';
+  activeAnimationLayer(p)!.contacts = false;
+  return { b, p };
+}
+describe('animated control layer blending', () => {
+  it('mixes replacement XY position, additive Z position and all additive rotation', () => {
+    const { b, p } = scene();
+    p.tracks.hand_l.keys[0].p = [0.1, -0.2, 0.3];
+    set(p, 'hand_l', 'blendReplace_px', 100);
+    set(p, 'hand_l', 'blendReplace_py', 100);
+    for (const f of [0, 3.5, 15, 30]) {
+      const a = evaluate(b, f).hand_l,
+        v = evaluate(p, f).hand_l;
+      near(v.p, [0.3, 0.8, a.p[2] + 0.3]);
+      near(v.q, a.q);
+    }
+  });
+  it('weights each axis independently and multiplies overall and layer weights', () => {
+    const { b, p } = scene();
+    p.tracks.hand_l.keys[0].p = [0.2, 0.4, 0.6];
+    set(p, 'hand_l', 'blendWeight_px', 50);
+    set(p, 'hand_l', 'blendWeight_py', 25);
+    set(p, 'hand_l', 'blendWeight_pz', 0);
+    set(p, 'hand_l', 'blendWeight', 50);
+    activeAnimationLayer(p)!.weight = 0.5;
+    const a = evaluate(b, 15).hand_l;
+    near(evaluate(p, 15).hand_l.p, [a.p[0] + 0.025, a.p[1] + 0.025, a.p[2]]);
+  });
+  it('retains quaternion additive evaluation when only overall influence is changed', () => {
+    const { p } = scene();
+    p.tracks.hand_l.keys[0].q = new Quaternion().setFromEuler(new Euler(0.4, -0.3, 0.7)).toArray();
+    const old = clone(p);
+    activeAnimationLayer(old)!.weight = 0.3;
+    set(p, 'hand_l', 'blendWeight', 30);
+    for (const f of [0, 8.4, 30])
+      near(matrix(evaluate(p, f).hand_l).elements, matrix(evaluate(old, f).hand_l).elements);
+  });
+  it('independently weights and replaces rotation axes in parent space', () => {
+    const { p } = scene();
+    activeAnimationLayer(p)!.space = 'parent';
+    set(p, 'hand_l', 'blendReplace_rx', 100);
+    set(p, 'hand_l', 'blendWeight_ry', 0);
+    p.tracks.hand_l.keys[0].q = new Quaternion().setFromEuler(new Euler(0.15, 0.2, 0.1)).toArray();
+    const a = new Euler().setFromQuaternion(new Quaternion(...evaluate(p, 30).hand_l.q));
+    expect(a.x).toBeCloseTo(0.15, 6);
+    expect(a.y).toBeCloseTo(0.3, 6);
+  });
+  it('captures world replacement against animated root motion', () => {
+    const { p } = scene();
+    p.layers![0].tracks.root.keys = [
+      { ...pose(), frame: 0 },
+      {
+        ...pose([1, 0, 0], new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), 0.5).toArray()),
+        frame: 30,
+      },
+    ];
+    for (const axis of ['px', 'py', 'pz', 'rx', 'ry', 'rz'] as const)
+      set(p, 'hand_l', blendChannel(axis, 'Replace'), 100);
+    const a = evaluate(p, 0).hand_l;
+    near(matrix(evaluate(p, 30).hand_l).elements, matrix(a).elements);
+  });
+  it('round trips edits in local, parent and world space with mixed channels and influence', () => {
+    for (const space of ['local', 'parent', 'world'] as const) {
+      const { p } = scene();
+      activeAnimationLayer(p)!.space = space;
+      set(p, 'hand_l', 'blendReplace_px', 100);
+      set(p, 'hand_l', 'blendReplace_ry', 60);
+      set(p, 'hand_l', 'blendWeight_rz', 40);
+      set(p, 'hand_l', 'blendWeight', 65);
+      const target = clone(evaluate(p, 12).hand_l);
+      target.p[0] += 0.03;
+      target.p[1] -= 0.04;
+      target.q = new Quaternion()
+        .setFromEuler(new Euler(0.12, 0.24, -0.08))
+        .multiply(new Quaternion(...target.q))
+        .toArray();
+      putKey(p.tracks.hand_l, 0, rawForWorld(p, 'hand_l', 12, target));
+      near(matrix(evaluate(p, 12).hand_l).elements, matrix(target).elements, 5);
+    }
+  });
+  it('can pose lower layers through partial replacement without corrupting the upper channels', () => {
+    const { p } = scene();
+    set(p, 'hand_l', 'blendReplace_px', 40);
+    set(p, 'hand_l', 'blendReplace_ry', 40);
+    const settings = JSON.stringify(p.tracks.hand_l.curves);
+    selectAnimationLayer(p, p.layers![0].id);
+    const target = clone(evaluate(p, 12).hand_l);
+    target.p[0] += 0.03;
+    target.q = new Quaternion()
+      .setFromEuler(new Euler(0.12, 0.1, -0.08))
+      .multiply(new Quaternion(...target.q))
+      .toArray();
+    putKey(p.tracks.hand_l, 12, rawForWorld(p, 'hand_l', 12, target));
+    near(matrix(evaluate(p, 12).hand_l).elements, matrix(target).elements, 5);
+    expect(JSON.stringify(p.layers![1].tracks.hand_l.curves)).toBe(settings);
+  });
+  it('animates a static pose layer blend without collapsing settings to frame zero or stopping playback', () => {
+    const { p } = scene(),
+      s = new StudioStore();
+    s.open(library(p));
+    s.selectControl('hand_l');
+    s.setFrame(10);
+    s.patch({ playing: true });
+    s.setControlLayerSetting('blendReplace_py', 100, true, 10, 'bezier');
+    const next = s.state.project!;
+    expect(next.tracks.hand_l.curves!.blendReplace_py!.keys.map((k) => k.frame)).toEqual([
+      0, 10, 20,
+    ]);
+    expect(channelSample(next.tracks.hand_l, 'blendReplace_py', 15)).toBeCloseTo(50);
+    expect(next.tracks.hand_l.keys.map((k) => k.frame)).toEqual([0]);
+    expect(s.state.playing).toBe(true);
+    const original = evaluate(p, 10).hand_l.p[1];
+    expect(evaluate(next, 20).hand_l.p[1]).toBeCloseTo(original);
+    const curve = JSON.stringify(next.tracks.hand_l.curves!.blendReplace_py);
+    putKey(next.tracks.hand_l, 0, pose([0, -0.2, 0]));
+    expect(JSON.stringify(next.tracks.hand_l.curves!.blendReplace_py)).toBe(curve);
+    s.undo();
+    expect(s.state.project!.tracks.hand_l.curves?.blendReplace_py).toBeUndefined();
+  });
+  it('persists blend settings and their reference, with timeline copy, paste and retiming', () => {
+    const { p } = scene(),
+      s = new StudioStore();
+    s.open(library(p));
+    s.selectControl('hand_l');
+    s.setFrame(8);
+    s.setControlLayerSetting('blendWeight', 20, true, 8, 'linear');
+    const next = validateProject(JSON.parse(JSON.stringify(syncLayers(s.state.project!))));
+    expect(trackFrames(next.tracks.hand_l)).toContain(16);
+    const clip = copyTimelineKeys(next, [
+      { id: 'hand_l', frame: 8 },
+      { id: 'hand_l', frame: 16 },
+    ])!;
+    const pasted = pasteTimelineKeys(next, clip, 12).project;
+    expect(pasted.tracks.hand_l.curves!.blendWeight!.keys.find((k) => k.frame === 20)?.value).toBe(
+      20,
+    );
+    const moved = moveTimelineKeys(pasted, [{ id: 'hand_l', frame: 20 }], 2).project;
+    expect(moved.tracks.hand_l.curves!.blendWeight!.keys.at(-1)!.frame).toBe(22);
+    const removed = deleteTimelineKeys(moved, [{ id: 'hand_l', frame: 22 }]).project;
+    expect(trackFrames(removed.tracks.hand_l)).not.toContain(22);
+  });
+  it('rejects malformed references and lets a zero-weight control be re-enabled', () => {
+    const { p } = scene(),
+      s = new StudioStore();
+    s.open(library(p));
+    s.selectControl('hand_l');
+    s.setControlLayerSetting('blendWeight', 0, false);
+    s.setControlLayerSetting('blendWeight', 100, false);
+    expect(channelSample(s.state.project!.tracks.hand_l, 'blendWeight', 0)).toBe(100);
+    const bad = clone(s.state.project!);
+    bad.tracks.hand_l.layerReference!.value.q = [0, 0, 0, 0];
+    expect(() => validateProject(bad)).toThrow(/reference/);
+  });
 });
 
-it('keeps edited world overlays uniform through contact states when blended',()=>{
- const base=createProject({},true),p=addAnimationLayer(base,'pose');set(p,'hand_l','blendWeight_py',50);
- const target=clone(evaluate(p,8).hand_l);target.p[1]-=.08;putKey(p.tracks.hand_l,0,rawForWorld(p,'hand_l',8,target));
- for(const f of [0,8,13,35,70])expect(evaluate(p,f).hand_l.p[1]-evaluate(base,f).hand_l.p[1]).toBeCloseTo(-.08,5);
+it('keeps edited world overlays uniform through contact states when blended', () => {
+  const base = createProject({}, true),
+    p = addAnimationLayer(base, 'pose');
+  set(p, 'hand_l', 'blendWeight_py', 50);
+  const target = clone(evaluate(p, 8).hand_l);
+  target.p[1] -= 0.08;
+  putKey(p.tracks.hand_l, 0, rawForWorld(p, 'hand_l', 8, target));
+  for (const f of [0, 8, 13, 35, 70])
+    expect(evaluate(p, f).hand_l.p[1] - evaluate(base, f).hand_l.p[1]).toBeCloseTo(-0.08, 5);
 });
 
-it('mirrors blend references without reapplying imported curve basis',()=>{
- const {p}=scene();p.tracks.hand_l.basis={pre:new Matrix4().makeRotationX(.2).toArray(),post:new Matrix4().toArray()};p.tracks.hand_r.basis=clone(p.tracks.hand_l.basis);set(p,'hand_l','blendReplace_px',100);set(p,'hand_l','blendReplace_py',100);set(p,'hand_l','blendReplace_pz',100);
- const ref=clone(p.tracks.hand_l.layerReference!),clip=copyTimelineKeys(p,[{id:'hand_l',frame:0}])!;
- const mirrored=mirrorTimelineClipboard(clip,p,()=>({world:new Matrix4(),parent:new Matrix4()}));
- near(mirrored.items[0].track.layerReference!.value.p,[-ref.value.p[0],ref.value.p[1],ref.value.p[2]]);
- expect(mirrored.items[0].track.curves!.blendReplace_py!.keys[0].value).toBe(100);
+it('mirrors blend references without reapplying imported curve basis', () => {
+  const { p } = scene();
+  p.tracks.hand_l.basis = {
+    pre: new Matrix4().makeRotationX(0.2).toArray(),
+    post: new Matrix4().toArray(),
+  };
+  p.tracks.hand_r.basis = clone(p.tracks.hand_l.basis);
+  set(p, 'hand_l', 'blendReplace_px', 100);
+  set(p, 'hand_l', 'blendReplace_py', 100);
+  set(p, 'hand_l', 'blendReplace_pz', 100);
+  const ref = clone(p.tracks.hand_l.layerReference!),
+    clip = copyTimelineKeys(p, [{ id: 'hand_l', frame: 0 }])!;
+  const mirrored = mirrorTimelineClipboard(clip, p, () => ({
+    world: new Matrix4(),
+    parent: new Matrix4(),
+  }));
+  near(mirrored.items[0].track.layerReference!.value.p, [
+    -ref.value.p[0],
+    ref.value.p[1],
+    ref.value.p[2],
+  ]);
+  expect(mirrored.items[0].track.curves!.blendReplace_py!.keys[0].value).toBe(100);
 });

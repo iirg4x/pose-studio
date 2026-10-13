@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-pwa/
+release/
+windows-build/
+android/
+android-build/
+public/
+backend/
+design/
+pwa/
+*.md
