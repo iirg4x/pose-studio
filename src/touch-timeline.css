@@ -316,7 +316,9 @@
   bottom: calc(var(--touch-timeline) + var(--touch-edge) + 16px + env(safe-area-inset-bottom));
 }
 :root.android .app.timeline-expanded {
-  --touch-timeline: calc(100dvh - 112px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  --touch-timeline: calc(
+    var(--screen-h, 100dvh) - 112px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+  );
 }
 
 /* One button size in the bar: play, key and auto key are the same square; the key

@@ -337,9 +337,10 @@
   position: relative;
 }
 .track-options-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 4px);
+  position: fixed;
+  right: auto;
+  top: auto;
+  z-index: 1000;
   width: 232px;
   padding: 6px;
   background: var(--raised);
@@ -519,7 +520,7 @@
 }
 
 .android .app.timeline-expanded {
-  --touch-timeline: calc(100dvh - 264px);
+  --touch-timeline: calc(var(--screen-h, 100dvh) - 264px);
 }
 
 .selection-pose-tools {

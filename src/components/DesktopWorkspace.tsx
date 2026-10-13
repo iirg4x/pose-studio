@@ -98,10 +98,11 @@ export function DesktopWorkspace({
   useEffect(() => {
     if (!library) return;
     const outside = (e: PointerEvent) => {
-      const t = e.target as HTMLElement;
+      const t = e.target instanceof Element ? e.target : null;
       if (
-        !libraryRoot.current?.contains(t) &&
-        !t.closest('.desktop-clip-trigger, [role=dialog], dialog')
+        !t ||
+        (!libraryRoot.current?.contains(t) &&
+          !t.closest('.desktop-clip-trigger, .animation-context-menu, [role=dialog], dialog'))
       )
         setLibrary(false);
     };
@@ -198,17 +199,20 @@ export function DesktopWorkspace({
       style={style}
     >
       {toolbarSlot ? createPortal(toolbars, toolbarSlot) : toolbars}
-      {library && (
-        <div
-          className="library-popover"
-          style={library}
-          ref={libraryRoot}
-          role="dialog"
-          aria-label="Animation library"
-        >
-          {animations}
-        </div>
-      )}
+      {/* Keep the embedded animation bar mounted while the popover closes. Its
+          rename dialog is portaled to body, so duplicate → rename can finish
+          after the new clip becomes active and this popover is hidden. */}
+      <div
+        className="library-popover"
+        style={library ?? { display: 'none' }}
+        ref={libraryRoot}
+        role={library ? 'dialog' : undefined}
+        aria-label="Animation library"
+        aria-hidden={!library || undefined}
+        hidden={!library}
+      >
+        {animations}
+      </div>
       {retarget && (
         <>
           <aside className="area area-setup" aria-label="Characters">

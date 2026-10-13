@@ -201,7 +201,7 @@
   z-index: 1;
   background: var(--raised);
   border-color: var(--border);
-  max-height: calc(100dvh - 150px);
+  max-height: calc(var(--screen-h, 100dvh) - 150px);
   box-shadow: 0 8px 24px #0005;
 }
 .animation-library {
@@ -398,7 +398,7 @@
   border-radius: 4px;
   box-shadow: 0 8px 24px #0005;
   padding: 12px;
-  max-height: calc(100dvh - 60px);
+  max-height: calc(var(--screen-h, 100dvh) - 60px);
   overflow: auto;
 }
 .keyframe-settings header {

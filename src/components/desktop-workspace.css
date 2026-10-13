@@ -337,8 +337,51 @@
   .desktop-clip-trigger {
     max-width: 120px;
   }
-  .desktop-tools .pivot-trigger {
-    display: none;
+
+  /* The title bar has two jobs at this width: project navigation and animator
+   * tools. Keep both rows readable instead of letting the flex item for the
+   * transform tools overflow into the animation controls. The second row gets
+   * the full window width, so orientation, pivot, undo/redo, action switching,
+   * the active layer and the animation picker remain direct controls. */
+  .app.desktop-workspace,
+  .app.desktop-workspace.curves-open,
+  .app.desktop-workspace:not(.curves-open) {
+    grid-template-rows: 56px minmax(0, 1fr) 20px;
+  }
+  .app.desktop-workspace > .titlebar {
+    display: grid;
+    grid-template-columns: auto auto auto minmax(0, 1fr);
+    grid-template-rows: 32px 24px;
+    column-gap: 8px;
+    row-gap: 0;
+    align-content: stretch;
+  }
+  .app.desktop-workspace > .titlebar > .brand-mark {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .app.desktop-workspace > .titlebar > .menubar {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .app.desktop-workspace > .titlebar > .workspace-tabs {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .app.desktop-workspace > .titlebar > .save-indicator {
+    grid-column: 4;
+    grid-row: 1;
+    justify-self: start;
+  }
+  .app.desktop-workspace > .titlebar > .title-spacer {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: auto;
+    min-width: 0;
+  }
+  .app.desktop-workspace > .titlebar .desktop-tools,
+  .app.desktop-workspace > .titlebar .desktop-panel-nav {
+    flex-shrink: 0;
   }
 }
 .delete-animation-dialog {

@@ -141,7 +141,7 @@
 /* One scroll viewport fills the sheet; nested scrolling could hide its last rows. */
 .android .tablet-sheet-animations:has(.animation-folders) {
   height: calc(
-    100dvh - 80px - var(--touch-dock) - 28px - env(safe-area-inset-top) -
+    var(--screen-h, 100dvh) - 80px - var(--touch-dock) - 28px - env(safe-area-inset-top) -
       env(safe-area-inset-bottom)
   );
 }
@@ -175,24 +175,4 @@
   min-height: 0;
   margin: 0;
   padding: 0;
-}
-@media (max-height: 540px) {
-  .android .app.sheet-open .tablet-sheet-animations:has(.animation-folders),
-  .android
-    .app.sheet-open:has(.selection-pose-tools:not([data-state='closing']))
-    .tablet-sheet-animations:has(.animation-folders) {
-    top: 52px;
-    right: 72px;
-    height: calc(100dvh - 140px);
-    max-height: calc(100dvh - 140px);
-  }
-  .android .app.sheet-open:has(.tablet-sheet-animations) .touch-panel-rail {
-    top: 104px;
-    bottom: auto;
-    flex-direction: column;
-  }
-  .android .app.sheet-open:has(.tablet-sheet-animations) .selection-pose-tools,
-  .android .app.sheet-open:has(.tablet-sheet-animations) .touch-pose-rail {
-    visibility: hidden;
-  }
 }

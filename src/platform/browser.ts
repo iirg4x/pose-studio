@@ -1,4 +1,5 @@
 import { initializePwa } from './pwa';
+import { measureTouchViewport } from './touchViewport';
 import { randomId } from '../core/crypto';
 import { encodeProject } from '../../shared/project-codec.mjs';
 import { readProjectDocument } from './projectDocuments';
@@ -44,33 +45,45 @@ async function importModel() {
   await writeAsset('asset:' + asset, data);
   return { asset, name: file.name.replace(/\.glb$/i, ''), data };
 }
-/** Installed on an iPhone or iPad, CSS viewport units can report less than the screen
- * (the gap is the status bar's height), leaving a strip at the bottom. The installed app
- * always owns the whole screen, so size it from the screen itself. */
-function fillInstalledScreen() {
-  const nav = navigator as Navigator & { standalone?: boolean };
-  if (!nav.standalone) return;
+/** Keep the touch layout inside the visible browser viewport. This also tracks the
+ * keyboard and standalone PWA viewport without consulting the device's physical screen. */
+function initializeTouchViewport() {
   const root = document.documentElement;
-  root.classList.add('ios-standalone');
+  if (root.dataset.touchViewportInitialized === 'true') return;
+  root.dataset.touchViewportInitialized = 'true';
+
+  let frame = 0;
   const measure = () => {
-    const long = Math.max(screen.width, screen.height),
-      short = Math.min(screen.width, screen.height),
-      landscape = matchMedia('(orientation: landscape)').matches;
-    const full = landscape ? short : long;
-    // Only the status-bar-sized shortfall is the bug; a windowed app (iPad split view,
-    // Stage Manager) really is smaller than the screen.
-    const height = full - innerHeight > 0 && full - innerHeight <= 80 ? full : innerHeight;
-    root.style.setProperty('--app-height', height + 'px');
+    frame = 0;
+    const viewport = measureTouchViewport({
+      innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
+      visualViewport: window.visualViewport,
+    });
+    root.style.setProperty('--touch-viewport-width', viewport.width + 'px');
+    root.style.setProperty('--touch-viewport-height', viewport.height + 'px');
+    root.style.setProperty('--touch-viewport-left', viewport.offsetLeft + 'px');
+    root.style.setProperty('--touch-viewport-top', viewport.offsetTop + 'px');
   };
-  measure();
-  addEventListener('resize', measure);
-  addEventListener('orientationchange', measure);
+  const schedule = () => {
+    if (frame) return;
+    frame = window.requestAnimationFrame(measure);
+  };
+
+  schedule();
+  window.addEventListener('resize', schedule, { passive: true });
+  window.addEventListener('orientationchange', schedule, { passive: true });
+  window.addEventListener('pageshow', schedule, { passive: true });
+  window.visualViewport?.addEventListener('resize', schedule, { passive: true });
+  window.visualViewport?.addEventListener('scroll', schedule, { passive: true });
 }
 export async function initializeBrowser() {
   if (window.studioDesktop) return;
-  if (isTouch) document.documentElement.classList.add('android');
+  if (isTouch) {
+    document.documentElement.classList.add('android');
+    initializeTouchViewport();
+  }
   document.documentElement.classList.add('web');
-  fillInstalledScreen();
   void initializePwa();
   const { AndroidAnimationImport } = await import('./androidAnimation');
   const animations = new AndroidAnimationImport(async () => {

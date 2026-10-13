@@ -17,7 +17,7 @@
   position: fixed;
   z-index: 850;
   width: min(352px, calc(100vw - 24px));
-  max-height: calc(100dvh - 24px);
+  max-height: calc(var(--screen-h, 100dvh) - 24px);
   display: flex;
   flex-direction: column;
   border: 1px solid #465364;

@@ -69,7 +69,7 @@ export function AnimationBar({
     };
     const escape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setPanel(null);
+        if (!embedded) setPanel(null);
         setContext(null);
       }
     };
@@ -90,9 +90,13 @@ export function AnimationBar({
     c.id === w.activeId ? { ...c, project: s.project!, frame: s.frame } : c,
   );
   const beginRename = (id: string) => {
-    if (!isAndroid && !studio.state.workspace?.openIds.includes(id)) studio.activate(id);
+    // Embedded desktop keeps the scene's active animation stable while the
+    // library is open, so rename closed clips through the dialog instead of
+    // activating them and collapsing the surrounding workspace.
+    if (!embedded && !isAndroid && !studio.state.workspace?.openIds.includes(id))
+      studio.activate(id);
     setContext(null);
-    if (!isAndroid) setPanel(null);
+    if (!isAndroid && !embedded) setPanel(null);
     setRenaming(id);
   };
   const nextTab = (id: string, delta: number) => {
@@ -150,7 +154,7 @@ export function AnimationBar({
                   showContext(id, e.clientX, e.clientY);
                 }}
               >
-                {renaming === id && !isAndroid ? (
+                {renaming === id && !isAndroid && !embedded ? (
                   <>
                     <Icon className="tab-type-icon" size={15} />
                     <InlineName
@@ -305,7 +309,7 @@ export function AnimationBar({
           }}
         />
       )}
-      <MotionOverlay show={isAndroid && !!renaming}>
+      <MotionOverlay show={(isAndroid || embedded) && !!renaming}>
         <RenameAnimationDialog
           name={clips.find((c) => c.id === renaming)?.project.name ?? ''}
           cancel={cancelRename}

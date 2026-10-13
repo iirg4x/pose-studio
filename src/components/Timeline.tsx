@@ -70,8 +70,14 @@ export const Timeline = memo(function Timeline({
   useEffect(() => {
     if (!more) return;
     const outside = (e: PointerEvent) => {
-      const t = e.target as HTMLElement;
-      if (!t.closest('.timeline-more-anchor, .active-layer-menu, .keyframe-menu')) setMore(false);
+      const t = e.target instanceof Element ? e.target : null;
+      if (
+        !t ||
+        !t.closest(
+          '.timeline-more-anchor, .active-layer-menu, .keyframe-menu, .loop-panel, .animation-mirror-panel',
+        )
+      )
+        setMore(false);
     };
     document.addEventListener('pointerdown', outside, true);
     return () => document.removeEventListener('pointerdown', outside, true);

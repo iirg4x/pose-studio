@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { LockKeyhole, UnlockKeyhole } from 'lucide-react';
 import { curveKeyLocked } from '../core/curveLocks';
 import { MotionPresence } from './Motion';
@@ -8,7 +9,16 @@ import { MotionSettings } from './MotionSettings';
 import { InterpolationSettings, HandleSettings } from './InterpolationSettings';
 import { loopRange } from '../core/loops';
 import { INTERPOLATION_NAMES } from '../core/timelineSettings';
-import { memo, useEffect, useMemo, useRef, useState, useId } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useId,
+} from 'react';
 import type { ReactNode } from 'react';
 import { beginCurveKeyDrag, curveKeyDragDelta } from '../core/curveDrag';
 import type { CurveKeyDrag, CurveDragAxis } from '../core/curveDrag';
@@ -100,6 +110,51 @@ export const CurveEditor = memo(function CurveEditor({
       null,
     ),
     clipId = useId();
+  const [viewMenuOpen, setViewMenuOpen] = useState(false),
+    viewMenuButton = useRef<HTMLElement>(null),
+    viewMenu = useRef<HTMLDivElement>(null),
+    [viewMenuPosition, setViewMenuPosition] = useState({ left: 8, top: 8 });
+  const positionViewMenu = useCallback(() => {
+    const anchor = viewMenuButton.current;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect(),
+      width = viewMenu.current?.offsetWidth ?? 190,
+      height = viewMenu.current?.offsetHeight ?? 240,
+      left = Math.max(8, Math.min(innerWidth - width - 8, rect.right - width)),
+      below = rect.bottom + 6,
+      top = below + height <= innerHeight - 8 ? below : Math.max(8, rect.top - height - 6);
+    setViewMenuPosition({ left, top });
+  }, []);
+  useLayoutEffect(() => {
+    if (!viewMenuOpen) return;
+    positionViewMenu();
+    window.addEventListener('resize', positionViewMenu);
+    window.addEventListener('scroll', positionViewMenu, true);
+    return () => {
+      window.removeEventListener('resize', positionViewMenu);
+      window.removeEventListener('scroll', positionViewMenu, true);
+    };
+  }, [viewMenuOpen, positionViewMenu]);
+  useEffect(() => {
+    if (!viewMenuOpen) return;
+    const close = (e: PointerEvent) => {
+      const target = e.target;
+      if (
+        !(target instanceof Node) ||
+        (!viewMenuButton.current?.contains(target) && !viewMenu.current?.contains(target))
+      )
+        setViewMenuOpen(false);
+    };
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setViewMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', close, true);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', close, true);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [viewMenuOpen]);
   useEffect(() => {
     setSelected(focusKey ? [focusKey.frame] : []);
     setView(null);
@@ -708,53 +763,72 @@ export const CurveEditor = memo(function CurveEditor({
               <span>Paste</span>
             </button>
           </div>
-          <details className="curve-view-options">
-            <summary aria-label="Curve view options" title="Zoom, guides and movement">
+          <details className="curve-view-options" open={viewMenuOpen}>
+            <summary
+              ref={viewMenuButton}
+              aria-label="Curve view options"
+              aria-expanded={viewMenuOpen}
+              title="Zoom, guides and movement"
+              onClick={(e) => {
+                e.preventDefault();
+                setViewMenuOpen(!viewMenuOpen);
+              }}
+            >
               <MoreHorizontal size={17} />
             </summary>
-            <div className="curve-view-menu">
-              <button aria-label="Zoom in curve" onClick={() => zoom(0.5)}>
-                <ZoomIn size={16} />
-                Zoom in
-              </button>
-              <button aria-label="Zoom out curve" onClick={() => zoom(2)}>
-                <ZoomOut size={16} />
-                Zoom out
-              </button>
-              <button
-                aria-label="Show curve guides"
-                aria-pressed={guides}
-                onClick={() => setGuides(!guides)}
-              >
-                <Grid3X3 size={16} />
-                Guide lines
-              </button>
-              {selected.length > 0 && (
-                <>
-                  <button
-                    aria-label="Move curve keys in time only"
-                    aria-pressed={constraint === 'x'}
-                    onClick={() => setConstraint(constraint === 'x' ? null : 'x')}
-                  >
-                    <ArrowLeftRight size={16} />
-                    Move time only
-                  </button>
-                  <button
-                    aria-label="Move curve key values only"
-                    aria-pressed={constraint === 'y'}
-                    onClick={() => setConstraint(constraint === 'y' ? null : 'y')}
-                  >
-                    <ArrowUpDown size={16} />
-                    Move values only
-                  </button>
-                  <button aria-label="Fit selected curve keys" onClick={fitSelection}>
-                    <Focus size={16} />
-                    Fit selected keys
-                  </button>
-                </>
-              )}
-            </div>
           </details>
+          {createPortal(
+            <MotionPresence show={viewMenuOpen}>
+              <div
+                ref={viewMenu}
+                className="curve-view-menu"
+                data-editor-overlay
+                style={{ left: viewMenuPosition.left, top: viewMenuPosition.top }}
+              >
+                <button aria-label="Zoom in curve" onClick={() => zoom(0.5)}>
+                  <ZoomIn size={16} />
+                  Zoom in
+                </button>
+                <button aria-label="Zoom out curve" onClick={() => zoom(2)}>
+                  <ZoomOut size={16} />
+                  Zoom out
+                </button>
+                <button
+                  aria-label="Show curve guides"
+                  aria-pressed={guides}
+                  onClick={() => setGuides(!guides)}
+                >
+                  <Grid3X3 size={16} />
+                  Guide lines
+                </button>
+                {selected.length > 0 && (
+                  <>
+                    <button
+                      aria-label="Move curve keys in time only"
+                      aria-pressed={constraint === 'x'}
+                      onClick={() => setConstraint(constraint === 'x' ? null : 'x')}
+                    >
+                      <ArrowLeftRight size={16} />
+                      Move time only
+                    </button>
+                    <button
+                      aria-label="Move curve key values only"
+                      aria-pressed={constraint === 'y'}
+                      onClick={() => setConstraint(constraint === 'y' ? null : 'y')}
+                    >
+                      <ArrowUpDown size={16} />
+                      Move values only
+                    </button>
+                    <button aria-label="Fit selected curve keys" onClick={fitSelection}>
+                      <Focus size={16} />
+                      Fit selected keys
+                    </button>
+                  </>
+                )}
+              </div>
+            </MotionPresence>,
+            document.body,
+          )}
           <button
             aria-label="Curve key and tangent properties"
             title="Key values and tangent handles"

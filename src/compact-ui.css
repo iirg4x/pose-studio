@@ -187,7 +187,7 @@
   bottom: auto;
   height: auto;
   max-height: calc(
-    100dvh - 80px - var(--touch-dock) - 28px - env(safe-area-inset-top) -
+    var(--screen-h, 100dvh) - 80px - var(--touch-dock) - 28px - env(safe-area-inset-top) -
       env(safe-area-inset-bottom)
   );
   overflow: visible;
@@ -198,7 +198,7 @@
 }
 .android .app.sheet-open:has(.selection-pose-tools:not([data-state='closing'])) .tablet-sheet {
   max-height: calc(
-    100dvh - 80px - var(--touch-dock) - 100px - env(safe-area-inset-top) -
+    var(--screen-h, 100dvh) - 80px - var(--touch-dock) - 100px - env(safe-area-inset-top) -
       env(safe-area-inset-bottom)
   );
 }

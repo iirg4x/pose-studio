@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { timelineMarqueeKeys, marqueeScrollSpeed } from '../core/timelineMarquee';
 import { MotionPresence, InlineCollapse } from './Motion';
@@ -16,13 +17,13 @@ import {
   TimelineTrackLabel,
   TrackSearch,
   AxisCurveStrip,
-  timelineRowHeight,
+  useTimelineRowHeight,
 } from './TimelineTracks';
 import type { TimelineTracksState } from './TimelineTracks';
 import { segmentInterpolation } from '../core/timelineSettings';
 import { InterpolationConnector } from './InterpolationConnector';
 import { KeyframeSettings } from './KeyframeSettings';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { controlTint } from '../core/controlStyle';
 import type { CSSProperties, KeyboardEvent, PointerEvent } from 'react';
 import {
@@ -83,11 +84,40 @@ export const TimelineGrid = memo(function TimelineGrid({
   viewSwitch?: ReactNode;
 }) {
   const [toolsOpen, setToolsOpen] = useState(false),
-    toolsRoot = useRef<HTMLDivElement>(null);
+    toolsRoot = useRef<HTMLDivElement>(null),
+    toolsButton = useRef<HTMLButtonElement>(null),
+    toolsMenu = useRef<HTMLDivElement>(null),
+    [toolsPosition, setToolsPosition] = useState({ left: 8, top: 8 });
+  const positionToolsMenu = useCallback(() => {
+    const anchor = toolsButton.current;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect(),
+      width = toolsMenu.current?.offsetWidth ?? 232,
+      height = toolsMenu.current?.offsetHeight ?? 160,
+      left = Math.max(8, Math.min(innerWidth - width - 8, rect.right - width)),
+      below = rect.bottom + 4,
+      top = below + height <= innerHeight - 8 ? below : Math.max(8, rect.top - height - 4);
+    setToolsPosition({ left, top });
+  }, []);
+  useLayoutEffect(() => {
+    if (!toolsOpen) return;
+    positionToolsMenu();
+    window.addEventListener('resize', positionToolsMenu);
+    window.addEventListener('scroll', positionToolsMenu, true);
+    return () => {
+      window.removeEventListener('resize', positionToolsMenu);
+      window.removeEventListener('scroll', positionToolsMenu, true);
+    };
+  }, [toolsOpen, positionToolsMenu]);
   useEffect(() => {
     if (!toolsOpen) return;
     const close = (e: globalThis.PointerEvent) => {
-      if (!toolsRoot.current?.contains(e.target as Node)) setToolsOpen(false);
+      const target = e.target;
+      if (
+        !(target instanceof Node) ||
+        (!toolsRoot.current?.contains(target) && !toolsMenu.current?.contains(target))
+      )
+        setToolsOpen(false);
     };
     const escape = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') setToolsOpen(false);
@@ -100,8 +130,7 @@ export const TimelineGrid = memo(function TimelineGrid({
     };
   }, [toolsOpen]);
   const [zoom, setZoom] = useState(1),
-    // Phones use the compact row (phone.css); other layouts the shared track height.
-    baseRowHeight = isAndroid && (innerWidth <= 700 || innerHeight <= 540) ? 34 : timelineRowHeight,
+    baseRowHeight = useTimelineRowHeight(),
     rulerHeight = isAndroid ? 40 : 30;
   const s = useStudioChrome({ frame: 'none' }),
     scroll = useRef<HTMLDivElement>(null),
@@ -175,7 +204,7 @@ export const TimelineGrid = memo(function TimelineGrid({
     else if (bottom > el.scrollTop + el.clientHeight) el.scrollTop = bottom - el.clientHeight;
     reveal.current = null;
   }, [collapsed, tracks.expanded, tracks.query, s.selected, s.selection, ids]);
-  const [viewport, setViewport] = useState({ top: 0, height: 360 });
+  const [viewport, setViewport] = useState({ top: 0, height: 360, width: 800 });
   // A few tracks share the panel height instead of leaving it empty; once they no longer
   // fit, rows return to their normal height and scroll.
   const fill = rows.length ? Math.floor((viewport.height - rulerHeight) / rows.length) : 0,
@@ -187,14 +216,20 @@ export const TimelineGrid = memo(function TimelineGrid({
     const measure = () => {
       raf = 0;
       const top = el.scrollTop,
-        height = el.clientHeight;
-      setViewport((old) => (old.top === top && old.height === height ? old : { top, height }));
+        height = el.clientHeight,
+        width = grid.current?.clientWidth ?? 800;
+      setViewport((old) =>
+        old.top === top && old.height === height && old.width === width
+          ? old
+          : { top, height, width },
+      );
     };
     const schedule = () => {
       if (!raf) raf = requestAnimationFrame(measure);
     };
     const observer = new ResizeObserver(schedule);
     observer.observe(el);
+    if (grid.current) observer.observe(grid.current);
     el.addEventListener('scroll', schedule, { passive: true });
     measure();
     return () => {
@@ -397,10 +432,14 @@ export const TimelineGrid = memo(function TimelineGrid({
       mode: e.ctrlKey || e.altKey ? 'subtract' : e.shiftKey || multiSelect ? 'add' : 'replace',
     });
   };
-  const interval = Math.max(
+  const baseInterval = Math.max(
     1,
     Math.round((p.end <= 120 ? 8 : p.end <= 300 ? 24 : Math.ceil(p.end / 12 / 12) * 12) / zoom),
   );
+  // Keep ruler labels readable when the phone's bone list leaves a narrow time area.
+  const interval =
+    baseInterval *
+    Math.max(1, Math.ceil((p.end * 40) / (Math.max(1, viewport.width) * baseInterval)));
   return (
     <div
       className={'dope-sheet' + (armed ? ' box-armed' : '')}
@@ -573,49 +612,59 @@ export const TimelineGrid = memo(function TimelineGrid({
           }
           <div className="track-options" ref={toolsRoot}>
             <button
+              ref={toolsButton}
               aria-label="Track options"
               aria-expanded={toolsOpen}
               onClick={() => setToolsOpen(!toolsOpen)}
             >
               <MoreHorizontal size={20} />
             </button>
-            <MotionPresence show={toolsOpen}>
-              <div className="track-options-menu" aria-label="Track display options">
-                <button
-                  onClick={() => {
-                    fold(new Set());
-                    setToolsOpen(false);
-                  }}
+            {createPortal(
+              <MotionPresence show={toolsOpen}>
+                <div
+                  ref={toolsMenu}
+                  className="track-options-menu"
+                  aria-label="Track display options"
+                  data-editor-overlay
+                  style={{ left: toolsPosition.left, top: toolsPosition.top }}
                 >
-                  <ListTree size={17} />
-                  Expand all tracks
-                </button>
-                <button
-                  onClick={() => {
-                    fold(new Set(ids.filter((id) => id !== 'root')));
-                    setToolsOpen(false);
-                  }}
-                >
-                  <FoldVertical size={17} />
-                  Collapse track groups
-                </button>
-                {p.bodyBase && (
                   <button
-                    aria-label="Source reference keys"
-                    aria-pressed={showReferences}
                     onClick={() => {
-                      setShowReferences(!showReferences);
-                      try {
-                        localStorage.setItem('pose-timeline-references', String(!showReferences));
-                      } catch {}
+                      fold(new Set());
+                      setToolsOpen(false);
                     }}
                   >
-                    <Ghost size={17} />
-                    Source reference keys
+                    <ListTree size={17} />
+                    Expand all tracks
                   </button>
-                )}
-              </div>
-            </MotionPresence>
+                  <button
+                    onClick={() => {
+                      fold(new Set(ids.filter((id) => id !== 'root')));
+                      setToolsOpen(false);
+                    }}
+                  >
+                    <FoldVertical size={17} />
+                    Collapse track groups
+                  </button>
+                  {p.bodyBase && (
+                    <button
+                      aria-label="Source reference keys"
+                      aria-pressed={showReferences}
+                      onClick={() => {
+                        setShowReferences(!showReferences);
+                        try {
+                          localStorage.setItem('pose-timeline-references', String(!showReferences));
+                        } catch {}
+                      }}
+                    >
+                      <Ghost size={17} />
+                      Source reference keys
+                    </button>
+                  )}
+                </div>
+              </MotionPresence>,
+              document.body,
+            )}
           </div>
         </div>
       </div>

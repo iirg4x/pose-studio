@@ -152,7 +152,7 @@
 }
 @media (max-height: 540px) {
   .android .timeline .active-layer-menu {
-    max-height: calc(100dvh - 136px);
+    max-height: calc(var(--screen-h, 100dvh) - 136px);
   }
 }
 .timeline .timeline-window-tools {
@@ -1322,10 +1322,10 @@
   color: var(--track-clock);
 }
 .curve-view-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  z-index: 25;
+  position: fixed;
+  right: auto;
+  top: auto;
+  z-index: 1000;
   width: 190px;
   padding: 5px;
   border: 1px solid #46505e;
@@ -1489,7 +1489,7 @@
 }
 .curve-reducer {
   width: min(720px, calc(100vw - 24px));
-  max-height: calc(100dvh - 32px);
+  max-height: calc(var(--screen-h, 100dvh) - 32px);
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -1735,7 +1735,7 @@
   min-height: 44px;
 }
 .android .curve-reducer {
-  max-height: calc(100dvh - 24px);
+  max-height: calc(var(--screen-h, 100dvh) - 24px);
 }
 @media (max-width: 700px) {
   .curve-reducer header,

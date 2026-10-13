@@ -24,7 +24,20 @@ export interface TimelineTracksState {
   setQuery: (text: string) => void;
   openCurve: (id: ControlId, channel: Channel, frame?: number) => void;
 }
-export const timelineRowHeight = isTouch ? 44 : 32;
+/** Keep virtual row positions aligned with the responsive phone/tablet density. */
+export function useTimelineRowHeight() {
+  const compact = () => isTouch && matchMedia('(max-width: 700px), (max-height: 540px)').matches;
+  const [height, setHeight] = useState(() => (compact() ? 34 : isTouch ? 44 : 32));
+  useEffect(() => {
+    if (!isTouch) return;
+    const media = matchMedia('(max-width: 700px), (max-height: 540px)');
+    const update = () => setHeight(media.matches ? 34 : 44);
+    media.addEventListener('change', update);
+    update();
+    return () => media.removeEventListener('change', update);
+  }, []);
+  return height;
+}
 
 export function TrackSearch({
   query,
@@ -157,6 +170,7 @@ export const CurveTrackTree = memo(function CurveTrackTree({
   state: TimelineTracksState;
   ids: ControlId[];
 }) {
+  const rowHeight = useTimelineRowHeight();
   const s = useStudioChrome({ frame: 'none' }),
     p = s.project!,
     ref = useRef<HTMLDivElement>(null),
@@ -197,27 +211,24 @@ export const CurveTrackTree = memo(function CurveTrackTree({
       (row) => row.control === s.selected && row.channel === state.channel,
     );
     if (index < 0) return;
-    const top = index * timelineRowHeight;
+    const top = index * rowHeight;
     if (top < el.scrollTop) el.scrollTop = top;
-    else if (top + timelineRowHeight > el.scrollTop + el.clientHeight)
-      el.scrollTop = top + timelineRowHeight - el.clientHeight;
-  }, [s.selected, state.channel, state.expanded, state.collapsed, state.query, rows]);
-  const first = Math.max(0, Math.floor(viewport.top / timelineRowHeight) - 2),
-    last = Math.min(
-      rows.length,
-      Math.ceil((viewport.top + viewport.height) / timelineRowHeight) + 2,
-    );
+    else if (top + rowHeight > el.scrollTop + el.clientHeight)
+      el.scrollTop = top + rowHeight - el.clientHeight;
+  }, [s.selected, state.channel, state.expanded, state.collapsed, state.query, rows, rowHeight]);
+  const first = Math.max(0, Math.floor(viewport.top / rowHeight) - 2),
+    last = Math.min(rows.length, Math.ceil((viewport.top + viewport.height) / rowHeight) + 2);
   return (
     <aside className="curve-track-tree" aria-label="Bone curves">
       <TrackSearch query={state.query} setQuery={state.setQuery} />
       <div className="curve-track-scroll" ref={ref}>
-        <div style={{ height: rows.length * timelineRowHeight, position: 'relative' }}>
+        <div style={{ height: rows.length * rowHeight, position: 'relative' }}>
           {rows.slice(first, last).map((row, i) => (
             <div
               key={row.key}
               style={{
                 position: 'absolute',
-                top: (first + i) * timelineRowHeight,
+                top: (first + i) * rowHeight,
                 left: 0,
                 right: 0,
               }}
