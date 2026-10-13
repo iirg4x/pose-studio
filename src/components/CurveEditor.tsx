@@ -77,8 +77,9 @@ export const CurveEditor = memo(function CurveEditor({
 }: {
   channel: Channel;
   focusKey?: { frame: number; serial: number };
-  sidebar: ReactNode;
-  /** Desktop: Timeline/Curves switch shown first in the tool row. */
+  /** Bone channel tree; absent on desktop, where the curves fill the panel. */
+  sidebar?: ReactNode;
+  /** Desktop: back to the timeline and the channel chips, first in the tool row. */
   viewSwitch?: ReactNode;
   onReduce: (frames: number[]) => void;
 }) {
@@ -455,7 +456,9 @@ export const CurveEditor = memo(function CurveEditor({
   return (
     <div
       className={
-        'curve-editor' + (inspecting ? ' inspecting' : '') + (showTracks ? '' : ' tracks-hidden')
+        'curve-editor' +
+        (inspecting ? ' inspecting' : '') +
+        (showTracks && sidebar ? '' : ' tracks-hidden')
       }
       tabIndex={0}
       aria-label="Curve editor"
@@ -572,18 +575,21 @@ export const CurveEditor = memo(function CurveEditor({
       <div className="curve-center">
         <div className="curve-tools">
           {viewSwitch}
-          <button
-            className="curve-tracks-toggle"
-            aria-label={showTracks ? 'Hide bone channels' : 'Show bone channels'}
-            title="Bone channels"
-            aria-pressed={showTracks}
-            onClick={() => setShowTracks(!showTracks)}
-          >
-            <PanelLeft size={16} />
-          </button>
+          {sidebar && (
+            <button
+              className="curve-tracks-toggle"
+              aria-label={showTracks ? 'Hide bone channels' : 'Show bone channels'}
+              title="Bone channels"
+              aria-pressed={showTracks}
+              onClick={() => setShowTracks(!showTracks)}
+            >
+              <PanelLeft size={16} />
+            </button>
+          )}
           <strong style={{ color: channelColor(channel) }}>
             <span className="curve-bone-flair">{controlLabel(s.selected, p)}</span>
-            {CHANNEL_LABELS[channel]} <small>{channelUnit(channel)}</small>
+            {/* With channel chips present they name the channel. */}
+            {!viewSwitch && CHANNEL_LABELS[channel]} <small>{channelUnit(channel)}</small>
           </strong>
           <button
             className="curve-key-lock"

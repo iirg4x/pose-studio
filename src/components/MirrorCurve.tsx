@@ -20,7 +20,7 @@ export function MirrorCurve({
   project: Project;
   id: ControlId;
   channel: Channel;
-  sidebar: ReactNode;
+  sidebar?: ReactNode;
 }) {
   const data = useMemo(
     () =>

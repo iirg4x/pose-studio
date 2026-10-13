@@ -3,9 +3,10 @@ import { mirrorDriver } from '../core/liveMirror';
 import { MirrorCurve } from './MirrorCurve';
 import { LockKeyhole, UnlockKeyhole } from 'lucide-react';
 import { memo, useState, useEffect, useLayoutEffect, useMemo } from 'react';
+import type { CSSProperties } from 'react';
 import { loadTimelineCollapsed, revealTimelineControl } from '../core/timelineHierarchy';
 import type { Channel } from '../core/curves';
-import { channelsFor } from '../core/curves';
+import { CHANNEL_LABELS, channelColor, channelsFor } from '../core/curves';
 import type { ControlId } from '../core/model';
 import { CurveTrackTree } from './TimelineTracks';
 import type { TimelineTracksState } from './TimelineTracks';
@@ -24,6 +25,7 @@ import {
   SkipForward,
   Diamond,
   ChevronDown,
+  ChevronLeft,
   ListVideo,
   Spline,
   ChevronsUpDown,
@@ -114,29 +116,48 @@ export const Timeline = memo(function Timeline({
     },
   };
   if (!p) return <div className="timeline" />;
-  const viewSwitch = split ? (
-    <div className="editor-switch" role="group" aria-label="Editor">
+  // Desktop: the panel is either the timeline or the curves of one bone, never both.
+  const toCurves = split ? (
+    <button
+      className="editor-go"
+      title="Curves of the selected bone (double-click a bone name)"
+      disabled={!p.tracks[s.selected]}
+      onClick={() => studio.patch({ tab: 'curves' })}
+    >
+      <Spline size={15} />
+      <span>Curves</span>
+    </button>
+  ) : undefined;
+  const toTimeline = split ? (
+    <>
       <button
-        aria-pressed={s.tab !== 'curves'}
-        title="Dope sheet: keys and timing for every control"
+        className="editor-go"
+        title="Back to the timeline"
         onClick={() => studio.patch({ tab: 'timeline' })}
       >
-        Timeline
+        <ChevronLeft size={15} />
+        <span>Timeline</span>
       </button>
-      <button
-        aria-pressed={s.tab === 'curves'}
-        title="Curves of the selected control (double-click a bone name)"
-        onClick={() => studio.patch({ tab: 'curves' })}
-      >
-        Curves
-      </button>
-    </div>
+      <div className="curve-channel-chips" role="group" aria-label="Curve channel">
+        {channelsFor(s.selected, p.tracks[s.selected]).map((c) => (
+          <button
+            key={c}
+            aria-pressed={c === channel}
+            title={CHANNEL_LABELS[c]}
+            style={{ '--chip': channelColor(c) } as CSSProperties}
+            onClick={() => setChannel(c)}
+          >
+            {CHANNEL_LABELS[c].replace('Position ', 'Loc ').replace('Rotation ', 'Rot ')}
+          </button>
+        ))}
+      </div>
+    </>
   ) : undefined;
   const grid = (
     <TimelineGrid
       key={(s.workspace?.activeId ?? '') + p.editing}
       tracks={tracks}
-      viewSwitch={viewSwitch}
+      viewSwitch={toCurves}
     />
   );
   const curves = mirrorDriver(p, s.selected) ? (
@@ -144,16 +165,16 @@ export const Timeline = memo(function Timeline({
       project={p}
       id={s.selected}
       channel={channel}
-      sidebar={<CurveTrackTree state={tracks} ids={ids} />}
+      sidebar={split ? undefined : <CurveTrackTree state={tracks} ids={ids} />}
     />
   ) : (
     <CurveEditor
-      viewSwitch={viewSwitch}
+      viewSwitch={toTimeline}
       key={(s.workspace?.activeId ?? '') + s.selected + p.editing + (p.activeLayerId ?? '')}
       channel={channel}
       focusKey={curveFocus}
       onReduce={(frames) => setReducer({ channel, frames })}
-      sidebar={<CurveTrackTree state={tracks} ids={ids} />}
+      sidebar={split ? undefined : <CurveTrackTree state={tracks} ids={ids} />}
     />
   );
   if (split)
