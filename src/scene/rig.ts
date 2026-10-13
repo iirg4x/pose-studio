@@ -280,9 +280,12 @@ export class MannyRig {
     this.localInputs.clear();
     this.lastValues = values;
     this.reset();
+    // Body controls run parent before child, so each bone only needs its own world
+    // matrix here; one subtree update follows instead of one per control.
     for (const id of BONE_CONTROLS)
       if (CONTROLS[id].group === 'Body' || id.startsWith('shoulder'))
-        this.applyOffset(id, values[id]);
+        this.applyOffset(id, values[id], false);
+    this.root.updateMatrixWorld(true);
     if (this.floating && !this.motionRig)
       for (const side of ['l', 'r']) {
         const b = this.bones.get('clavicle_' + side)!;
@@ -385,15 +388,23 @@ export class MannyRig {
       .decompose(rootBone.position, rootBone.quaternion, rootBone.scale);
     this.root.updateMatrixWorld(true);
   }
-  applyOffset(id: ControlId, value: Pose) {
+  applyOffset(id: ControlId, value: Pose, subtree = true) {
     const b = this.bodyBone(id),
       r = this.rest.get(b.name)!;
     b.position.copy(r.p).add(new T.Vector3(...value.p));
     b.quaternion.copy(r.q).multiply(new T.Quaternion(...value.q));
-    b.updateMatrixWorld(true);
-    this.applyFollowing(id);
+    this.updateBone(b, subtree);
+    this.applyFollowing(id, subtree);
   }
-  private applyFollowing(id: ControlId) {
+  /** World matrix of the bone (and, with subtree, its descendants) from a current parent. */
+  private updateBone(b: T.Object3D, subtree: boolean) {
+    if (subtree) b.updateMatrixWorld(true);
+    else {
+      b.updateMatrix();
+      b.matrixWorld.multiplyMatrices(b.parent!.matrixWorld, b.matrix);
+    }
+  }
+  private applyFollowing(id: ControlId, subtree = true) {
     const b = this.bodyBone(id);
     b.updateMatrix();
     this.localInputs.set(id, b.matrix.clone());
@@ -402,7 +413,7 @@ export class MannyRig {
     const parent = this.rootMotion.clone().multiply(b.parent!.matrixWorld),
       world = followedBone(b.matrix, parent, key);
     parent.invert().multiply(world).decompose(b.position, b.quaternion, b.scale);
-    b.updateMatrixWorld(true);
+    this.updateBone(b, subtree);
   }
   captureFollowing(
     id: ControlId,

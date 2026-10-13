@@ -1,3 +1,4 @@
+import { copyPose } from './poseCopy';
 import { loopBoundarySlope, normalizeLoopKeys, syncLoopSeam } from './loopInterpolation';
 import { randomId } from './crypto';
 import { motionProgress, motionOptions, validateMotionOptions } from './interpolation';
@@ -129,7 +130,7 @@ export function baseSample(track: Track, frame: number): Pose {
     b = a;
   }
   const mode = a.interpolation ?? track.interpolation;
-  if (a === b || frame <= a.frame || mode === 'step') return structuredClone(a);
+  if (a === b || frame <= a.frame || mode === 'step') return copyPose(a);
   let t = clamp((frame - a.frame) / (b.frame - a.frame), 0, 1);
   if (mode === 'smooth') t = t * t * (3 - 2 * t);
   else if (mode === 'spring' || mode === 'bounce') t = motionProgress(mode, t, { ...track, ...a });
@@ -369,7 +370,7 @@ export function sampleCurve(curve: Curve, frame: number): number {
 }
 export function sampleChannels(track: Track, frame: number, base: Pose): Pose {
   if (!track.curves || !Object.keys(track.curves).length) return base;
-  const p = structuredClone(base),
+  const p = copyPose(base),
     angles = new Euler().setFromQuaternion(new Quaternion(...p.q), track.rotationOrder ?? 'XYZ'),
     rotation = [angles.x, angles.y, angles.z];
   let rotated = false,

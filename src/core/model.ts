@@ -1,3 +1,4 @@
+import { copyPose } from './poseCopy';
 import { applyLiveMirrors, mirroredLimb, validateMirrorLinks } from './liveMirror';
 import type { MirrorLinks } from './liveMirror';
 import { validateControllerConstraints } from './controllerConstraints';
@@ -173,7 +174,7 @@ export function fromMatrix(m: Matrix4, extra: Pose = pose()): Pose {
   const p = new Vector3(),
     q = new Quaternion();
   m.decompose(p, q, new Vector3());
-  return { ...clone(extra), p: p.toArray() as V3, q: q.normalize().toArray() as Q4 };
+  return { ...copyPose(extra), p: p.toArray() as V3, q: q.normalize().toArray() as Q4 };
 }
 export function sample(track: Track, frame: number): Pose {
   return sampleChannels(track, frame, baseSample(track, frame));

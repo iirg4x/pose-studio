@@ -51,6 +51,12 @@ export abstract class SceneCore {
   scene = new T.Scene();
   protected overlays = new T.Scene();
   protected reflections?: StudioReflections;
+  /** Reflections, AO and antialiasing render when the view settles; playback and
+   * gestures use the plain pass so motion stays smooth. Stopping redraws at full quality. */
+  protected cinematicFrame() {
+    const s = this.store.state;
+    return s.cinematic && !s.playing && !s.interacting;
+  }
   protected playerEffects?: StudioReflections;
   camera = new T.PerspectiveCamera(36, 1, 0.01, 100);
   playerCamera = new T.PerspectiveCamera(70, 16 / 9, 0.035, 100);
@@ -264,7 +270,7 @@ export abstract class SceneCore {
     this.renderer.setScissorTest(false);
     this.renderer.setViewport(0, 0, this.width, this.height);
     if (!this.store.state.playerView) {
-      if (this.store.state.cinematic)
+      if (this.cinematicFrame())
         (this.reflections ??= new StudioReflections(this.renderer, this.scene, this.camera)).render(
           this.scene,
           this.camera,
@@ -326,7 +332,7 @@ export abstract class SceneCore {
     this.renderer.setScissor(p.x, this.height - p.y - p.h, p.w, p.h);
     this.renderer.setViewport(p.x, this.height - p.y - p.h, p.w, p.h);
     this.renderer.clearDepth();
-    if (this.store.state.cinematic)
+    if (this.cinematicFrame())
       (this.playerEffects ??= new StudioReflections(
         this.renderer,
         this.scene,

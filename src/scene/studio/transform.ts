@@ -112,8 +112,12 @@ export abstract class TransformScene extends RetargetScene {
                 })();
     return { id, world, parent, root: id === 'root' ? new T.Matrix4() : worldFor('root') };
   }
+  protected lastCoordinatePublish = 0;
   protected publishCoordinates() {
     if (!this.coordinateListeners.size) return;
+    // During playback the readout updates at 10 Hz; every frame re-rendered the properties panel.
+    const now = performance.now();
+    if (this.store.state.playing && now - this.lastCoordinatePublish < 100) return;
     const next = this.coordinateState(),
       old = this.coordinateSnapshot;
     if (
@@ -125,6 +129,7 @@ export abstract class TransformScene extends RetargetScene {
     )
       return;
     this.coordinateSnapshot = next;
+    this.lastCoordinatePublish = now;
     for (const listener of this.coordinateListeners) listener();
   }
   editCoordinate(
