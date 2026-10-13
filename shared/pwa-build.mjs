@@ -8,8 +8,6 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // PC's /api library must never be copied into the publication or offline cache.
 const APP_ASSETS = [
   'manny.glb',
-  'axe.json',
-  'controller-shapes.json',
   'builtin-axe.glb',
   'builtin-rifle.glb',
   'builtin-magazine.glb',
