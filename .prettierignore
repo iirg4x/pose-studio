@@ -10,3 +10,4 @@ backend/
 design/
 pwa/
 *.md
+tests/fixtures/

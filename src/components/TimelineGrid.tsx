@@ -215,13 +215,11 @@ export const TimelineGrid = memo(function TimelineGrid({
               frames = trackFrames(p.tracks[id]).filter((f) => f <= p.end);
             return [
               id,
-              frames
-                .slice(0, -1)
-                .map((from, i) => ({
-                  from,
-                  to: frames[i + 1],
-                  ...segmentInterpolation(id, p.tracks[id], from, frames[i + 1]),
-                })),
+              frames.slice(0, -1).map((from, i) => ({
+                from,
+                to: frames[i + 1],
+                ...segmentInterpolation(id, p.tracks[id], from, frames[i + 1]),
+              })),
             ];
           }),
       ),
