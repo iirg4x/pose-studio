@@ -179,25 +179,3 @@
 .web.android textarea {
   font-size: 16px;
 }
-@media (max-height: 540px) {
-  html.web.android .app.sheet-open .touch-transport,
-  html.web.android .app.sheet-open .selection-pose-tools {
-    left: calc((100vw - var(--touch-sheet) - 80px) / 2);
-    max-width: calc(100vw - var(--touch-sheet) - 96px);
-  }
-  html.web.android .app.sheet-open .touch-transport .touch-scrubber {
-    display: none;
-  }
-  html.web.android .app.sheet-open .pose-action-buttons {
-    gap: 2px;
-  }
-  html.web.android .app.sheet-open .pose-action-buttons button {
-    min-width: 0;
-    width: 48px;
-    flex: 1 1 48px;
-    padding: 4px;
-  }
-  html.web.android .app.sheet-open .pose-action-buttons button > span {
-    display: none;
-  }
-}

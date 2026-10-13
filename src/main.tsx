@@ -26,3 +26,4 @@ import './animation-links.css';
 // Last, so the shared design system applies over the older per-panel sheets.
 import './design-system.css';
 import './components/timeline-look.css';
+import './phone.css';

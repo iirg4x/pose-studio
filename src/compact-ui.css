@@ -406,15 +406,6 @@
     padding-top: 10px;
   }
 }
-@media (max-height: 540px) {
-  .android .tablet-sheet {
-    right: 64px;
-    max-height: calc(100dvh - 228px);
-  }
-  .android .app.sheet-open:has(.selection-pose-tools:not([data-state='closing'])) .tablet-sheet {
-    max-height: calc(100dvh - 228px);
-  }
-}
 
 /* The modifier stack is an editing tool: direct clipboard actions, collapsible bodies. */
 .modifier-panel {
@@ -743,18 +734,3 @@
 }
 
 /* Keep the layer flair clear of the properties tabs on narrow tablets. */
-@media (max-width: 700px) and (min-height: 541px) {
-  .android .app.sheet-open .tablet-sheet {
-    top: calc(144px + env(safe-area-inset-top));
-    max-height: calc(
-      100dvh - 144px - var(--touch-dock) - 28px - env(safe-area-inset-top) -
-        env(safe-area-inset-bottom)
-    );
-  }
-  .android .app.sheet-open:has(.selection-pose-tools:not([data-state='closing'])) .tablet-sheet {
-    max-height: calc(
-      100dvh - 144px - var(--touch-dock) - 100px - env(safe-area-inset-top) -
-        env(safe-area-inset-bottom)
-    );
-  }
-}

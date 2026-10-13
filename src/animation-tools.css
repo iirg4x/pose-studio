@@ -719,28 +719,6 @@ body > .animation-context-menu {
   display: none;
 }
 
-/* Keep every pose command above the timeline on narrow touch displays. */
-@media (max-width: 700px) and (min-height: 541px) {
-  .android .app.timeline-open .touch-pose-rail {
-    display: grid;
-    grid-template-columns: repeat(2, 48px);
-    gap: 2px;
-  }
-  .android .app.timeline-open .touch-pose-rail > .transform-options {
-    display: contents;
-  }
-  .android .app.timeline-open .touch-pose-rail > .transform-options > button {
-    width: 48px;
-    height: 52px;
-  }
-  .android .app.timeline-open .touch-pose-rail > i {
-    display: none;
-  }
-  .android .app.timeline-open .touch-pose-rail.no-selection > .transform-options {
-    display: none;
-  }
-}
-
 .ground-key-command {
   display: flex;
   align-items: center;

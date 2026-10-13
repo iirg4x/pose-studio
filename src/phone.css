@@ -1,0 +1,469 @@
+/* Phone layout. Same tools, panels and gestures as the tablet, arranged for a small
+ * screen. Portrait: a top bar (menu, layer, view), a tool strip under it, the viewport,
+ * then pose actions, a slim transport and a bottom tab bar whose panels open as bottom
+ * sheets. Landscape: one top row of tools, panels on the right, transport along the
+ * bottom. Tablets never match these queries, so their layout is unchanged. Selectors
+ * start at :root.android to sit above the shared touch rules. */
+
+/* The app fills the whole screen, including under the iOS status bar and home indicator
+ * when installed (100dvh comes up short in iOS standalone mode). */
+html.android,
+html.android body {
+  height: 100%;
+  background: var(--canvas);
+}
+:root.android .app {
+  position: fixed;
+  inset: 0;
+  height: auto;
+}
+:root.android .pose-action-buttons {
+  flex-wrap: nowrap;
+}
+
+/* ---- Portrait phones ---------------------------------------------------------------- */
+@media (max-width: 700px) {
+  :root.android .app {
+    --touch-edge: 8px;
+    --phone-gap: 8px;
+    --phone-top: calc(var(--phone-gap) + env(safe-area-inset-top));
+    --phone-left: calc(var(--phone-gap) + env(safe-area-inset-left));
+    --phone-right: calc(var(--phone-gap) + env(safe-area-inset-right));
+    --phone-tabs: calc(56px + env(safe-area-inset-bottom));
+    --phone-transport: 52px;
+    --touch-timeline: 46dvh;
+    --phone-sheet-max: calc(100dvh - var(--phone-tabs) - var(--phone-transport) - 112px);
+  }
+  :root.android .app.timeline-expanded {
+    --touch-timeline: calc(100dvh - var(--phone-tabs) - 116px - env(safe-area-inset-top));
+  }
+
+  /* Row 1: menu and save state, active layer, view settings. */
+  :root.android .app > .titlebar {
+    top: var(--phone-top);
+    left: var(--phone-left);
+    height: 44px;
+    max-width: 50vw;
+  }
+  :root.android .app > .titlebar .project-title {
+    display: none;
+  }
+  :root.android .app .touch-view-toggle {
+    top: var(--phone-top);
+    right: var(--phone-right);
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+  :root.android .app .touch-view-toggle span {
+    display: none;
+  }
+  :root.android .app > .active-layer-control,
+  :root.android .app .workspace > .active-layer-control,
+  :root.android .app .active-layer-control:not(.timeline *) {
+    top: var(--phone-top);
+    right: calc(var(--phone-right) + 52px);
+    left: auto;
+  }
+  :root.android .app .active-layer-control:not(.timeline *) .active-layer-trigger {
+    height: 44px;
+    max-width: calc(100vw - 236px);
+  }
+  :root.android .app .timeline .active-layer-control {
+    display: none;
+  }
+
+  /* Row 2: the tool strip, icon-only. */
+  :root.android .app .touch-pose-rail,
+  :root.android .app.timeline-open .touch-pose-rail {
+    top: calc(var(--phone-top) + 52px);
+    left: var(--phone-left);
+    flex-direction: row;
+    padding: 2px;
+    gap: 2px;
+    transform: none;
+    visibility: visible;
+  }
+  :root.android .app .touch-pose-rail :is(button, .transform-options > button) {
+    width: 42px;
+    height: 42px;
+    min-height: 42px;
+    padding: 0;
+  }
+  :root.android .app .touch-pose-rail .transform-options {
+    flex-direction: row;
+  }
+  :root.android .app .touch-pose-rail span,
+  :root.android .app .touch-pose-rail .transform-options > button > svg:last-child {
+    display: none;
+  }
+  :root.android .app .touch-pose-rail i {
+    display: block;
+    width: 1px;
+    height: 24px;
+    margin: auto 2px;
+  }
+
+  /* The strip spans the width; on narrow phones its buttons share the space. */
+  :root.android .app .touch-pose-rail,
+  :root.android .app.timeline-open .touch-pose-rail {
+    right: var(--phone-right);
+  }
+  :root.android .app .touch-pose-rail > button,
+  :root.android .app .touch-pose-rail .transform-options > button {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
+  :root.android .app .touch-pose-rail > .transform-options {
+    display: flex;
+    flex: 2 1 0;
+    min-width: 0;
+  }
+
+  /* Panels: a bottom tab bar. */
+  :root.android .app .touch-panel-rail,
+  :root.android .app.timeline-open .touch-panel-rail {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    flex-direction: row;
+    height: var(--phone-tabs);
+    padding: 4px 8px env(safe-area-inset-bottom);
+    gap: 4px;
+    transform: none;
+    border-width: 1px 0 0;
+    border-radius: 0;
+  }
+  :root.android .app .touch-panel-rail button {
+    flex: 1;
+    width: auto;
+    height: 48px;
+  }
+
+  /* Transport: one slim bar above the tabs. */
+  :root.android .app .touch-transport {
+    right: 0;
+    bottom: var(--phone-tabs);
+    left: 0;
+    max-width: none;
+    height: var(--phone-transport);
+    padding: 0 8px;
+    gap: 4px;
+    transform: none;
+    border-width: 1px 0 0;
+    border-radius: 0;
+  }
+  :root.android .app .touch-transport > button {
+    width: 44px;
+    height: 44px;
+  }
+  :root.android .app .touch-transport > button:first-child {
+    order: 0;
+  }
+  :root.android .app .touch-transport > button span {
+    display: none;
+  }
+  :root.android .app .touch-scrubber {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+  :root.android .app.timeline-open .touch-transport {
+    display: none;
+  }
+
+  /* Pose actions: icons over the transport; names stay as accessible labels. */
+  :root.android .app .selection-pose-tools {
+    bottom: calc(var(--phone-tabs) + var(--phone-transport) + 14px);
+    max-width: calc(100vw - 16px);
+    padding: 4px;
+  }
+  :root.android .app .pose-action-buttons button {
+    flex: none;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0 6px;
+  }
+  :root.android .app .pose-action-buttons button > span {
+    display: none;
+  }
+  :root.android .app:is(.timeline-open, .sheet-open) .selection-pose-tools {
+    display: none;
+  }
+
+  /* Sheets rise from above the transport, full width. */
+  :root.android .app .tablet-sheet,
+  :root.android .app.sheet-open .tablet-sheet {
+    top: auto;
+    right: 0;
+    bottom: calc(var(--phone-tabs) + var(--phone-transport));
+    left: 0;
+    width: auto;
+    max-width: none;
+    height: 60dvh;
+    max-height: var(--phone-sheet-max);
+    border-width: 1px 0 0;
+    border-radius: 14px 14px 0 0;
+  }
+  :root.android .app .tablet-sheet > header > button {
+    top: 0;
+    right: 4px;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    background: none;
+  }
+
+  /* Timeline: full width above the tabs. */
+  :root.android .app > .timeline {
+    right: 0;
+    bottom: var(--phone-tabs);
+    left: 0;
+    border-width: 1px 0 0;
+    border-radius: 14px 14px 0 0;
+  }
+  :root.android .app .curve-editor {
+    grid-template-columns: 80px minmax(140px, 1fr);
+  }
+  :root.android .app .curve-properties {
+    position: absolute;
+    top: 48px;
+    right: 0;
+    bottom: 0;
+    width: 200px;
+    z-index: 2;
+  }
+
+  :root.android .app .viewport-orientation {
+    display: none;
+  }
+  :root.android .app > .statusbar {
+    display: none;
+  }
+  :root.android .app .file-menu {
+    width: min(320px, calc(100vw - 16px));
+    max-height: calc(100dvh - 72px - env(safe-area-inset-top));
+    overflow: auto;
+  }
+}
+
+@media (max-width: 380px) {
+  /* Very narrow phones: the layer picker shows its icon; the menu names the layer. */
+  :root.android .app .active-layer-control:not(.timeline *) .active-layer-trigger strong {
+    display: none;
+  }
+}
+
+/* ---- Landscape phones --------------------------------------------------------------- */
+@media (max-height: 540px) and (min-width: 701px) {
+  :root.android .app {
+    --touch-edge: 6px;
+    --phone-gap: 6px;
+    --phone-top: calc(var(--phone-gap) + env(safe-area-inset-top));
+    --phone-left: calc(var(--phone-gap) + env(safe-area-inset-left));
+    --phone-right: calc(var(--phone-gap) + env(safe-area-inset-right));
+    --phone-bottom: calc(var(--phone-gap) + env(safe-area-inset-bottom));
+    --phone-sheet: min(340px, calc(100vw - 120px));
+    --touch-timeline: calc(100dvh - 60px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+
+  /* Top row: menu, tools, layer (icon), view settings. Panels just below on the right. */
+  :root.android .app > .titlebar {
+    top: var(--phone-top);
+    left: var(--phone-left);
+    height: 40px;
+  }
+  :root.android .app > .titlebar .project-title {
+    display: none;
+  }
+  :root.android .app .touch-pose-rail {
+    top: var(--phone-top);
+    bottom: auto;
+    left: calc(var(--phone-left) + 150px);
+    flex-direction: row;
+    padding: 2px;
+    gap: 2px;
+    transform: none;
+  }
+  :root.android .app .touch-pose-rail :is(button, .transform-options > button) {
+    width: 40px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+  }
+  :root.android .app .touch-pose-rail .transform-options {
+    flex-direction: row;
+  }
+  :root.android .app .touch-pose-rail span,
+  :root.android .app .touch-pose-rail .transform-options > button > svg:last-child {
+    display: none;
+  }
+  :root.android .app .touch-pose-rail i {
+    display: block;
+    width: 1px;
+    height: 22px;
+    margin: auto 2px;
+  }
+  :root.android .app .active-layer-control:not(.timeline *) {
+    top: var(--phone-top);
+    right: calc(var(--phone-right) + 46px);
+    left: auto;
+  }
+  :root.android .app .active-layer-control:not(.timeline *) .active-layer-trigger {
+    height: 40px;
+    max-width: 150px;
+  }
+  :root.android .app .touch-view-toggle {
+    top: var(--phone-top);
+    right: var(--phone-right);
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  :root.android .app .touch-view-toggle span {
+    display: none;
+  }
+  :root.android .app .touch-panel-rail {
+    top: calc(var(--phone-top) + 46px);
+    right: var(--phone-right);
+    bottom: auto;
+    flex-direction: row;
+    padding: 2px;
+    gap: 2px;
+    transform: none;
+  }
+  :root.android .app .touch-panel-rail button {
+    width: 40px;
+    height: 40px;
+  }
+  :root.android .app .touch-panel-rail span {
+    display: none;
+  }
+
+  /* Bottom: pose actions left, transport right (left of an open panel). */
+  :root.android .app .selection-pose-tools {
+    bottom: var(--phone-bottom);
+    left: var(--phone-left);
+    max-width: calc(50vw - 12px);
+    padding: 3px;
+    transform: none;
+  }
+  :root.android .app .pose-action-buttons button {
+    flex: none;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 4px;
+  }
+  :root.android .app .pose-action-buttons button > span {
+    display: none;
+  }
+  :root.android .app .touch-transport {
+    right: var(--phone-right);
+    bottom: var(--phone-bottom);
+    left: auto;
+    height: 48px;
+    max-width: calc(50vw - 12px);
+    padding: 0 4px;
+    gap: 2px;
+    transform: none;
+  }
+  :root.android .app.sheet-open .touch-transport {
+    right: calc(var(--phone-right) + var(--phone-sheet) + 6px);
+  }
+  :root.android .app .touch-transport > button {
+    width: 40px;
+    height: 40px;
+  }
+  :root.android .app .touch-transport > button:first-child {
+    order: 0;
+  }
+  :root.android .app .touch-transport > button span {
+    display: none;
+  }
+  :root.android .app .touch-scrubber {
+    display: flex;
+    flex: 1;
+    width: auto;
+    min-width: 120px;
+  }
+  :root.android .app.sheet-open .selection-pose-tools,
+  :root.android .app.timeline-open :is(.touch-transport, .selection-pose-tools) {
+    display: none;
+  }
+
+  /* Sheets on the right, under the panel row, to the bottom edge. */
+  :root.android .app .tablet-sheet,
+  :root.android .app.sheet-open .tablet-sheet {
+    top: calc(var(--phone-top) + 92px);
+    right: var(--phone-right);
+    bottom: var(--phone-bottom);
+    left: auto;
+    width: var(--phone-sheet);
+    max-width: none;
+    height: auto;
+    max-height: none;
+  }
+  :root.android .app .tablet-sheet > header {
+    height: 40px;
+    min-height: 40px;
+  }
+  :root.android .app .tablet-sheet > header > button {
+    top: 0;
+    right: 2px;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    background: none;
+  }
+
+  /* The timeline takes the whole screen (timeline-editor.css hides the chrome meanwhile). */
+  :root.android .app.timeline-open .touch-panel-rail {
+    display: none;
+  }
+
+  :root.android .app .viewport-orientation {
+    right: var(--phone-right);
+    bottom: 64px;
+    width: 44px;
+  }
+  :root.android .app > .statusbar {
+    display: none;
+  }
+  :root.android .app .file-menu {
+    max-height: calc(100dvh - 60px - env(safe-area-inset-top));
+    overflow: auto;
+  }
+}
+
+/* Shared by both phone orientations: sheets keep their phone bounds whether or not the
+ * pose actions are showing, and the transform menus open under the tool strip. */
+@media (max-width: 700px), (max-height: 540px) {
+  :root.android
+    .app.sheet-open:has(.selection-pose-tools:not([data-state='closing']))
+    .tablet-sheet {
+    max-height: var(--phone-sheet-max, none);
+  }
+  :root.android .app.sheet-open .touch-pose-rail {
+    opacity: 1;
+  }
+  :root.android .app .touch-pose-rail .transform-popover {
+    top: calc(100% + 6px);
+    bottom: auto;
+    left: 0;
+    width: min(300px, calc(100vw - 16px));
+    max-height: calc(100dvh - 160px);
+    overflow: auto;
+    transform: none;
+  }
+  :root.android .app .touch-pose-rail .transform-popover button {
+    width: 100%;
+    height: auto;
+    min-height: 44px;
+  }
+}
