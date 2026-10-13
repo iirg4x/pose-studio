@@ -270,7 +270,8 @@
   background: none !important;
   border: 0 !important;
 }
-.insert-key-group > button:last-child {
+/* The touch bar's key button is one face (touch-timeline.css). */
+.insert-key-group:not(.touch-timeline-transport > *) > button:last-child {
   border-left: 1px solid var(--border) !important;
   padding: 4px;
   color: var(--amber);

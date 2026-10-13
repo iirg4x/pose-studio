@@ -415,7 +415,7 @@
 :root.android .app .touch-timeline-transport .insert-key-group {
   border-radius: var(--ds-radius) 0 0 var(--ds-radius);
 }
-:root.android .app .touch-timeline-transport > .touch-timeline-play {
+:root.android .app .touch-timeline-bar .touch-timeline-transport > .touch-timeline-play {
   border-radius: 0;
   box-shadow:
     -1px 0 0 var(--canvas),
@@ -438,4 +438,19 @@
 }
 :root.android .app .touch-pose-rail .transform-options > button[aria-expanded='true'] {
   background: var(--selection);
+}
+/* Key and its options arrow are one button face: no seam between them. */
+:root.android .app .touch-timeline-transport .insert-key-group > button + button {
+  border-left: 0;
+  margin-left: -4px;
+}
+:root.android .app .touch-timeline-bar .touch-timeline-transport .insert-key-group > button {
+  border-radius: 0;
+}
+:root.android .app .touch-timeline-bar .touch-timeline-transport > .auto-key span {
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
 }

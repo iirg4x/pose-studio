@@ -626,7 +626,6 @@ html.android body {
   :root.android .app .touch-timeline-bar .touch-timeline-play {
     width: 36px;
     min-width: 36px;
-    border-radius: var(--ds-radius);
     height: 32px;
   }
   :root.android .app .touch-timeline-bar .insert-key-group > button + button {
