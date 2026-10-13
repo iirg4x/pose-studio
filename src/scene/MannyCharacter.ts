@@ -38,11 +38,7 @@ export const mannyPreviewConfig = (rig: MannyRig): RetargetCharacter => ({
 });
 
 /** Rebind the character to Manny's names, axes and hierarchy, at its own proportions. */
-export function bindCharacterToManny(
-  raw: RetargetRig,
-  source: MannyRig,
-  config: RetargetCharacter,
-) {
+function bindCharacterToManny(raw: RetargetRig, source: MannyRig, config: RetargetCharacter) {
   raw.configure(source, config);
   raw.resetToBind();
   const native = new Map([...raw.bones].map(([name, b]) => [name, b.matrixWorld.clone()]));

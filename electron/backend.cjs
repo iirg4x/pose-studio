@@ -125,4 +125,4 @@ async function runExport({ blender, backend, directory, payload, includeMesh }) 
   await fs.unlink(input);
   return { directory, files: manifest.files };
 }
-module.exports = { validateBake, runExport };
+module.exports = { runExport };

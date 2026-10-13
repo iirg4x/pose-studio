@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Only application resources belong in the public PWA. Project files and the
 // PC's /api library must never be copied into the publication or offline cache.
-export const APP_ASSETS = [
+const APP_ASSETS = [
   'manny.glb',
   'axe.json',
   'controller-shapes.json',

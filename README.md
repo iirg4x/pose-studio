@@ -27,7 +27,8 @@ npm run dev
 | --- | --- |
 | `npm run dev` | Start the Vite dev server |
 | `npm test` | Run the test suite (Vitest) |
-| `npm run typecheck` | Type-check with TypeScript |
+| `npm run typecheck` | Type-check the app and tests |
+| `npm run lint:unused` | Find unused files, exports and dependencies (knip) |
 | `npm run format` | Format with Prettier (`format:check` to verify) |
 | `npm run build:pwa` | Build the installable web app into `dist-pwa/` |
 | `npm run package` | Build the Windows desktop app (needs Blender for FBX export) |

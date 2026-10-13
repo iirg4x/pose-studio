@@ -196,4 +196,4 @@ function createCharacters(directory, assets, backend) {
     },
   };
 }
-module.exports = { createCharacters, glb, blenderJob };
+module.exports = { createCharacters, blenderJob };

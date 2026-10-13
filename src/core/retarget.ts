@@ -158,7 +158,7 @@ for (const s of RETARGET_SLOTS) {
       ] ?? s.bone + '.x',
     );
 }
-export const normalizeBone = (name: string) =>
+const normalizeBone = (name: string) =>
   name
     .replace(/^.*[:|]/, '')
     .replace(/^mixamorig\d*/i, '')

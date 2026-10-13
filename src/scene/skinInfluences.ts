@@ -170,7 +170,7 @@ export function prepareSkinRoot(root: T.Object3D) {
 }
 
 /** Preserve original weights before GLTFLoader normalizes the first set alone. */
-export function fullSkinPlugin(parser: GLTFParser): GLTFLoaderPlugin {
+function fullSkinPlugin(parser: GLTFParser): GLTFLoaderPlugin {
   const original = new Map<string, Attribute[]>();
   return {
     name: 'PoseFullSkinInfluences',

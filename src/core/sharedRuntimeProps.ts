@@ -9,7 +9,7 @@ export type PropParentFrame =
   | { kind: 'grip'; side: 'l' | 'r' }
   | { kind: 'bone'; bone: string }
   | { kind: 'prop'; control: ControlId };
-export interface RuntimePropStep {
+interface RuntimePropStep {
   control: ControlId;
   parent: PropParentFrame;
   position: boolean;

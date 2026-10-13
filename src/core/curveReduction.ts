@@ -28,7 +28,7 @@ export interface ReductionInput {
   channels: Channel[];
   protectedFrames?: number[];
 }
-export interface ReductionRow {
+interface ReductionRow {
   channel: Channel;
   before: number;
   after: number;

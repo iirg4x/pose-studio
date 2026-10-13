@@ -34,7 +34,7 @@ export const assetHash = sha256Hex;
 export function builtInAsset(id: string) {
   return /^(example-fantasy-(male|female)|builtin-(axe|rifle|magazine))$/.test(id);
 }
-export function assetIds(project: unknown) {
+function assetIds(project: unknown) {
   const p = project as {
     characters?: { asset: string }[];
     clips?: { project: { props?: Record<string, { asset: string }> } }[];

@@ -8,7 +8,7 @@ import type { Pose, Track, ControlId } from './model';
 import { blenderNoise } from './blenderNoise';
 import type { BlenderNoiseSettings } from './blenderNoise';
 import { BLEND_CHANNELS, BLEND_LABELS, isBlendChannel, blendDefault } from './blendChannels';
-export const POSE_CHANNELS = [
+const POSE_CHANNELS = [
   'px',
   'py',
   'pz',
@@ -37,7 +37,7 @@ export interface CurveKey extends MotionOptions {
   left?: [number, number];
   right?: [number, number];
 }
-export type CycleMode = 'none' | 'repeat' | 'offset' | 'mirror';
+type CycleMode = 'none' | 'repeat' | 'offset' | 'mirror';
 export type Modifier = (
   | { id: string; type: 'cycles'; enabled: boolean; before: CycleMode; after: CycleMode }
   | ({
@@ -310,7 +310,7 @@ function noise(frame: number, period: number, phase: number, seed: number) {
   };
   return hash(i) + (hash(i + 1) - hash(i)) * u;
 }
-export const noiseValue = (frame: number, m: Extract<Modifier, { type: 'noise' }>) =>
+const noiseValue = (frame: number, m: Extract<Modifier, { type: 'noise' }>) =>
   m.amplitude *
   (m.algorithm === 'blender' ? blenderNoise(frame, m) : noise(frame, m.period, m.phase, m.seed));
 /** Periodic crossfade matches both value and slope, without changing imported noise. */

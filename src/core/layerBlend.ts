@@ -12,7 +12,6 @@ export interface LayerReference {
   frame: number;
   basis?: { parent: Q4; rest: Q4; parentPosition?: V3; restPosition?: V3 };
 }
-export const hasLayerBlend = (t: Track) => BLEND_CHANNELS.some((c) => !!t.curves?.[c]);
 export const blendValue = (t: Track, c: BlendChannel, f: number) =>
   Math.max(0, Math.min(100, t.curves?.[c] ? sampleCurve(t.curves[c]!, f) : blendDefault(c)));
 export const controlLayerWeight = (t: Track, f: number) => blendValue(t, 'blendWeight', f) / 100;

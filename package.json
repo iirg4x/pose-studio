@@ -16,7 +16,9 @@
     "build:pwa": "tsc -b && vite build --mode pwa --outDir dist-pwa",
     "typecheck": "tsc -b && tsc -p tests",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "android:publish": "node scripts/publish-android.cjs",
+    "lint:unused": "knip"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
@@ -37,49 +39,12 @@
     "@types/three": "^0.180.0",
     "@vitejs/plugin-react": "^4.5.0",
     "electron": "^38.0.0",
-    "electron-builder": "^26.0.0",
+    "knip": "6.41.0",
     "playwright": "^1.56.0",
     "prettier": "3.6.2",
     "typescript": "~5.8.3",
     "vite": "^6.3.5",
     "vitest": "^3.2.0"
-  },
-  "build": {
-    "appId": "local.manny.animationstudio",
-    "productName": "Manny Animation Studio",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*",
-      "package.json",
-      "shared/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "electron/refresh-file-associations.ps1",
-        "to": "refresh-file-associations.ps1"
-      },
-      {
-        "from": "backend",
-        "to": "backend",
-        "filter": [
-          "export_fbx.py",
-          "manny-clean.blend",
-          "skeleton.json",
-          "import_asset.py",
-          "import_character.py",
-          "export_character.py",
-          "export_shared.py",
-          "import_shared_unreal.py"
-        ]
-      }
-    ],
-    "win": {
-      "target": "dir",
-      "signAndEditExecutable": false
-    }
   },
   "description": "A standalone humanoid animation editor with project assets and layered posing",
   "author": "iirg4x",

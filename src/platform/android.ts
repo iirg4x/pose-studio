@@ -53,11 +53,7 @@ async function write(id: string, data: Uint8Array, position = 0) {
   for (let i = 0; i < data.length; i += CHUNK)
     await native.write({ id, data: encode64(data.subarray(i, i + CHUNK)), position: position + i });
 }
-export async function saveAndroidFile(
-  data: Uint8Array,
-  name: string,
-  mime = 'application/octet-stream',
-) {
+async function saveAndroidFile(data: Uint8Array, name: string, mime = 'application/octet-stream') {
   const file = await native.create({ name: name.replace(/[\\/:*?"<>|]/g, '_'), mime });
   if (!file?.id) return null;
   try {

@@ -17,7 +17,7 @@ const CONTROLLER_INPUTS = [
   'knee_l',
   'knee_r',
 ] as const;
-export interface SharedRuntimeInputLayout {
+interface SharedRuntimeInputLayout {
   version: 2;
   space: 'source-component';
   carrier: string;

@@ -5,7 +5,7 @@ export interface MotionTolerance {
   position: number;
   rotation: number;
 }
-export const IMPORT_TOLERANCE: MotionTolerance = {
+const IMPORT_TOLERANCE: MotionTolerance = {
   position: 0.0002,
   rotation: (Math.PI / 180) * 0.25,
 };

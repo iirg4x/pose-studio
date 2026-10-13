@@ -1,0 +1,9 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": ["electron/preload.cjs", "shared/*.d.mts"],
+  "ignoreDependencies": ["playwright"],
+  "ignoreIssues": {
+    "electron/project-files.cjs": ["exports"],
+    "electron/shared-export.cjs": ["exports"]
+  }
+}

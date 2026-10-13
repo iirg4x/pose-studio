@@ -11,7 +11,7 @@ export type AttachmentTarget = ControlId | 'world' | 'native';
 export const boneControl = (name: string): ControlId | undefined =>
   IDS.find((id) => CONTROLS[id].bone === name && isBoneControl(id)) ??
   IDS.find((id) => CONTROLS[id].bone === name);
-export function controlWorld(rig: MannyRig, values: Record<ControlId, Pose>, id: ControlId) {
+function controlWorld(rig: MannyRig, values: Record<ControlId, Pose>, id: ControlId) {
   return CONTROLS[id].bone ? rig.bodyBone(id).matrixWorld.clone() : matrix(values[id]);
 }
 export class AttachmentSolver {

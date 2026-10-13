@@ -51,7 +51,7 @@ export interface Key extends Pose, MotionOptions {
   frame: number;
   interpolation?: Interpolation;
 }
-export interface Space {
+interface Space {
   frame: number;
   parent: ParentId;
   offset: number[];
@@ -75,14 +75,14 @@ export interface Track extends MotionOptions {
   interpolation: Interpolation;
 }
 export type RigLayer = 'firstPerson' | 'body';
-export interface BodyBase {
+interface BodyBase {
   sourceId: string;
   source: Project;
   enabled: boolean;
   excluded: ControlId[];
   alignment?: number[];
 }
-export interface CameraBinding {
+interface CameraBinding {
   bone: string;
   offset: number[];
   enabled: boolean;
@@ -130,7 +130,7 @@ export function forLayer(p: Project, layer: RigLayer): Project {
 }
 export const layerFrame = (p: Project, layer: RigLayer, frame: number) =>
   p.bodyBase && layer !== p.editing ? baseFrame(p, frame) : frame;
-export const CONTROL_LABELS = Object.fromEntries(
+const CONTROL_LABELS = Object.fromEntries(
   CONTROL_IDS.map((id) => [id, CONTROLS[id].label]),
 ) as Record<ControlId, string>;
 export const controlLabel = (
@@ -197,9 +197,9 @@ export function attachmentRest(track: Track, frame: number, template: Pose): Pos
   return s && fromMatrix(new Matrix4().fromArray(s.base), template);
 }
 export const overlayPose = () => pose([0, 0, 0], [0, 0, 0, 1], [0, 0, 0, 0, 0]);
-export const baseFrame = (p: Project, frame: number) =>
+const baseFrame = (p: Project, frame: number) =>
   p.bodyBase ? Math.min(p.bodyBase.source.end, (frame * p.bodyBase.source.fps) / p.fps) : frame;
-export const defaultBodyExclusions = () =>
+const defaultBodyExclusions = () =>
   IDS.filter(
     (id) =>
       id === 'camera' ||
@@ -231,7 +231,7 @@ const resolvedBodySource = (source: Project, frame: number) => {
   const values = evaluate(source, frame);
   return rigLocal(bodySourceResolver ? bodySourceResolver(source, frame, values) : values);
 };
-export function bodyBaseValues(p: Project, frame: number): Record<ControlId, Pose> | null {
+function bodyBaseValues(p: Project, frame: number): Record<ControlId, Pose> | null {
   if (!p.bodyBase) return null;
   if (p.editing === 'firstPerson') {
     const { source, enabled, excluded } = p.bodyBase,
@@ -284,7 +284,7 @@ export function bodyBaseValues(p: Project, frame: number): Record<ControlId, Pos
         values[('hand_' + side) as ControlId].grip[index] = 0;
   return values;
 }
-export function inheritedParent(p: Project, id: ControlId, frame: number): ParentId {
+function inheritedParent(p: Project, id: ControlId, frame: number): ParentId {
   const base = p.bodyBase;
   if (!base?.enabled || base.excluded.includes(id)) return 'world';
   const parent = controlParent(base.source, id, baseFrame(p, frame));

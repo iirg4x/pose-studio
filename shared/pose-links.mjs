@@ -49,7 +49,3 @@ export function inferPoseLinks(data) {
   });
   return changed ? { ...data, clips } : data;
 }
-
-export function poseDependencies(project) {
-  return [...new Set((project.layers?.[0]?.poseLinks ?? []).map((link) => link.clipId))];
-}

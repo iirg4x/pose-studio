@@ -14,7 +14,7 @@ import { RecordingDialog } from './components/RecordingDialog';
 import { useProjectFile } from './components/useProjectFile';
 import { WindowControls } from './components/WindowControls';
 import { KeyframeMenu } from './components/KeyframeMenu';
-import { usePanelSizes } from './components/PanelDividers';
+import { usePanelSizes } from './components/usePanelSizes';
 import { RecentProjects } from './components/RecentProjects';
 import { NewActionDialog } from './components/NewActionDialog';
 import type { RigLayer } from './core/model';

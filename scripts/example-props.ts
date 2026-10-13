@@ -1,28 +1,4 @@
 import * as T from 'three';
-import axe from '../public/assets/axe.json';
-export function createMainProp() {
-  const group = new T.Group(),
-    rifle = createRifle(),
-    geometry = new T.BufferGeometry();
-  rifle.name = 'rifle';
-  geometry.setAttribute('position', new T.Float32BufferAttribute(axe.positions, 3));
-  geometry.computeVertexNormals();
-  const tool = new T.Mesh(
-    geometry,
-    new T.MeshStandardMaterial({ color: 0x90938d, metalness: 0.35, roughness: 0.65 }),
-  );
-  tool.name = 'axe';
-  tool.castShadow = true;
-  tool.layers.enable(1);
-  tool.userData.control = 'rifle';
-  tool.visible = false;
-  group.userData.control = 'rifle';
-  group.add(rifle, tool);
-  return group;
-}
-export function setMainProp(group: T.Group, preset: 'rifle' | 'axe' = 'rifle') {
-  for (const child of group.children) child.visible = child.name === preset;
-}
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 const dark = new T.MeshStandardMaterial({ color: 0x30363a, metalness: 0.75, roughness: 0.38 });
 const rubber = new T.MeshStandardMaterial({ color: 0x181d22, metalness: 0.1, roughness: 0.8 });

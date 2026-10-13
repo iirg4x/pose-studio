@@ -14,7 +14,7 @@ export interface BoneFollowing {
   local: number[];
   parent: number[];
 }
-export const activeBoneFollowing = (track: Track | undefined, frame: number) =>
+const activeBoneFollowing = (track: Track | undefined, frame: number) =>
   track?.following?.filter((key) => key.frame <= frame).at(-1);
 function authoredFollowing(p: Project, frame: number) {
   const result: Partial<Record<ControlId, BoneFollowing>> = {},

@@ -1,5 +1,5 @@
 /** Blend controls share the curve editor, but never write transform values. */
-export const TRANSFORM_AXES = ['px', 'py', 'pz', 'rx', 'ry', 'rz'] as const;
+const TRANSFORM_AXES = ['px', 'py', 'pz', 'rx', 'ry', 'rz'] as const;
 export type TransformAxis = (typeof TRANSFORM_AXES)[number];
 export const BLEND_CHANNELS = [
   'blendWeight',

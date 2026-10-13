@@ -8,10 +8,7 @@ export interface CoordinateSnapshot {
   parent: Matrix4;
   root: Matrix4;
 }
-export function coordinateFrame(
-  snapshot: CoordinateSnapshot,
-  space: Exclude<CoordinateSpace, 'local'>,
-) {
+function coordinateFrame(snapshot: CoordinateSnapshot, space: Exclude<CoordinateSpace, 'local'>) {
   return space === 'world' ? new Matrix4() : space === 'root' ? snapshot.root : snapshot.parent;
 }
 export function coordinatePose(

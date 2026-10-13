@@ -7,7 +7,7 @@ import type { ControlId } from '../core/model';
 import { controllerShape } from './controlShapes';
 import type { SourceShape, ControllerShape } from './controlShapes';
 export type { SourceShape } from './controlShapes';
-export const controlColor = (id: ControlId) =>
+const controlColor = (id: ControlId) =>
   id.endsWith('_l')
     ? 0x63c5e9
     : id.endsWith('_r')
@@ -102,7 +102,7 @@ export class ControlVisual extends T.Group {
     this.haloInk.dispose();
   }
 }
-export function pointSegmentDistance(
+function pointSegmentDistance(
   x: number,
   y: number,
   a: { x: number; y: number },
