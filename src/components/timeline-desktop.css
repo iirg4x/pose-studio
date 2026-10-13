@@ -1,0 +1,220 @@
+/* Desktop timeline. Three elevations (recessed tracks, raised labels, raised ruler and
+ * toolbar); colour does work: keys and hold bars carry their control's colour, the
+ * accent marks time and selection. */
+.app.desktop-workspace .timeline {
+  --tl-ground: #0e1218;
+  --tl-row-alt: #121720;
+  --tl-row-hover: #18202b;
+  --tl-group: #141a23;
+  --tl-labels: #171d26;
+  --tl-ruler: #1d2530;
+  --tl-rule: #ffffff0f;
+  --tl-grid: #ffffff08;
+  --tl-text: #e3e9f1;
+  --tl-text-2: #b9c3cf;
+  --tl-muted: #7f8c9d;
+  --tl-accent: #5ed3ea;
+  --tl-ink: #0a0d11;
+  --track-ink: var(--tl-ground);
+  --track-surface: var(--tl-labels);
+  --track-raised: #263040;
+  --track-rule: var(--tl-rule);
+  --track-text: var(--tl-text);
+  --track-muted: var(--tl-muted);
+  --track-clock: var(--tl-accent);
+  --track-selected: color-mix(in srgb, var(--tl-accent) 13%, var(--tl-ground));
+  background: var(--tl-ground);
+}
+
+/* Toolbar: raised, quiet until used. */
+.app.desktop-workspace .timeline .key-edit-tools {
+  background: var(--tl-ruler);
+  border-bottom: 1px solid #00000066;
+  box-shadow: 0 1px 0 #ffffff08 inset;
+}
+.app.desktop-workspace .timeline .key-edit-tools button {
+  color: var(--tl-text-2);
+}
+.app.desktop-workspace .timeline .key-edit-tools button:hover:not(:disabled) {
+  background: #ffffff0d;
+  color: var(--tl-text);
+}
+.app.desktop-workspace .timeline .key-selection-count {
+  color: var(--tl-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ruler: the most raised surface, readable numbers, visible minor ticks. */
+.app.desktop-workspace .timeline .track-ruler-label,
+.app.desktop-workspace .timeline .time-ruler {
+  background: var(--tl-ruler);
+}
+.app.desktop-workspace .timeline .time-ruler {
+  border-bottom: 1px solid #00000080;
+  box-shadow:
+    0 1px 0 #ffffff0a inset,
+    0 4px 10px #00000059;
+}
+.app.desktop-workspace .timeline .time-ruler > .ruler-tick {
+  color: var(--tl-text-2);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.app.desktop-workspace .timeline .ruler-minors {
+  height: 5px;
+  opacity: 0.55;
+}
+
+/* Label column: raised, hierarchy through weight, not colour stripes. */
+.app.desktop-workspace .timeline .track-labels {
+  background: var(--tl-labels);
+  border-right: 1px solid #00000080;
+  box-shadow: 1px 0 0 #ffffff08;
+}
+.app.desktop-workspace .timeline-track-label {
+  background: var(--tl-labels);
+  border-bottom: 1px solid #ffffff06;
+}
+.app.desktop-workspace .timeline-track-label:hover {
+  background: color-mix(in srgb, #ffffff 4%, var(--tl-labels));
+}
+.app.desktop-workspace .timeline-track-label .track-name {
+  color: var(--tl-text-2);
+  font-size: 12px;
+  font-weight: 400;
+}
+.app.desktop-workspace .timeline-track-label[data-depth='0'] .track-name {
+  color: var(--tl-text);
+  font-weight: 600;
+}
+.app.desktop-workspace .timeline-track-label.axis-label-row .track-name {
+  color: var(--tl-muted);
+  font-size: 11px;
+}
+.app.desktop-workspace .timeline-track-label.selected {
+  background: color-mix(in srgb, var(--tl-accent) 14%, var(--tl-labels));
+  box-shadow: none;
+}
+.app.desktop-workspace .timeline-track-label.selected .track-name {
+  color: #ffffff;
+}
+.app.desktop-workspace .timeline-track-label .track-children {
+  height: 18px;
+  min-height: 18px;
+  min-width: 0;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: #ffffff0a;
+  color: var(--tl-muted);
+  opacity: 1;
+}
+.app.desktop-workspace .timeline-track-label .track-children.folded {
+  background: #ffffff12;
+  color: var(--tl-text-2);
+}
+
+/* Rows: recessed, readable alternation, beat grid, groups separated. */
+.app.desktop-workspace .timeline .key-track {
+  background-color: var(--tl-ground);
+  background-image: linear-gradient(to right, var(--tl-grid) 1px, transparent 1px);
+  border-bottom: 1px solid #ffffff05;
+}
+.app.desktop-workspace .timeline .key-track[data-alternate='true'] {
+  background-color: var(--tl-row-alt);
+}
+.app.desktop-workspace .timeline .key-track[data-group='true'] {
+  background-color: var(--tl-group);
+  border-top: 1px solid #ffffff0a;
+}
+.app.desktop-workspace .timeline .key-track:hover {
+  background-color: var(--tl-row-hover);
+}
+.app.desktop-workspace .timeline .key-track.selected-channel {
+  background-color: color-mix(in srgb, var(--tl-accent) 10%, var(--tl-ground));
+  box-shadow:
+    inset 0 1px color-mix(in srgb, var(--tl-accent) 28%, transparent),
+    inset 0 -1px color-mix(in srgb, var(--tl-accent) 28%, transparent);
+}
+
+/* Keys: solid diamonds in the control's colour, dark outline so they read on any row. */
+.app.desktop-workspace .timeline .keyframe {
+  z-index: 2;
+}
+.app.desktop-workspace .timeline .keyframe,
+.app.desktop-workspace .timeline .keyframe:not(.selected):not(.partial) {
+  color: var(--track-color, #b8c4d2);
+}
+.app.desktop-workspace .timeline .keyframe svg {
+  width: 11px;
+  height: 11px;
+  stroke: var(--tl-ink);
+  stroke-width: 2.2;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease;
+}
+.app.desktop-workspace .timeline .keyframe:hover svg {
+  transform: scale(1.25);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--track-color, #fff) 60%, transparent));
+}
+.app.desktop-workspace .timeline .keyframe.partial {
+  color: color-mix(in srgb, var(--track-color, #b8c4d2) 55%, var(--tl-ground));
+}
+.app.desktop-workspace .timeline .keyframe.selected {
+  color: #ffffff;
+}
+.app.desktop-workspace .timeline .keyframe.selected svg {
+  width: 13px;
+  height: 13px;
+  stroke: var(--tl-accent);
+  stroke-width: 2.4;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--tl-accent) 70%, transparent));
+}
+
+/* Interpolation: a hold bar between keys in the control's colour. The type shows in
+ * the bar's form; exact settings stay in the tooltip. */
+.app.desktop-workspace .timeline .timeline-interpolation {
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--track-color, #8fa0b3) 30%, transparent);
+  color: transparent;
+  opacity: 1;
+}
+.app.desktop-workspace .timeline .timeline-interpolation .interpolation-connector,
+.app.desktop-workspace .timeline .timeline-interpolation .interpolation-caption {
+  display: none;
+}
+.app.desktop-workspace .timeline .timeline-interpolation[data-interpolation='linear'] {
+  background:
+    linear-gradient(var(--track-color, #8fa0b3), var(--track-color, #8fa0b3)) center / 100% 1px
+      no-repeat,
+    color-mix(in srgb, var(--track-color, #8fa0b3) 14%, transparent);
+}
+.app.desktop-workspace .timeline .timeline-interpolation[data-interpolation='hold'] {
+  background: none;
+  border: 1px dashed color-mix(in srgb, var(--track-color, #8fa0b3) 60%, transparent);
+}
+.app.desktop-workspace .timeline .timeline-interpolation[data-interpolation='mixed'] {
+  background: color-mix(in srgb, var(--track-color, #8fa0b3) 18%, transparent);
+  border: 1px dotted color-mix(in srgb, var(--track-color, #8fa0b3) 55%, transparent);
+}
+.app.desktop-workspace .timeline .timeline-interpolation:hover,
+.app.desktop-workspace .timeline .selected-channel .timeline-interpolation {
+  background-color: color-mix(in srgb, var(--track-color, #8fa0b3) 45%, transparent);
+}
+
+/* Time: a 2px playhead with a soft current-frame band. */
+.app.desktop-workspace .timeline .playhead {
+  width: 2px;
+  margin-left: -1px;
+  background: var(--tl-accent);
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, var(--tl-accent) 7%, transparent),
+    0 0 10px color-mix(in srgb, var(--tl-accent) 45%, transparent);
+}
+.app.desktop-workspace .timeline .playhead-cap output {
+  background: var(--tl-accent);
+  color: #06222a;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 6px #00000080;
+}
