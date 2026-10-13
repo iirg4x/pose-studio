@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { Check } from 'lucide-react';
 
@@ -102,34 +102,99 @@ export function MenuBar({ menus, disabled = false }: { menus: Menu[]; disabled?:
               aria-label={menu.label}
               onKeyDown={onMenuKey}
             >
-              {menu.items.map((item, i) =>
-                item === 'separator' ? (
-                  <hr key={'sep' + i} />
-                ) : (
-                  <button
-                    key={item.label}
-                    role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
-                    aria-checked={item.checked}
-                    disabled={item.disabled}
-                    tabIndex={-1}
-                    onClick={() => {
-                      close(true);
-                      item.run();
-                    }}
-                  >
-                    <span className="menu-check" aria-hidden="true">
-                      {item.checked && <Check size={13} />}
-                    </span>
-                    <span className="menu-label">{item.label}</span>
-                    {item.shortcut && <kbd>{item.shortcut}</kbd>}
-                  </button>
-                ),
-              )}
+              {renderItems(menu.items, () => close(true))}
               {menu.footer}
             </div>
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function renderItems(items: MenuItem[], done: () => void) {
+  return items.map((item, i) =>
+    item === 'separator' ? (
+      <hr key={'sep' + i} />
+    ) : (
+      <button
+        key={item.label}
+        role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+        aria-checked={item.checked}
+        disabled={item.disabled}
+        tabIndex={-1}
+        onClick={() => {
+          done();
+          item.run();
+        }}
+      >
+        <span className="menu-check" aria-hidden="true">
+          {item.checked && <Check size={13} />}
+        </span>
+        <span className="menu-label">{item.label}</span>
+        {item.shortcut && <kbd>{item.shortcut}</kbd>}
+      </button>
+    ),
+  );
+}
+
+/** Menu opened at the pointer, sharing the menu bar's items and keyboard behaviour. */
+export function ContextMenu({
+  x,
+  y,
+  label,
+  items,
+  close,
+}: {
+  x: number;
+  y: number;
+  label: string;
+  items: MenuItem[];
+  close: () => void;
+}) {
+  const root = useRef<HTMLDivElement>(null);
+  const [at, setAt] = useState({ x, y });
+  useLayoutEffect(() => {
+    const r = root.current!.getBoundingClientRect();
+    setAt({
+      x: Math.max(4, Math.min(x, innerWidth - r.width - 4)),
+      y: Math.max(4, Math.min(y, innerHeight - r.height - 4)),
+    });
+    root.current?.querySelector<HTMLElement>('[role^=menuitem]:not(:disabled)')?.focus();
+  }, [x, y]);
+  useEffect(() => {
+    const outside = (e: PointerEvent) => {
+      if (!root.current?.contains(e.target as Node)) close();
+    };
+    document.addEventListener('pointerdown', outside, true);
+    window.addEventListener('resize', close);
+    return () => {
+      document.removeEventListener('pointerdown', outside, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [close]);
+  return (
+    <div
+      ref={root}
+      className="menubar-dropdown context-menu"
+      role="menu"
+      aria-label={label}
+      style={{ left: at.x, top: at.y }}
+      onKeyDown={(e) => {
+        const list = [
+          ...root.current!.querySelectorAll<HTMLButtonElement>('[role^=menuitem]:not(:disabled)'),
+        ];
+        const i = list.indexOf(document.activeElement as HTMLButtonElement);
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          list[(i + (e.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length]?.focus();
+        } else if (e.key === 'Escape' || e.key === 'Tab') {
+          e.preventDefault();
+          close();
+        }
+      }}
+    >
+      {renderItems(items, close)}
     </div>
   );
 }

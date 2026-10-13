@@ -716,3 +716,8 @@
 .app.desktop-workspace .touch-view-toggle {
   display: none;
 }
+.menubar-dropdown.context-menu {
+  position: fixed;
+  top: auto;
+  z-index: 400;
+}

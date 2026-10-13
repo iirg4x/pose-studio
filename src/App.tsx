@@ -1,5 +1,5 @@
 import { DesktopWorkspace, useDesktopLayout } from './components/DesktopWorkspace';
-import { MenuBar } from './components/MenuBar';
+import { MenuBar, ContextMenu } from './components/MenuBar';
 import type { Menu } from './components/MenuBar';
 import { PreviewModel } from './components/PreviewModel';
 import { InstallStudio } from './components/InstallStudio';
@@ -82,6 +82,7 @@ export default function App() {
     [titleSlot, setTitleSlot] = useState<HTMLDivElement | null>(null),
     [desktopLayout, setDesktopLayout] = useDesktopLayout(),
     [trail, setTrail] = useState(false),
+    [poseMenu, setPoseMenu] = useState<{ x: number; y: number } | null>(null),
     [exporting, setExporting] = useState(false),
     [recording, setRecording] = useState(false),
     [characterExport, setCharacterExport] = useState(false),
@@ -136,6 +137,34 @@ export default function App() {
       });
       runtime.current?.resetView();
     };
+  useEffect(() => {
+    if (isAndroid) return;
+    let press: { x: number; y: number; cancels: boolean } | null = null;
+    const inViewport = (t: EventTarget | null) =>
+      !!(t as HTMLElement | null)?.closest?.('.area-viewport canvas');
+    const down = (e: PointerEvent) => {
+      if (e.button !== 2 || !inViewport(e.target)) return;
+      const st = studio.state;
+      press = { x: e.clientX, y: e.clientY, cancels: st.interacting || !!st.boxSelection };
+    };
+    const menu = (e: MouseEvent) => {
+      if (!press || !inViewport(e.target)) return;
+      const moved = Math.hypot(e.clientX - press.x, e.clientY - press.y) > 4,
+        open =
+          !moved &&
+          !press.cancels &&
+          !studio.state.retargetMode &&
+          studio.state.selection.length > 0;
+      press = null;
+      if (open) setPoseMenu({ x: e.clientX, y: e.clientY });
+    };
+    document.addEventListener('pointerdown', down, true);
+    document.addEventListener('contextmenu', menu, true);
+    return () => {
+      document.removeEventListener('pointerdown', down, true);
+      document.removeEventListener('contextmenu', menu, true);
+    };
+  }, []);
   const setRuntime = useCallback((r: StudioScene | null) => {
     runtime.current = r;
     if (import.meta.env.DEV) {
@@ -499,6 +528,7 @@ export default function App() {
   const busy = !s.ready || recording || exporting,
     selected = s.selection.length > 0,
     keyLocked = selected && !!s.project && s.selection.every((id) => s.project!.tracks[id].keyLock);
+  const closePoseMenu = useCallback(() => setPoseMenu(null), []);
   const desktopMenus: Menu[] = [
     {
       label: 'File',
@@ -1026,6 +1056,15 @@ export default function App() {
         />
       )}
       <KeyframeMenu />
+      {poseMenu && (
+        <ContextMenu
+          x={poseMenu.x}
+          y={poseMenu.y}
+          label="Pose"
+          items={[...desktopMenus[2].items, 'separator', ...desktopMenus[3].items.slice(0, 2)]}
+          close={closePoseMenu}
+        />
+      )}
 
       <footer className="statusbar">
         <span role="status">{s.message}</span>
