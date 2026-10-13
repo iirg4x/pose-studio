@@ -1,3 +1,4 @@
+import { isTouch } from '../platform/storage';
 import { ControlLayerSettings } from './ControlLayerSettings';
 import { TransformFields } from './TransformFields';
 import type { StudioScene } from '../scene/StudioScene';
@@ -167,7 +168,9 @@ export function Inspector({
           </>
         ) : !s.selection.length ? (
           <p className="property-empty-selection">
-            Select a control in the scene or Rig panel to edit its pose.
+            {isTouch
+              ? 'Select a control in the scene or Rig panel to edit its pose.'
+              : 'Click a control in the viewport or a track in the dope sheet to pose it. A selects every control; B box-selects.'}
           </p>
         ) : (
           <>

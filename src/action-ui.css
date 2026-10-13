@@ -332,7 +332,7 @@
 .time-ruler > .ruler-tick {
   top: 2px;
   transform: translateX(-50%);
-  font-size: 9px;
+  font-size: 10px;
   color: var(--muted);
 }
 .time-ruler > .playhead-cap {
@@ -672,7 +672,7 @@ select:focus-visible {
 .track-name > small {
   margin-left: auto;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
   padding-left: 3px;
 }
@@ -748,7 +748,7 @@ select:focus-visible {
 .control-mask-header small {
   margin-left: auto;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
 .control-mask-children {

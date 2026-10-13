@@ -60,7 +60,7 @@
 }
 .property-context-heading small {
   margin-left: auto;
-  font-size: 9px;
+  font-size: 10px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -190,7 +190,7 @@
 }
 .property-vector-label small {
   margin-left: auto;
-  font-size: 9px;
+  font-size: 10px;
   color: var(--muted);
 }
 .properties-editor .vector-inputs {
@@ -229,7 +229,7 @@
 .property-edit-target small {
   margin-left: auto;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 .property-layer-editor {
   display: flex;
@@ -348,7 +348,7 @@
 .property-add-layer small {
   display: block;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   margin-top: 3px;
 }
 .property-mask-actions {
@@ -531,7 +531,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 9px;
+  font-size: 10px;
   color: var(--muted);
 }
 .attachment-key-status b {
@@ -583,7 +583,7 @@
 }
 .attachment-option-group {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   padding: 8px 8px 4px;
 }
 .attachment-options button {

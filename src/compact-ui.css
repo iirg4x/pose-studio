@@ -109,7 +109,7 @@
   font-weight: 500;
 }
 .property-context-heading.context-flair small {
-  font-size: 9px;
+  font-size: 10px;
 }
 .property-context-heading.context-flair i {
   width: 5px;
@@ -600,7 +600,7 @@
   gap: 3px;
 }
 .modifier-card-actions button > span {
-  font-size: 9px;
+  font-size: 10px;
 }
 .modifier-card-actions button:disabled {
   opacity: 0.3;

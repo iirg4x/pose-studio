@@ -1764,7 +1764,7 @@ select optgroup {
   color: var(--accent);
 }
 .viewport-orientation > span {
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.25px;
 }
 .scene-canvas,

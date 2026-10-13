@@ -721,3 +721,23 @@
   top: auto;
   z-index: 400;
 }
+
+/* One control vocabulary: 4px corners, 26px controls in panels, 24px in toolbars. */
+.app.desktop-workspace
+  :is(.area-editors, .area-side, .time-slider, .library-popover)
+  button:not(.pose-preset) {
+  border-radius: 4px;
+}
+.app.desktop-workspace
+  .area-side
+  :is(button, select):not(.pose-preset):not(.property-header):not(.key-row):not(.inline-space) {
+  height: 26px;
+  min-height: 26px;
+}
+.app.desktop-workspace .area-side .property-context-tabs button {
+  height: 28px;
+  min-height: 28px;
+}
+.app.desktop-workspace .track-name {
+  border-radius: 4px;
+}
