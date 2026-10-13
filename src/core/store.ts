@@ -79,7 +79,6 @@ import {
   validateLibrary,
   refreshBases,
   sourceWouldCycle,
-  mergeHostedLibrary,
 } from './library';
 import type { AnimationLibrary, PoseStamp } from './library';
 import {
@@ -476,15 +475,6 @@ export class StudioStore {
       ready: true,
       revision: this.state.revision + 1,
       message,
-    });
-  }
-  openHostedAnimations(input: unknown, activate = true) {
-    const incoming = validateLibrary(input),
-      current = this.workspaceSnapshot();
-    if (!current) return;
-    this.batch(() => {
-      this.patch({ workspace: mergeHostedLibrary(current, incoming) });
-      this.activate(activate ? incoming.activeId : current.activeId);
     });
   }
   activate(id: string) {

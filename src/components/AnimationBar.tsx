@@ -1,6 +1,5 @@
 import { DeleteAnimationDialog } from './DeleteAnimationDialog';
 import { MotionPresence, MotionOverlay } from './Motion';
-import { HostedAnimations } from './HostedAnimations';
 import { isTouch as isAndroid } from '../platform/storage';
 import { RenameAnimationDialog } from './RenameAnimationDialog';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -133,7 +132,7 @@ export function AnimationBar({
         title="Browse project animations"
       >
         <Library size={17} />
-        <b>{window.poseHost?.clips.length ?? clips.length}</b>
+        <b>{clips.length}</b>
       </button>
       <div className="animation-tabs-area">
         <div className="animation-tabs" role="tablist" aria-label="Open animations">
@@ -261,18 +260,15 @@ export function AnimationBar({
           {w.poses.length > 0 && <b>{w.poses.length}</b>}
         </button>
       </div>
-      {libraryPresence.value &&
-        (window.poseHost ? (
-          <HostedAnimations open={panel === 'animations'} close={closePanel} />
-        ) : (
-          <AnimationBrowser
-            open={panel === 'animations'}
-            close={closePanel}
-            create={create}
-            importClips={importClips}
-            context={showContext}
-          />
-        ))}
+      {libraryPresence.value && (
+        <AnimationBrowser
+          open={panel === 'animations'}
+          close={closePanel}
+          create={create}
+          importClips={importClips}
+          context={showContext}
+        />
+      )}
       {context && (
         <AnimationMenu
           tabs={!embedded}

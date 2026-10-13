@@ -70,44 +70,6 @@ export function library(project: Project): AnimationLibrary {
     poses: [],
   };
 }
-// Hosted files are lazy-loaded parts of one library. Never replace an already
-// loaded clip (or its drafts/settings) with the server's original copy.
-export function mergeHostedLibrary(
-  current: AnimationLibrary,
-  incoming: AnimationLibrary,
-): AnimationLibrary {
-  const clips = new Set(current.clips.map((c) => c.id)),
-    characters = new Set(current.characters?.map((c) => c.id)),
-    poses = new Set(current.poses.map((p) => p.id));
-  const incomingById = new Map(incoming.clips.map((c) => [c.id, c]));
-  const existing = current.clips.map((c) => {
-    const source = incomingById.get(c.id)?.project,
-      base = c.project.layers?.[0],
-      links = source?.layers?.[0]?.poseLinks;
-    let project = c.project;
-    if (base && !base.poseLinks && links)
-      project = {
-        ...project,
-        layers: project.layers!.map((l, i) => (i ? l : { ...l, poseLinks: clone(links) })),
-      };
-    if (!project.cameraBinding && source?.cameraBinding)
-      project = { ...project, cameraBinding: clone(source.cameraBinding) };
-    return project === c.project ? c : { ...c, project };
-  });
-  const merged = {
-    ...current,
-    clips: [...existing, ...incoming.clips.filter((c) => !clips.has(c.id))],
-    characters: [
-      ...(current.characters ?? []),
-      ...(incoming.characters ?? []).filter((c) => !characters.has(c.id)),
-    ],
-    poses: [...current.poses, ...incoming.poses.filter((p) => !poses.has(p.id))],
-  };
-  if (merged.characters.length > 8) throw Error('This project supports up to 8 characters.');
-  if (merged.poses.length > 200) throw Error('This project supports up to 200 saved poses.');
-  return merged;
-}
-// Keep native source keys/modifiers in a portable cache. No baked inheritance.
 export function refreshBases(data: AnimationLibrary) {
   data = inferPoseLinks(data);
   const done = new Set<string>(),

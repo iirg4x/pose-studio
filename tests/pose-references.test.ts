@@ -13,7 +13,7 @@ import { addAnimationLayer, ensureLayers, syncLayers } from '../src/core/layers'
 import { entry, library, refreshBases, validateLibrary } from '../src/core/library';
 import { snapshotPoseTracks } from '../src/core/poseReferences';
 import { StudioStore } from '../src/core/store';
-import { extendHostedSaveBaseline, projectSaveSignature } from '../src/core/projectSaving';
+import { projectSaveSignature } from '../src/core/projectSaving';
 import { inferPoseLinks } from '../shared/pose-links.mjs';
 
 const near = (a: number[], b: number[]) => a.forEach((v, i) => expect(v).toBeCloseTo(b[i], 7));
@@ -185,20 +185,6 @@ describe('linked base poses', () => {
     store.undo();
     near(evaluate(store.state.project!, 0).rifle.p, current);
   });
-  it('preserves edited sources while merging streamed dependencies and upgrading link metadata', () => {
-    const { data, base, target } = fixture(),
-      old = clone(data);
-    delete old.clips[1].project.layers![0].poseLinks;
-    const store = new StudioStore();
-    store.open(old);
-    const desired = clone(evaluate(store.state.project!, 0).rifle);
-    desired.p[1] -= 0.3;
-    store.editWorld('rifle', desired);
-    store.openHostedAnimations(data);
-    store.activate(target.id);
-    expect(store.state.project!.layers![0].poseLinks![0].clipId).toBe(base.id);
-    near(evaluate(store.state.project!, 0).rifle.p.slice(1), desired.p.slice(1));
-  });
   it('counts source edits as unsaved while ignoring derived cache updates', () => {
     const { data, base, target } = fixture();
     refreshBases(data);
@@ -207,18 +193,6 @@ describe('linked base poses', () => {
     expect(projectSaveSignature(data)).toBe(saved);
     base.project.tracks.rifle.keys[0].p[1] -= 0.2;
     expect(projectSaveSignature(data)).not.toBe(saved);
-  });
-  it('does not make a clean project dirty when the host upgrades snapshot metadata', () => {
-    const { data } = fixture(),
-      old = clone(data);
-    delete old.clips[1].project.layers![0].poseLinks;
-    const store = new StudioStore();
-    store.open(old);
-    const before = store.recoverySnapshot()!,
-      saved = projectSaveSignature(before);
-    store.openHostedAnimations(data);
-    const after = store.recoverySnapshot()!;
-    expect(extendHostedSaveBaseline(saved, before, after)).toBe(projectSaveSignature(after));
   });
   it('rejects malformed reference metadata', () => {
     const { target } = fixture();

@@ -1,4 +1,3 @@
-import './hosted.css';
 import { initializeBrowser } from './platform/browser';
 import { createRoot } from 'react-dom/client';
 import App from './App';

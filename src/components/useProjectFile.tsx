@@ -1,4 +1,3 @@
-import { hostedClip } from '../platform/browser';
 import { encodeProject } from '../../shared/project-codec.mjs';
 import {
   isAndroid,
@@ -13,7 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { studio } from '../core/store';
 import { consumeProjectDocument } from '../platform/projectDocuments';
 import type { AnimationLibrary } from '../core/library';
-import { projectSaveSignature, extendHostedSaveBaseline } from '../core/projectSaving';
+import { projectSaveSignature } from '../core/projectSaving';
 import { activateDocument, linkedDocument, openedDocument } from '../platform/linkedDocuments';
 import type { LinkedDocument } from '../platform/linkedDocuments';
 import { checkLinkedProject } from '../platform/android';
@@ -123,7 +122,6 @@ export function useProjectFile(ready: boolean, blocked = false) {
         );
       }
       if (isAndroid) activateDocument(source);
-      if (window.poseHost) localStorage.setItem('pose-host-clip', data.activeId);
       setPending(null);
       setError('');
     },
@@ -144,53 +142,6 @@ export function useProjectFile(ready: boolean, blocked = false) {
     },
     [dirty, open],
   );
-  const includeHosted = useCallback((data: unknown, activate = true) => {
-    const before = studio.recoverySnapshot();
-    studio.openHostedAnimations(data, activate);
-    const after = studio.recoverySnapshot();
-    if (before && after) {
-      saved.current = extendHostedSaveBaseline(saved.current, before, after);
-      if (saved.current) void writePreference(BASELINE, saved.current).catch(() => {});
-      localStorage.setItem('pose-host-clip', after.activeId);
-    }
-  }, []);
-  useEffect(() => {
-    let cancelled = false;
-    const openHosted = async (event: Event) => {
-      if (busyRef.current || blocked || pending) return;
-      const id = (event as CustomEvent<string>).detail;
-      if (!window.poseHost?.clips.some((c) => c.id === id)) return;
-      const existing = studio.state.workspace?.clips.find((c) => c.id === id),
-        base = existing?.project.layers?.[0],
-        needsLinks =
-          base?.static && base.source && existing!.project.layers!.length > 1 && !base.poseLinks,
-        needsSource = base?.poseLinks?.some(
-          (link) => !studio.state.workspace!.clips.some((c) => c.id === link.clipId),
-        );
-      if (existing && !needsLinks && !needsSource) {
-        studio.activate(id);
-        localStorage.setItem('pose-host-clip', id);
-        return;
-      }
-      busyRef.current = true;
-      setBusy(true);
-      studio.patch({ message: 'Loading animation from your PC…' });
-      try {
-        const data = await hostedClip(id);
-        if (!cancelled) includeHosted(data);
-      } catch (e) {
-        studio.patch({ message: (e as Error).message });
-      } finally {
-        busyRef.current = false;
-        setBusy(false);
-      }
-    };
-    window.addEventListener('pose-open-host-clip', openHosted);
-    return () => {
-      cancelled = true;
-      window.removeEventListener('pose-open-host-clip', openHosted);
-    };
-  }, [includeHosted, blocked, pending]);
   const checkProject = useCallback(
     async (manual = false) => {
       if (
@@ -301,14 +252,7 @@ export function useProjectFile(ready: boolean, blocked = false) {
       .then((data) => {
         if (data) {
           consumed = true;
-          const recovered =
-            window.studioDesktop?.platform === 'web' &&
-            window.poseHost &&
-            studio.state.workspace?.clips.some((c) =>
-              window.poseHost!.clips.some((host) => host.id === c.id),
-            );
-          if (recovered) includeHosted(data, false);
-          else requestOpen(data);
+          requestOpen(data);
         }
       })
       .catch((e) => {
@@ -319,7 +263,7 @@ export function useProjectFile(ready: boolean, blocked = false) {
         opening.current = false;
         if (consumed || retryOpen.current) setQueued((n) => n + 1);
       });
-  }, [ready, blocked, pending, busy, queued, requestOpen, includeHosted]);
+  }, [ready, blocked, pending, busy, queued, requestOpen]);
   const finish = async () => {
     if (!pending) return;
     setError('');

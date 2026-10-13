@@ -15,8 +15,6 @@ import {
   visibleControls,
 } from '../src/core/model';
 import { StudioStore } from '../src/core/store';
-import { library, mergeHostedLibrary } from '../src/core/library';
-import { extendHostedSaveBaseline, projectSaveSignature } from '../src/core/projectSaving';
 
 it('moves the lens with an animated bone without moving the hands, and handles an external rig transform', async () => {
   const bytes = await fs.readFile('public/assets/manny.glb'),
@@ -74,26 +72,6 @@ it('moves the lens with an animated bone without moving the hands, and handles a
   animationCamera(p, rig, before.camera).elements.forEach((v, i) =>
     expect(v).toBeCloseTo(camera0.elements[i]),
   );
-});
-it('adds missing hosted camera metadata without overwriting edits or enabled preferences', () => {
-  const original = library(createProject({}, false)),
-    incoming = structuredClone(original);
-  incoming.clips[0].project.cameraBinding = {
-    bone: 'head',
-    enabled: true,
-    offset: new Matrix4().toArray(),
-  };
-  const saved = projectSaveSignature(original),
-    merged = mergeHostedLibrary(original, incoming);
-  expect(merged.clips[0].project.cameraBinding).toEqual(incoming.clips[0].project.cameraBinding);
-  expect(extendHostedSaveBaseline(saved, original, merged)).toBe(projectSaveSignature(merged));
-  const edited = structuredClone(original);
-  edited.clips[0].project.tracks.head.keys[0].p[0] = 0.2;
-  const updated = mergeHostedLibrary(edited, incoming);
-  expect(updated.clips[0].project.tracks.head.keys[0].p[0]).toBe(0.2);
-  expect(extendHostedSaveBaseline(saved, edited, updated)).not.toBe(projectSaveSignature(updated));
-  updated.clips[0].project.cameraBinding!.enabled = false;
-  expect(mergeHostedLibrary(updated, incoming).clips[0].project.cameraBinding!.enabled).toBe(false);
 });
 it('persists camera bindings, exposes the driving bone and supports undo without pausing', () => {
   const p = createProject({}, false);

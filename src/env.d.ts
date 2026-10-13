@@ -54,19 +54,6 @@ declare global {
       onWindowState: (callback: (state: { maximized: boolean }) => void) => () => void;
       windowAction: (action: 'minimize' | 'maximize' | 'close') => void;
     };
-    poseHost?: {
-      name: string;
-      revision: string;
-      activeId: string;
-      clips: {
-        id: string;
-        name: string;
-        folder?: string[];
-        layer: string;
-        fps: number;
-        end: number;
-      }[];
-    };
     __studio?: StudioStore;
     __scene?: StudioScene | null;
   }

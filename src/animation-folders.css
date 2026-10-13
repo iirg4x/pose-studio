@@ -176,19 +176,6 @@
   margin: 0;
   padding: 0;
 }
-.android .tablet-sheet-animations:has(.hosted-library) .animation-bar {
-  grid-template-rows: minmax(0, 1fr);
-}
-.android .tablet-sheet-animations:has(.hosted-library) .animation-bar > .library-toggle,
-.android .tablet-sheet-animations:has(.hosted-library) .animation-bar > .pose-toolbar {
-  display: none;
-}
-.android .tablet-sheet-animations:has(.hosted-library) .library-panel {
-  grid-row: 1;
-}
-.android .tablet-sheet-animations .hosted-source {
-  display: none;
-}
 @media (max-height: 540px) {
   .android .app.sheet-open .tablet-sheet-animations:has(.animation-folders),
   .android
