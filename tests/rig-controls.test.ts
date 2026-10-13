@@ -2,7 +2,6 @@ import { rigLoader } from './rig-loader';
 import { describe, it, expect, beforeAll } from 'vitest';
 import { Matrix4, Quaternion, Vector3 } from 'three';
 import fs from 'node:fs/promises';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MannyRig } from '../src/scene/rig';
 import {
   createProject,
@@ -21,7 +20,7 @@ import { StudioStore } from '../src/core/store';
 import { ControlVisual, pickControl } from '../src/scene/controlVisual';
 import { PerspectiveCamera } from 'three';
 import { addAnimationLayer } from '../src/core/layers';
-import { library, capturePose, applyPose } from '../src/core/library';
+import { capturePose, applyPose } from '../src/core/library';
 let rig: MannyRig;
 const near = (a: number[], b: number[], precision = 6) =>
   a.forEach((v, i) => expect(v).toBeCloseTo(b[i], precision));

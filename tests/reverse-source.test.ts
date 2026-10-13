@@ -7,14 +7,12 @@ import {
   evaluate,
   rigLocal,
   clone,
-  putKey,
-  rawForWorld,
   limbMode,
   layerFrame,
   validateProject,
   CAMERA_REFERENCE,
 } from '../src/core/model';
-import { addAnimationLayer, activeAnimationLayer } from '../src/core/layers';
+import { addAnimationLayer } from '../src/core/layers';
 import { entry, library, refreshBases, validateLibrary } from '../src/core/library';
 import { StudioStore } from '../src/core/store';
 import { firstPersonKeyReferences } from '../src/core/timelineReferences';

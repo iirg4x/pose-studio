@@ -1,8 +1,6 @@
 import { rigLoader } from './rig-loader';
 import { beforeAll, describe, it, expect } from 'vitest';
 import fs from 'node:fs/promises';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Vector3, Quaternion } from 'three';
 import { MannyRig } from '../src/scene/rig';
 import {
   createProject,

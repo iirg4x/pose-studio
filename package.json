@@ -14,7 +14,7 @@
     "android:sync": "npm run build && cap sync android",
     "android:apk": "npm run android:sync && node scripts/android-build.cjs",
     "build:pwa": "tsc -b && vite build --mode pwa --outDir dist-pwa",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tests",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

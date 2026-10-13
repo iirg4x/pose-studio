@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { StudioStore } from '../src/core/store';
-import { createProject, clone, evaluate, putKey, pose } from '../src/core/model';
+import { createProject, clone, evaluate } from '../src/core/model';
 import {
   readCurve,
   sampleCurve,
@@ -175,7 +175,7 @@ describe('Seamless procedural modifiers', () => {
     });
   it('closes a restricted Blender noise envelope even with hard range cuts at the seam', () => {
     const m = {
-      ...modifier('noise'),
+      ...(modifier('noise') as Extract<Modifier, { type: 'noise' }>),
       type: 'noise' as const,
       algorithm: 'blender' as const,
       phase: 2.3,

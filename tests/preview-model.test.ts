@@ -351,7 +351,7 @@ describe('shared Manny skeleton preview models', () => {
     for (const c of [male, female])
       for (let f = 0; f <= p.end; f += 4) {
         const values = sample(c, p, f),
-          prop = c.body.props.rifle;
+          prop = c.body.props.rifle!;
         expect(
           new Vector3().setFromMatrixScale(prop).distanceTo(new Vector3(1, 1, 1)),
         ).toBeLessThan(1e-5);

@@ -26,8 +26,8 @@ const apply = (targets: Map<ControlId, Matrix4>) => {
 describe('foot contact authoring', () => {
   it('grounds toes without separating their joint from the supporting foot', () => {
     for (const side of ['l', 'r'] as const) {
-      const foot = ('foot_' + side) as const,
-        toe = ('toe_' + side) as const,
+      const foot = `foot_${side}` as const,
+        toe = `toe_${side}` as const,
         p = forLayer(createProject(rig.restControls, false), 'body');
       putKey(p.tracks[foot], 0, {
         ...p.tracks[foot].keys[0],
@@ -54,8 +54,8 @@ describe('foot contact authoring', () => {
   });
   it('plants toes while keeping a raised heel and the original toe joint length', () => {
     for (const side of ['l', 'r'] as const) {
-      const foot = ('foot_' + side) as const,
-        toe = ('toe_' + side) as const,
+      const foot = `foot_${side}` as const,
+        toe = `toe_${side}` as const,
         p = forLayer(createProject(rig.restControls, false), 'body');
       rig.apply(evaluate(p, 0));
       apply(rig.groundPose(foot));
@@ -85,7 +85,7 @@ describe('foot contact authoring', () => {
     for (const side of ['l', 'r'] as const)
       for (const pivot of ['sole', 'heel', 'ball', 'toe'] as const)
         for (const angle of [-0.5, 0.5]) {
-          const id = ('foot_' + side) as const,
+          const id = `foot_${side}` as const,
             p = forLayer(createProject(rig.restControls, false), 'body');
           rig.apply(evaluate(p, 0));
           apply(rig.groundPose(id));

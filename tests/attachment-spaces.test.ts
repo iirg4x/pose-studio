@@ -3,11 +3,11 @@ import fs from 'node:fs/promises';
 import { Matrix4, Vector3, Quaternion } from 'three';
 import { rigLoader } from './rig-loader';
 import { MannyRig } from '../src/scene/rig';
-import { AttachmentSolver, controlWorld } from '../src/scene/attachments';
+import { AttachmentSolver } from '../src/scene/attachments';
 import { blankProject } from '../src/core/assets';
-import { evaluate, putKey, pose, clone, limbMode } from '../src/core/model';
+import { evaluate, putKey, pose, limbMode } from '../src/core/model';
 import { boneFollowing } from '../src/core/boneFollowing';
-import type { Project, ControlId } from '../src/core/model';
+import type { Project } from '../src/core/model';
 let rig: MannyRig;
 const solver = new AttachmentSolver();
 beforeAll(async () => {

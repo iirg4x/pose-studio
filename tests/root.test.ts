@@ -1,9 +1,9 @@
+import type { ControlId } from '../src/core/controls';
 import { rigLoader } from './rig-loader';
 import { describe, it, expect } from 'vitest';
 import { Matrix4, Quaternion, Vector3 } from 'three';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MannyRig } from '../src/scene/rig';
 import {
   createProject,
@@ -78,8 +78,8 @@ describe('root control', () => {
       target = forLayer(createProject(), 'body');
     putKey(target.tracks.root, 0, pose([4, 0, -3]));
     const pasted = applyPose(target, 48, stamp, 'hand_l');
-    for (const id of Object.keys(stamp.poses))
-      near(matrix(evaluate(pasted, 48)[id]).toArray(), matrix(stamp.poses[id]).toArray());
+    for (const id of Object.keys(stamp.poses) as ControlId[])
+      near(matrix(evaluate(pasted, 48)[id]).toArray(), matrix(stamp.poses[id]!).toArray());
   });
   it('upgrades old libraries without changing an existing pose', () => {
     const p = createProject(),

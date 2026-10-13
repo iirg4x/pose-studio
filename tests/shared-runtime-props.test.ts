@@ -43,7 +43,7 @@ describe('shared runtime prop dependency states', () => {
     const p = setup();
     p.tracks['prop:scope'].following = [follow(0, 'prop:bolt')];
     p.tracks['prop:bolt'].following = [follow(0, 'rifle')];
-    p.tracks.magazine.spaces = [{ frame: 0, parent: 'rifle', offset: eye }];
+    p.tracks.magazine.spaces = [{ frame: 0, parent: 'rifle', offset: eye, base: eye }];
     const plan = runtimePropSteps(p, 0);
     expect(plan.steps.map((s) => s.control)).toEqual(['prop:bolt', 'prop:scope', 'magazine']);
     expect(plan.steps[0].parent).toEqual({ kind: 'prop', control: 'rifle' });

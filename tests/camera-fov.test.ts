@@ -58,8 +58,8 @@ describe('camera field of view editing', () => {
     p.tracks.camera.curves = {
       fov: {
         keys: [
-          { frame: 0, value: -110, interpolation: 'linear' },
-          { frame: 10, value: 290, interpolation: 'linear' },
+          { frame: 0, value: -110, interpolation: 'linear', handle: 'auto' },
+          { frame: 10, value: 290, interpolation: 'linear', handle: 'auto' },
         ],
         modifiers: [],
       },

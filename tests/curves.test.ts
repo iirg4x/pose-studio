@@ -9,16 +9,9 @@ import {
   sample,
   validateProject,
 } from '../src/core/model';
-import {
-  baseCurve,
-  ensureCurve,
-  handles,
-  modifier,
-  sampleCurve,
-  validateCurves,
-} from '../src/core/curves';
+import { baseCurve, ensureCurve, handles, modifier, sampleCurve } from '../src/core/curves';
 import type { Curve } from '../src/core/curves';
-import { loopRange, matchLoopEnd, playbackFrame, seamReport } from '../src/core/loops';
+import { matchLoopEnd, playbackFrame, seamReport } from '../src/core/loops';
 import { StudioStore } from '../src/core/store';
 const simple = (): Curve => ({
   keys: [

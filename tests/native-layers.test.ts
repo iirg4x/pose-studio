@@ -243,7 +243,7 @@ describe('native additive layers with editable IK', () => {
         layer = activeAnimationLayer(p)!;
       const raw = Object.fromEntries(
         Object.entries(p.tracks).map(([id, t]) => [id, t.keys.at(-1)!]),
-      ) as Record<ControlId, Pose>;
+      ) as unknown as Record<ControlId, Pose>;
       layer.nativeRotationLinks = {
         thumb_01_l: 'wrist_l',
         thumb_02_l: 'thumb_01_l',

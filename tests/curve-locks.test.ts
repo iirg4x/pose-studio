@@ -1,7 +1,7 @@
 import { Quaternion, Euler } from 'three';
 import { describe, it, expect } from 'vitest';
 import { createProject, clone, putKey, sample, validateProject } from '../src/core/model';
-import { ensureCurve, readCurve } from '../src/core/curves';
+import { readCurve } from '../src/core/curves';
 import { lockControlKeys, lockCurveKeys } from '../src/core/curveLocks';
 import { insertChannels } from '../src/core/keying';
 import { StudioStore } from '../src/core/store';

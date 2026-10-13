@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { StudioStore } from '../src/core/store';
-import { createProject, createBodyAction, pose, evaluate, putKey, clone } from '../src/core/model';
+import { createProject, createBodyAction, pose, evaluate, putKey } from '../src/core/model';
 import { library, entry, validateLibrary, refreshBases } from '../src/core/library';
 import { ensureLayers, addAnimationLayer } from '../src/core/layers';
 describe('delete animations', () => {

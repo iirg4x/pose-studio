@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, it, expect } from 'vitest';
 import fs from 'node:fs/promises';
-import { Matrix4, Quaternion, Vector3 } from 'three';
+import { Quaternion, Vector3 } from 'three';
 import { rigLoader } from './rig-loader';
 import { MannyRig } from '../src/scene/rig';
 import { BodySourceSampler } from '../src/scene/BodySourceSampler';
@@ -13,7 +13,6 @@ import {
   putKey,
   pose,
   matrix,
-  rigLocal,
   setBodySourceResolver,
   limbMode,
 } from '../src/core/model';

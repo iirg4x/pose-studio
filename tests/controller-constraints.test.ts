@@ -16,8 +16,6 @@ import {
   putKey,
   limbMode,
   validateProject,
-  clone,
-  switchParent,
 } from '../src/core/model';
 import { controllerConstraints, groundingClearance } from '../src/core/controllerConstraints';
 import { boneFollowing } from '../src/core/boneFollowing';
@@ -44,7 +42,7 @@ const actualMeshMinimum = (r: MannyRig, id: ControlId, scene = new Matrix4()) =>
       si = mesh.geometry.getAttribute('skinIndex'),
       sw = mesh.geometry.getAttribute('skinWeight'),
       drawn = mesh.geometry.index
-        ? new Set(Array.from(mesh.geometry.index.array))
+        ? new Set<number>(Array.from(mesh.geometry.index.array))
         : new Set(Array.from({ length: p.count }, (_, i) => i));
     for (const i of drawn) {
       let belongs = false;

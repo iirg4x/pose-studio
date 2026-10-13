@@ -1,14 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Quaternion, Vector3 } from 'three';
-import {
-  createProject,
-  createBodyAction,
-  evaluate,
-  clone,
-  rawForWorld,
-  putKey,
-} from '../src/core/model';
-import { addAnimationLayer, activeAnimationLayer } from '../src/core/layers';
+import { createProject, createBodyAction, evaluate } from '../src/core/model';
+import { addAnimationLayer } from '../src/core/layers';
 import { layerDelta, removeLayerDelta } from '../src/core/layerSpaces';
 import { pose } from '../src/core/model';
 describe('per-bone pose layer spaces', () => {

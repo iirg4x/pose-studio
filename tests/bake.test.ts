@@ -2,7 +2,6 @@ import { rigLoader } from './rig-loader';
 import { it, expect } from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Vector3 } from 'three';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { MannyRig } from '../src/scene/rig';
@@ -26,9 +25,9 @@ it('poses the real 89-bone Manny and produces finite deterministic export frames
     bodyRig.apply(bodyValues);
     const bones = rig.deformation();
     expect(Object.values(bones).flat().every(Number.isFinite)).toBe(true);
-    for (const side of ['l', 'r'])
+    for (const side of ['l', 'r'] as const)
       expect(
-        rig.position('hand_' + side).distanceTo(new Vector3(...values['hand_' + side].p)),
+        rig.position('hand_' + side).distanceTo(new Vector3(...values[`hand_${side}`].p)),
         'frame ' + f + ' side ' + side,
       ).toBeLessThan(0.002);
     frames.push({

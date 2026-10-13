@@ -3,7 +3,6 @@ import {
   createProject,
   clone,
   evaluate,
-  forLayer,
   matrix,
   pose,
   putKey,
@@ -93,7 +92,7 @@ describe('animator workspace', () => {
       result = applyPose(target, 12, stamp, 'rifle'),
       values = evaluate(result, 12);
     for (const [id, p] of Object.entries(stamp.poses))
-      near(matrix(values[id as keyof typeof values]).toArray(), matrix(p).toArray());
+      near(matrix(values[id as keyof typeof values]).toArray(), matrix(p!).toArray());
     expect(result.tracks.camera).toEqual(camera);
     expect(result.otherTracks).toEqual(body);
     expect(

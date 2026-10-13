@@ -16,7 +16,6 @@ import {
   validateProject,
   forLayer,
   clone,
-  matrix,
 } from '../src/core/model';
 import { baseCurve, ensureCurve, readCurve, modifier, sampleCurve } from '../src/core/curves';
 import { StudioStore } from '../src/core/store';
