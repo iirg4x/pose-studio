@@ -52,6 +52,8 @@ Every push to `main` runs the checks and tests, then deploys the web app to GitH
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
-## Licenses
+## License
 
-Third-party libraries and assets, including the Epic Games Manny model and code adapted from Blender, are listed in [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).
+Pose Studio is free software under the [GNU General Public License v3.0 or later](LICENSE). You can use, study, change and share it; versions you distribute must stay under the GPL.
+
+The license covers this project's code. Bundled third-party libraries keep their own licenses, and the Epic Games Manny model and other bundled assets remain the property of their owners. See [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).

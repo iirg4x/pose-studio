@@ -82,5 +82,6 @@
     }
   },
   "description": "A standalone humanoid animation editor with project assets and layered posing",
-  "author": "Local personal project"
+  "author": "iirg4x",
+  "license": "GPL-3.0-or-later"
 }
