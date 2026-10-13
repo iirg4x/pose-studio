@@ -2,9 +2,7 @@ import { AnimationMirror } from './AnimationMirror';
 import { mirrorDriver } from '../core/liveMirror';
 import { MirrorCurve } from './MirrorCurve';
 import { LockKeyhole, UnlockKeyhole } from 'lucide-react';
-import { memo, useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import type { CSSProperties } from 'react';
-import type { CurveAlign } from './CurveEditor';
+import { memo, useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { loadTimelineCollapsed, revealTimelineControl } from '../core/timelineHierarchy';
 import type { Channel } from '../core/curves';
 import { channelsFor } from '../core/curves';
@@ -67,69 +65,6 @@ export const Timeline = memo(function Timeline({
     [channel, setChannel] = useState<Channel>('px');
   const [curveFocus, setCurveFocus] = useState<{ frame: number; serial: number } | undefined>();
   const [reducer, setReducer] = useState<{ channel?: Channel; frames: number[] } | null>(null);
-  const [dopeShare, setDopeShare] = useState(() => {
-    const v = Number(localStorage.getItem('pose-dope-share'));
-    return v >= 0.2 && v <= 0.8 ? v : 0.45;
-  });
-  const splitRoot = useRef<HTMLElement>(null);
-  const [align, setAlign] = useState<CurveAlign | null>(null);
-  useEffect(() => {
-    const root = splitRoot.current;
-    if (!split || !root || !p) return;
-    let raf = 0;
-    // The graph's plot spans exactly the dope sheet's visible frames, at the same x.
-    const measure = () => {
-      raf = 0;
-      const content = root.querySelector<HTMLElement>('.split-dope .track-content'),
-        ruler = root.querySelector<HTMLElement>('.split-dope .time-ruler'),
-        graph = root.querySelector<SVGElement>('.split-graph .curve-canvas');
-      if (!content || !ruler || !graph) return;
-      const c = content.getBoundingClientRect(),
-        r = ruler.getBoundingClientRect(),
-        g = graph.getBoundingClientRect(),
-        visibleRight = c.left + content.clientWidth;
-      if (!r.width || !g.width) return;
-      const next = {
-        left: c.left - g.left,
-        right: g.right - visibleRight,
-        from: ((c.left - r.left) / r.width) * p.end,
-        to: ((visibleRight - r.left) / r.width) * p.end,
-      };
-      setAlign((old) =>
-        old &&
-        Math.abs(old.left - next.left) < 0.5 &&
-        Math.abs(old.right - next.right) < 0.5 &&
-        Math.abs(old.from - next.from) < 0.01 &&
-        Math.abs(old.to - next.to) < 0.01
-          ? old
-          : next,
-      );
-    };
-    const schedule = () => {
-      if (!raf) raf = requestAnimationFrame(measure);
-    };
-    const observer = new ResizeObserver(schedule);
-    observer.observe(root);
-    const watch = () => {
-      root
-        .querySelectorAll('.split-dope .time-ruler, .split-graph .curve-canvas')
-        .forEach((el) => observer.observe(el));
-    };
-    watch();
-    const mutations = new MutationObserver(() => {
-      watch();
-      schedule();
-    });
-    mutations.observe(root, { childList: true, subtree: true });
-    root.addEventListener('scroll', schedule, true);
-    schedule();
-    return () => {
-      cancelAnimationFrame(raf);
-      observer.disconnect();
-      mutations.disconnect();
-      root.removeEventListener('scroll', schedule, true);
-    };
-  }, [split, p?.end]);
   useEffect(() => setReducer(null), [s.workspace?.activeId, p?.activeLayerId, p?.editing]);
   const visible = p ? timelineVisibleControls(p, s.selection, s.timelineFilter) : [],
     visibilityKey = visible.join('|'),
@@ -177,15 +112,33 @@ export const Timeline = memo(function Timeline({
       studio.patch({ tab: 'curves' });
       if (isAndroid && !expanded) expand?.();
     },
-    selectChannel: split
-      ? (id, axis) => {
-          studio.selectControl(id);
-          setChannel(p && channelsFor(id, p.tracks[id]).includes(axis) ? axis : 'px');
-        }
-      : undefined,
   };
   if (!p) return <div className="timeline" />;
-  const grid = <TimelineGrid key={(s.workspace?.activeId ?? '') + p.editing} tracks={tracks} />;
+  const viewSwitch = split ? (
+    <div className="editor-switch" role="group" aria-label="Editor">
+      <button
+        aria-pressed={s.tab !== 'curves'}
+        title="Dope sheet: keys and timing for every control"
+        onClick={() => studio.patch({ tab: 'timeline' })}
+      >
+        Timeline
+      </button>
+      <button
+        aria-pressed={s.tab === 'curves'}
+        title="Curves of the selected control (double-click a bone name)"
+        onClick={() => studio.patch({ tab: 'curves' })}
+      >
+        Curves
+      </button>
+    </div>
+  ) : undefined;
+  const grid = (
+    <TimelineGrid
+      key={(s.workspace?.activeId ?? '') + p.editing}
+      tracks={tracks}
+      viewSwitch={viewSwitch}
+    />
+  );
   const curves = mirrorDriver(p, s.selected) ? (
     <MirrorCurve
       project={p}
@@ -195,8 +148,7 @@ export const Timeline = memo(function Timeline({
     />
   ) : (
     <CurveEditor
-      hideTracks={split}
-      align={split ? align : null}
+      viewSwitch={viewSwitch}
       key={(s.workspace?.activeId ?? '') + s.selected + p.editing + (p.activeLayerId ?? '')}
       channel={channel}
       focusKey={curveFocus}
@@ -206,33 +158,8 @@ export const Timeline = memo(function Timeline({
   );
   if (split)
     return (
-      <section
-        ref={splitRoot}
-        className="timeline split"
-        aria-label="Animation editors"
-        style={{ '--dope-share': dopeShare } as CSSProperties}
-      >
-        <div className="split-dope">{grid}</div>
-        <div
-          className="split-editors-handle"
-          role="separator"
-          aria-orientation="horizontal"
-          aria-label="Resize dope sheet and graph editor"
-          onPointerDown={(e) => {
-            e.preventDefault();
-            e.currentTarget.setPointerCapture(e.pointerId);
-          }}
-          onPointerMove={(e) => {
-            if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
-            const box = e.currentTarget.parentElement!.getBoundingClientRect(),
-              share = Math.max(0.2, Math.min(0.8, (e.clientY - box.top) / box.height));
-            setDopeShare(share);
-            try {
-              localStorage.setItem('pose-dope-share', String(share));
-            } catch {}
-          }}
-        />
-        <div className="split-graph">{curves}</div>
+      <section className="timeline split" aria-label="Animation editor">
+        {s.tab === 'curves' ? curves : grid}
         {reducer && (
           <CurveReducer
             channel={reducer.channel}

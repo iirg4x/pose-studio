@@ -67,23 +67,19 @@ type Drag = {
   add?: boolean;
 };
 const bounds = { left: 54, right: 16, top: 12, bottom: 26 };
-export type CurveAlign = { left: number; right: number; from: number; to: number };
 const copy = <T,>(v: T) => structuredClone(v);
 export const CurveEditor = memo(function CurveEditor({
   channel,
   focusKey,
   sidebar,
-  hideTracks = false,
-  align = null,
+  viewSwitch,
   onReduce,
 }: {
   channel: Channel;
   focusKey?: { frame: number; serial: number };
   sidebar: ReactNode;
-  /** Start with the channel list hidden (another list drives the channel). */
-  hideTracks?: boolean;
-  /** Pin the plot's frame axis to another editor: plot margins and visible frames. */
-  align?: CurveAlign | null;
+  /** Desktop: Timeline/Curves switch shown first in the tool row. */
+  viewSwitch?: ReactNode;
   onReduce: (frames: number[]) => void;
 }) {
   const s = useStudioChrome({ frame: 'none', edits: 'live' }),
@@ -92,7 +88,7 @@ export const CurveEditor = memo(function CurveEditor({
   const [selected, setSelected] = useState<number[]>([]),
     [panel, setPanel] = useState<'key' | 'modifiers'>('key'),
     [view, setView] = useState<View | null>(null);
-  const [showTracks, setShowTracks] = useState(() => !hideTracks && (!isTouch || innerWidth > 700)),
+  const [showTracks, setShowTracks] = useState(() => !isTouch || innerWidth > 700),
     [guides, setGuides] = useState(false);
   const [tool, setTool] = useState<'box' | 'pan'>('box'),
     [multi, setMulti] = useState(false),
@@ -176,20 +172,18 @@ export const CurveEditor = memo(function CurveEditor({
       pad = Math.max((hi - lo) * 0.16, channel.startsWith('q') ? 0.002 : hi === lo ? 1 : 0.01);
     return { from: 0, to: p.end, min: lo - pad, max: hi + pad };
   }, [data, curve, channel, p.end, contextData]);
-  // Until the user pans or zooms the graph, its frames sit under the aligned editor's.
-  const b = align ? { ...bounds, left: align.left, right: align.right } : bounds;
-  const v = view ?? (align ? { ...fit, from: align.from, to: align.to } : fit),
-    cw = Math.max(20, W - b.left - b.right),
-    ch = Math.max(20, H - b.top - b.bottom);
-  const x = (f: number) => b.left + ((f - v.from) / (v.to - v.from)) * cw,
-    y = (value: number) => b.top + ((v.max - value) / (v.max - v.min)) * ch;
+  const v = view ?? fit,
+    cw = Math.max(20, W - bounds.left - bounds.right),
+    ch = Math.max(20, H - bounds.top - bounds.bottom);
+  const x = (f: number) => bounds.left + ((f - v.from) / (v.to - v.from)) * cw,
+    y = (value: number) => bounds.top + ((v.max - value) / (v.max - v.min)) * ch;
   const point = (e: { clientX: number; clientY: number }) => {
     const r = svg.current!.getBoundingClientRect();
     return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H };
   };
   const frameAt = (px: number) =>
-    Math.max(0, Math.min(p.end, Math.round(v.from + ((px - b.left) / cw) * (v.to - v.from))));
-  const valueAt = (py: number) => v.max - ((py - b.top) / ch) * (v.max - v.min);
+    Math.max(0, Math.min(p.end, Math.round(v.from + ((px - bounds.left) / cw) * (v.to - v.from))));
+  const valueAt = (py: number) => v.max - ((py - bounds.top) / ch) * (v.max - v.min);
   const active = curve.keys.find((k) => k.frame === selected.at(-1)),
     selectedKeys = curve.keys.filter((k) => selected.includes(k.frame));
   const remove = () => {
@@ -577,6 +571,7 @@ export const CurveEditor = memo(function CurveEditor({
       {showTracks && sidebar}
       <div className="curve-center">
         <div className="curve-tools">
+          {viewSwitch}
           <button
             className="curve-tracks-toggle"
             aria-label={showTracks ? 'Hide bone channels' : 'Show bone channels'}
@@ -883,7 +878,7 @@ export const CurveEditor = memo(function CurveEditor({
               e,
               e.button === 1 || e.altKey || tool === 'pan'
                 ? 'pan'
-                : point(e).y > H - b.bottom
+                : point(e).y > H - bounds.bottom
                   ? 'scrub'
                   : 'box',
             )
@@ -894,14 +889,14 @@ export const CurveEditor = memo(function CurveEditor({
           onContextMenu={(e) => e.preventDefault()}
           onDoubleClick={(e) => {
             const at = point(e);
-            if (at.x < b.left || at.y > H - b.bottom) return;
+            if (at.x < bounds.left || at.y > H - bounds.bottom) return;
             const f = frameAt(at.x);
             insertKey(f, valueAt(at.y));
           }}
           onWheel={(e) => {
             const at = point(e),
               factor = e.deltaY > 0 ? 1.15 : 0.87,
-              anchor = v.from + ((at.x - b.left) / cw) * (v.to - v.from),
+              anchor = v.from + ((at.x - bounds.left) / cw) * (v.to - v.from),
               value = valueAt(at.y);
             setView(
               e.shiftKey
@@ -920,7 +915,7 @@ export const CurveEditor = memo(function CurveEditor({
         >
           <defs>
             <clipPath id={clipId}>
-              <rect x={b.left - 12} y={b.top} width={cw + 24} height={ch} />
+              <rect x={bounds.left - 12} y={bounds.top} width={cw + 24} height={ch} />
             </clipPath>
           </defs>
           {guides &&
@@ -929,13 +924,13 @@ export const CurveEditor = memo(function CurveEditor({
               return (
                 <g key={'y' + i} className="curve-guide">
                   <line
-                    x1={b.left}
-                    x2={W - b.right}
+                    x1={bounds.left}
+                    x2={W - bounds.right}
                     y1={y(value)}
                     y2={y(value)}
                     className="curve-grid-line"
                   />
-                  <text x={b.left - 8} y={y(value) + 4} textAnchor="end">
+                  <text x={bounds.left - 8} y={y(value) + 4} textAnchor="end">
                     {Number(value.toFixed(2))}
                   </text>
                 </g>
@@ -946,8 +941,8 @@ export const CurveEditor = memo(function CurveEditor({
               <line
                 x1={x(frame)}
                 x2={x(frame)}
-                y1={b.top}
-                y2={H - b.bottom}
+                y1={bounds.top}
+                y2={H - bounds.bottom}
                 className={'curve-grid-line' + (guides ? '' : ' quiet')}
               />
               <text x={x(frame)} y={H - 8} textAnchor="middle">
@@ -958,10 +953,10 @@ export const CurveEditor = memo(function CurveEditor({
           <CurvePlayhead
             from={v.from}
             to={v.to}
-            left={b.left}
+            left={bounds.left}
             width={cw}
-            top={b.top}
-            bottom={H - b.bottom}
+            top={bounds.top}
+            bottom={H - bounds.bottom}
             onScrubStart={(e) => start(e, 'scrub', studio.state.frame)}
           />
           <g clipPath={'url(#' + clipId + ')'}>
@@ -982,7 +977,13 @@ export const CurveEditor = memo(function CurveEditor({
               />
             ))}
             {v.min < 0 && v.max > 0 && (
-              <line className="curve-zero-line" x1={b.left} x2={W - b.right} y1={y(0)} y2={y(0)} />
+              <line
+                className="curve-zero-line"
+                x1={bounds.left}
+                x2={W - bounds.right}
+                y1={y(0)}
+                y2={y(0)}
+              />
             )}
             {curve.modifiers.some((m) => m.enabled) && (
               <path d={underlyingPath} className="curve-base-line" />

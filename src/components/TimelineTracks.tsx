@@ -23,8 +23,6 @@ export interface TimelineTracksState {
   fold: (next: Set<ControlId>) => void;
   setQuery: (text: string) => void;
   openCurve: (id: ControlId, channel: Channel, frame?: number) => void;
-  /** Split view: show this channel in the graph editor beside the dope sheet. */
-  selectChannel?: (id: ControlId, channel: Channel) => void;
 }
 export const timelineRowHeight = isTouch ? 44 : 32;
 
@@ -121,8 +119,9 @@ export function TimelineTrackLabel({
           <button
             className="track-name"
             aria-pressed={selected}
-            title={row.label}
+            title={id ? row.label + ' · double-click for curves' : row.label}
             onClick={onSelect}
+            onDoubleClick={() => id && state.openCurve(id, state.channel)}
           >
             <span>{row.label}</span>
           </button>

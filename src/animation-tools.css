@@ -756,9 +756,6 @@ body > .animation-context-menu {
 .android .ground-key-command {
   min-height: 48px;
 }
-.coordinate-space-note {
-  margin-bottom: 0;
-}
 
 .key-track.selected-channel {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 38%, transparent);

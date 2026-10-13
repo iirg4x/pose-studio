@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { timelineMarqueeKeys, marqueeScrollSpeed } from '../core/timelineMarquee';
 import { MotionPresence, InlineCollapse } from './Motion';
 import { isTouch as isAndroid } from '../platform/storage';
@@ -75,8 +76,11 @@ type Drag =
     };
 export const TimelineGrid = memo(function TimelineGrid({
   tracks,
+  viewSwitch,
 }: {
   tracks: TimelineTracksState;
+  /** Desktop: Timeline/Curves switch shown first in the tool row. */
+  viewSwitch?: ReactNode;
 }) {
   const [toolsOpen, setToolsOpen] = useState(false),
     toolsRoot = useRef<HTMLDivElement>(null);
@@ -447,6 +451,7 @@ export const TimelineGrid = memo(function TimelineGrid({
         close={closeKeyMenu}
       />
       <div className="key-edit-tools">
+        {viewSwitch}
         <button
           aria-label="Box select timeline keys"
           title="Drag to select keys"
@@ -637,8 +642,6 @@ export const TimelineGrid = memo(function TimelineGrid({
                   selected={!!row.control && s.selection.includes(row.control) && !row.channel}
                   onSelect={(e) => {
                     root.current!.focus();
-                    if (row.control && row.channel)
-                      tracks.selectChannel?.(row.control, row.channel);
                     if (row.control && !multiSelect)
                       studio.selectControl(row.control, e.shiftKey || s.multiSelect);
                     const rowKeys = keys.filter((k) => row.ids.includes(k.id));
