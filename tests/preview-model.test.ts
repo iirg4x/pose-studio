@@ -387,7 +387,7 @@ describe('shared Manny skeleton preview models', () => {
   });
   it('keeps real Axe wrist and twist rotations continuous through the equip motion', async () => {
     const library = validateLibrary(
-        JSON.parse(await fs.readFile('tests/fixtures/axe-equip-idle.manny.json', 'utf8')),
+        JSON.parse(await fs.readFile('tests/fixtures/axe-equip-idle.json', 'utf8')),
       ),
       p = forLayer(library.clips[0].project, 'body');
     for (const c of [male, female]) {

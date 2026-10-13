@@ -24,7 +24,7 @@ beforeAll(async () => {
       )
     ).scene,
   );
-  source = JSON.parse(await fs.readFile('tests/fixtures/axe-equip-idle.manny.json', 'utf8'))
+  source = JSON.parse(await fs.readFile('tests/fixtures/axe-equip-idle.json', 'utf8'))
     .clips[0].project;
 });
 describe('imported knee poles', () => {

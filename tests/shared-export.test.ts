@@ -133,7 +133,7 @@ describe('shared Unreal skeleton export', () => {
   });
   it('preserves evaluated motion and animated prop sockets through contacts and root movement', async () => {
     const workspace = validateLibrary(
-        JSON.parse(await fs.readFile('tests/fixtures/axe-equip-idle.manny.json', 'utf8')),
+        JSON.parse(await fs.readFile('tests/fixtures/axe-equip-idle.json', 'utf8')),
       ),
       p = forLayer(workspace.clips[0].project, 'body');
     putKey(
@@ -189,7 +189,7 @@ describe('shared Unreal skeleton export', () => {
   });
   it('source-only sampling preserves source bones and prop motion independently of the preview character', async () => {
     const workspace = validateLibrary(
-        JSON.parse(await fs.readFile('tests/fixtures/axe-equip-idle.manny.json', 'utf8')),
+        JSON.parse(await fs.readFile('tests/fixtures/axe-equip-idle.json', 'utf8')),
       ),
       p = forLayer(workspace.clips[0].project, 'body'),
       sampler = new SharedPoseSampler(source);
@@ -272,7 +272,7 @@ describe('shared Unreal skeleton export', () => {
   }, 20000);
   it('preserves complete skin matrices and prop trajectories after runtime driver sampling', async () => {
     const workspace = validateLibrary(
-      JSON.parse(await fs.readFile('tests/fixtures/axe-equip-idle.manny.json', 'utf8')),
+      JSON.parse(await fs.readFile('tests/fixtures/axe-equip-idle.json', 'utf8')),
     );
     const project = forLayer(workspace.clips[0].project, 'body'),
       slots = sharedExportPlan(workspace).sockets,
