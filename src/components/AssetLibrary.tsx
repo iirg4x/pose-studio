@@ -71,7 +71,7 @@ export function AssetLibrary({
   const props = Object.entries(projectProps(s.project));
   return (
     <section
-      className="asset-library"
+      className="asset-library standalone-panel"
       data-editor-overlay
       role="dialog"
       aria-label="Project assets"

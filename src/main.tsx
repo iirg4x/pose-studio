@@ -28,3 +28,4 @@ import './design-system.css';
 import './components/timeline-look.css';
 import './touch-timeline.css';
 import './phone.css';
+import './standalone-panels.css';

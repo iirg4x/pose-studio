@@ -1,0 +1,76 @@
+/* Standalone tasks sit above the scene and are centered in the visible viewport.
+ * The touch viewport variables are updated while the browser chrome or keyboard
+ * changes; desktop falls back to the workspace area below its title bar. */
+:root.android {
+  --standalone-viewport-top: var(--touch-viewport-top, 0px);
+  --standalone-viewport-left: var(--touch-viewport-left, 0px);
+  --standalone-viewport-width: var(--touch-viewport-width, var(--screen-w, 100vw));
+  --standalone-viewport-height: var(--touch-viewport-height, var(--screen-h, 100dvh));
+}
+
+:root:not(.android) {
+  --standalone-viewport-top: 40px;
+  --standalone-viewport-left: 0px;
+  --standalone-viewport-width: 100vw;
+  --standalone-viewport-height: calc(100vh - 40px);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: var(--standalone-viewport-top) auto auto var(--standalone-viewport-left);
+  width: var(--standalone-viewport-width);
+  height: var(--standalone-viewport-height);
+  box-sizing: border-box;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.modal-backdrop > .modal {
+  max-height: calc(var(--standalone-viewport-height) - 32px);
+  margin: 0;
+}
+
+/* Asset browsing is a task surface rather than a scene-attached inspector. */
+.motion-overlay > .standalone-panel.asset-library {
+  position: fixed;
+  z-index: var(--z-dialog, 1000);
+  top: calc(var(--standalone-viewport-top) + var(--standalone-viewport-height) / 2);
+  right: auto;
+  bottom: auto;
+  left: calc(var(--standalone-viewport-left) + var(--standalone-viewport-width) / 2);
+  width: min(420px, calc(var(--standalone-viewport-width) - 32px));
+  max-width: none;
+  max-height: calc(var(--standalone-viewport-height) - 32px);
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+}
+
+/* Keep task dialogs readable on a very short landscape viewport. The panel itself
+ * owns scrolling so the backdrop never creates a second, confusing scroll surface. */
+.modal-backdrop > .modal {
+  min-height: 0;
+  overflow: auto;
+}
+
+@media (max-width: 700px) {
+  .modal-backdrop {
+    padding: 16px;
+  }
+
+  .modal-backdrop > .modal {
+    width: min(720px, 100%);
+    max-width: 100%;
+    max-height: calc(var(--standalone-viewport-height) - 32px);
+  }
+
+  .motion-overlay > .standalone-panel.asset-library {
+    width: min(420px, calc(var(--standalone-viewport-width) - 32px));
+    max-height: calc(var(--standalone-viewport-height) - 32px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-overlay > .standalone-panel.asset-library {
+    transform: translate(-50%, -50%);
+  }
+}

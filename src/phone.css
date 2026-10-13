@@ -39,7 +39,7 @@ html.android body {
     --phone-top: calc(var(--phone-gap) + env(safe-area-inset-top));
     --phone-left: calc(var(--phone-gap) + env(safe-area-inset-left));
     --phone-right: calc(var(--phone-gap) + env(safe-area-inset-right));
-    --phone-tabs: calc(50px + env(safe-area-inset-bottom));
+    --phone-tabs: 50px;
     --phone-transport: 46px;
     --touch-timeline: calc(var(--screen-h) * 0.44);
     --phone-sheet-max: calc(var(--screen-h) - var(--phone-tabs) - var(--phone-transport) - 112px);
@@ -149,7 +149,7 @@ html.android body {
     left: 0;
     flex-direction: row;
     height: var(--phone-tabs);
-    padding: 4px 8px env(safe-area-inset-bottom);
+    padding: 4px 8px 0;
     gap: 4px;
     transform: none;
     border-width: 1px 0 0;
@@ -278,7 +278,7 @@ html.android body {
     --phone-top: calc(var(--phone-gap) + env(safe-area-inset-top));
     --phone-left: calc(var(--phone-gap) + env(safe-area-inset-left));
     --phone-right: calc(var(--phone-gap) + env(safe-area-inset-right));
-    --phone-bottom: calc(var(--phone-gap) + env(safe-area-inset-bottom));
+    --phone-bottom: var(--phone-gap);
     --phone-sheet: min(340px, calc(100vw - 120px));
     --touch-timeline: calc(var(--screen-h) * 0.55);
   }
@@ -599,7 +599,7 @@ html.android body {
   /* Bars hug their controls. */
   :root.android .app {
     --phone-transport: 40px;
-    --phone-tabs: calc(46px + env(safe-area-inset-bottom));
+    --phone-tabs: 46px;
   }
   :root.android .app .touch-panel-rail button {
     height: 40px;
