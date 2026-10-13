@@ -84,7 +84,17 @@ export function DesktopWorkspace({
   chooseAction: (layer: RigLayer) => void;
 }) {
   const s = useStudioChrome({ frame: 'none' });
-  const [library, setLibrary] = useState(false);
+  // The library opens as a dropdown under its trigger, kept inside the window.
+  const [library, setLibraryOpen] = useState<CSSProperties | null>(null);
+  const setLibrary = (open: boolean, trigger?: HTMLElement) => {
+    if (!open || !trigger) return setLibraryOpen(null);
+    const r = trigger.getBoundingClientRect(),
+      width = 360;
+    setLibraryOpen({
+      top: r.bottom + 4,
+      left: Math.max(8, Math.min(r.right - width, innerWidth - width - 8)),
+    });
+  };
   const libraryRoot = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!library) return;
@@ -158,8 +168,8 @@ export function DesktopWorkspace({
           className="desktop-clip-trigger"
           title="Animation library"
           aria-label="Animation library"
-          aria-expanded={library}
-          onClick={() => setLibrary(!library)}
+          aria-expanded={!!library}
+          onClick={(e) => setLibrary(!library, e.currentTarget)}
         >
           <Library size={14} />
           <strong>{s.project?.name ?? 'Animations'}</strong>
@@ -192,6 +202,7 @@ export function DesktopWorkspace({
       {library && (
         <div
           className="library-popover"
+          style={library}
           ref={libraryRoot}
           role="dialog"
           aria-label="Animation library"

@@ -14,6 +14,7 @@ import { Updates } from './components/Updates';
 import { AndroidExportDialog } from './components/AndroidExportDialog';
 import { CharacterPanel, RetargetInspector, RetargetExport } from './components/RetargetPanel';
 import { RecordingDialog } from './components/RecordingDialog';
+import { ProjectLoading } from './components/ProjectLoading';
 import { useProjectFile } from './components/useProjectFile';
 import { WindowControls } from './components/WindowControls';
 import { KeyframeMenu } from './components/KeyframeMenu';
@@ -195,6 +196,7 @@ export default function App() {
   const file = useProjectFile(
       s.ready,
       exporting || recording || characterExport || importing || assets || !!newAction,
+      async () => runtime.current?.settled(),
     ),
     save = file.save;
   const importMode = useRef(false);
@@ -547,7 +549,12 @@ export default function App() {
         { label: 'Models, props and animations…', run: () => setAssets(true), disabled: !s.ready },
         'separator',
         {
-          label: characterPreview ? 'Export character animation…' : 'Export to Unreal…',
+          // The browser build saves .pose (Unreal packaging needs the desktop app).
+          label: characterPreview
+            ? 'Export character animation…'
+            : portablePlatform
+              ? 'Export…'
+              : 'Export to Unreal…',
           run: () => (characterPreview ? setCharacterExport(true) : setExporting(true)),
           disabled: busy,
         },
@@ -1092,16 +1099,24 @@ export default function App() {
           const f = e.target.files?.[0];
           if (f)
             try {
+              if (!importMode.current)
+                studio.patch({
+                  opening: {
+                    name: f.name.replace(/\.(pose|json|manny)$/i, ''),
+                    stage: 'Reading file',
+                  },
+                });
               receive(
                 await decodeProject(new Uint8Array(await f.arrayBuffer())),
                 importMode.current,
               );
             } catch (err) {
-              studio.patch({ message: (err as Error).message });
+              studio.patch({ opening: null, message: (err as Error).message });
             }
           e.target.value = '';
         }}
       />
+      <ProjectLoading />
       <MotionOverlay show={assets}>
         <AssetLibrary
           runtime={runtime.current}

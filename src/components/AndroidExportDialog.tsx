@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Save, Video, X } from 'lucide-react';
 import type { StudioScene } from '../scene/StudioScene';
 import { RecordingDialog } from './RecordingDialog';
@@ -12,7 +12,10 @@ export function AndroidExportDialog({
   close: () => void;
 }) {
   const [record, setRecord] = useState(false),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    first = useRef<HTMLButtonElement>(null);
+  // Focus starts inside the dialog, so Escape and the keyboard work immediately.
+  useEffect(() => first.current?.focus(), [record]);
   if (record) return <RecordingDialog runtime={runtime} close={close} />;
   return (
     <div className="modal-backdrop">
@@ -33,6 +36,7 @@ export function AndroidExportDialog({
         </header>
         <div className="android-export-options">
           <button
+            ref={first}
             disabled={busy}
             onClick={async () => {
               setBusy(true);

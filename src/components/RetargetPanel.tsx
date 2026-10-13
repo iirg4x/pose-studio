@@ -97,10 +97,9 @@ export function CharacterPanel({ runtime }: { runtime: StudioScene | null }) {
         </p>
       )}
       <div className="retarget-source">
-        <small>SHARED MANNY ANIMATION</small>
         <strong>{s.project?.name}</strong>
         <span>
-          {s.project?.fps} fps · {s.project?.end} frames
+          Shared Manny animation · {s.project?.fps} fps · {s.project?.end} frames
         </span>
         <p>
           Switch between project characters using Preview model while animating. Your keys and

@@ -607,12 +607,10 @@
 
 /* Library opens from the animation picker instead of occupying a panel. */
 .library-popover {
-  position: absolute;
-  top: 6px;
-  right: 12px;
+  position: fixed;
   z-index: 150;
   width: 360px;
-  max-height: min(560px, calc(100% - 48px));
+  max-height: min(560px, calc(100vh - 80px));
   display: flex;
   flex-direction: column;
   overflow: hidden;

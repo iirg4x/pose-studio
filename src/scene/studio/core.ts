@@ -166,14 +166,34 @@ export abstract class SceneCore {
     rig: MannyRig,
     first: boolean,
     bodyRoot: Pose,
+    fk = false,
   ) {
     const d = CONTROLS[id];
     if (d.kind === 'pivot') return rig.pivotWorld(id);
     if (d.kind === 'bone' || id === 'root') return rig.bodyBone(id).matrixWorld.clone();
+    // An IK handle on a limb posed in FK rides the FK chain, where switching to IK
+    // would put it, instead of resting at its own (possibly never-set) value.
+    if (fk && d.limb && (d.kind === 'target' || d.kind === 'pole')) return this.fkHandle(id, rig);
     const m = matrix(values[id]);
     if (d.kind === 'pole') m.makeTranslation(...values[id].p);
     if (first) m.premultiply(id === 'camera' ? matrix(bodyRoot) : this.cameraDelta);
     return m;
+  }
+  private fkHandle(id: ControlId, rig: MannyRig) {
+    const side = id.at(-1),
+      arm = CONTROLS[id].limb!.startsWith('arm'),
+      [a, b, c] = (arm ? ['upperarm', 'forearm', 'wrist'] : ['thigh', 'shin', 'ankle']).map(
+        (stem) => rig.bodyBone((stem + '_' + side) as ControlId).matrixWorld,
+      );
+    if (CONTROLS[id].kind === 'target') return c.clone();
+    // Same placement as matchLimb: off the middle joint, along the bend.
+    const start = new T.Vector3().setFromMatrixPosition(a),
+      mid = new T.Vector3().setFromMatrixPosition(b),
+      axis = new T.Vector3().setFromMatrixPosition(c).sub(start).normalize(),
+      bend = mid.clone().sub(start);
+    bend.addScaledVector(axis, -bend.dot(axis));
+    if (bend.lengthSq() < 1e-10) bend.set(0, 0, 1).addScaledVector(axis, -axis.z);
+    return new T.Matrix4().makeTranslation(mid.addScaledVector(bend.normalize(), 0.35));
   }
   protected viewCamera() {
     return this.store.state.playerView ? this.playerCamera : this.camera;

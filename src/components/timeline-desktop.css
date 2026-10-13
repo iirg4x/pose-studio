@@ -218,3 +218,39 @@
   font-variant-numeric: tabular-nums;
   box-shadow: 0 2px 6px #00000080;
 }
+
+/* Curves toolbar: the same raised bar as the timeline's, one row. Zoom and guides live
+ * in its view menu; lock and clipboard keep their icons and tooltips. */
+.app.desktop-workspace .timeline.split .curve-tools {
+  flex-wrap: nowrap;
+  min-height: 0;
+  height: var(--tl-toolbar-height, 36px);
+  background: var(--tl-ruler);
+  border-bottom: 1px solid #00000066;
+  box-shadow: 0 1px 0 #ffffff08 inset;
+}
+.app.desktop-workspace .timeline.split .curve-tools .curve-secondary-view {
+  display: none;
+}
+.app.desktop-workspace .timeline.split .curve-view-options {
+  display: block;
+}
+.app.desktop-workspace
+  .timeline.split
+  .curve-tools
+  :is(.curve-key-lock, .curve-clipboard-tools button)
+  span {
+  display: none;
+}
+.app.desktop-workspace .timeline.split .curve-tools button {
+  color: var(--tl-text-2);
+}
+.app.desktop-workspace .timeline.split .curve-tools button:hover:not(:disabled) {
+  background: #ffffff0d;
+  color: var(--tl-text);
+}
+.app.desktop-workspace .timeline.split .curve-tools .curve-cleanup {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--tl-text-2) !important;
+}

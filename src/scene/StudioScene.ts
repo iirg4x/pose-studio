@@ -580,8 +580,14 @@ export class StudioScene extends ExportScene {
     const first = project.editing === 'firstPerson',
       values = first ? fp : body,
       activeRig = first ? this.rig : this.bodyRig;
-    for (const id of this.markers.keys())
-      this.sourceControlWorlds.set(id, this.controlWorld(id, values, activeRig, first, body.root));
+    for (const id of this.markers.keys()) {
+      const limb = CONTROLS[id].limb,
+        fk = !!limb && limbMode(project, limb, frame) === 'fk';
+      this.sourceControlWorlds.set(
+        id,
+        this.controlWorld(id, values, activeRig, first, body.root, fk),
+      );
+    }
     if (first) this.sourceControlWorlds.set('camera', sourceCamera);
     this.updateControls(frame);
     if (this.fitOnApply) {
@@ -746,6 +752,36 @@ export class StudioScene extends ExportScene {
       this.lastActiveDraw = now;
     } else this.lastActiveDraw = 0;
   };
+  /** Resolves once the open project's props and characters are loaded, its shaders
+   * compiled and a frame drawn: when opening a project has visibly finished. */
+  async settled(timeout = 30000) {
+    const frame = () => new Promise((done) => requestAnimationFrame(done)),
+      work = (async () => {
+        await frame();
+        const project = this.store.state.project;
+        if (project) {
+          this.store.patch({
+            opening: this.store.state.opening && {
+              ...this.store.state.opening,
+              stage: 'Loading props and characters',
+            },
+          });
+          await this.projectObjects.ready(project).catch(() => {});
+        }
+        while (this.store.state.retargetLoading && !this.disposed)
+          await new Promise((done) => setTimeout(done, 50));
+        this.store.patch({
+          opening: this.store.state.opening && {
+            ...this.store.state.opening,
+            stage: 'Preparing the viewport',
+          },
+        });
+        await this.renderer.compileAsync(this.scene, this.camera).catch(() => {});
+        await frame();
+        await frame();
+      })();
+    await Promise.race([work, new Promise((done) => setTimeout(done, timeout))]);
+  }
   toggleTrail() {
     this.trails.toggle();
   }

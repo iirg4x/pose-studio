@@ -37,6 +37,8 @@ export interface StudioState {
   retargetCompare: boolean;
   retargetLoading: boolean;
   retargetError: string;
+  /** A project being opened: the loading screen shows its name and current stage. */
+  opening: { name: string; stage: string } | null;
   retargetBones: string[];
   retargetMeshes: string[];
   gameView: boolean;
@@ -82,6 +84,7 @@ export abstract class StoreCore {
     retargetCompare: false,
     retargetLoading: false,
     retargetError: '',
+    opening: null,
     retargetBones: [],
     retargetMeshes: [],
     gameView: false,

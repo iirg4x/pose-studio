@@ -19,7 +19,14 @@ import { checkLinkedProject } from '../platform/android';
 type Pending =
   | { kind: 'close' }
   | { kind: 'open'; data: AnimationLibrary; source?: LinkedDocument };
-export function useProjectFile(ready: boolean, blocked = false) {
+/** Lets the loading screen paint before the synchronous work that follows. */
+const nextPaint = () =>
+  new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+export function useProjectFile(
+  ready: boolean,
+  blocked = false,
+  settled: () => Promise<void> = async () => {},
+) {
   const saved = useRef<string | null>(null),
     [pending, setPending] = useState<Pending | null>(null),
     [busy, setBusy] = useState(false),
@@ -109,8 +116,15 @@ export function useProjectFile(ready: boolean, blocked = false) {
     }
   }, [markSaved]);
   const open = useCallback(
-    (data: AnimationLibrary, source?: LinkedDocument) => {
-      studio.openValidated(data);
+    async (data: AnimationLibrary, source?: LinkedDocument) => {
+      studio.patch({ opening: { name: data.name || 'project', stage: 'Building animations' } });
+      try {
+        await nextPaint();
+        studio.openValidated(data);
+        await settled();
+      } finally {
+        studio.patch({ opening: null });
+      }
       const current = studio.recoverySnapshot();
       if (current) {
         markSaved(current);
@@ -125,7 +139,7 @@ export function useProjectFile(ready: boolean, blocked = false) {
       setPending(null);
       setError('');
     },
-    [markSaved],
+    [markSaved, settled],
   );
   const requestOpen = useCallback(
     (data: unknown) => {
@@ -133,11 +147,13 @@ export function useProjectFile(ready: boolean, blocked = false) {
         const source = openedDocument(data),
           validated = consumeProjectDocument(data);
         if (dirty()) {
+          // The unsaved-changes prompt comes first; the loading screen returns on open.
+          studio.patch({ opening: null });
           setPending({ kind: 'open', data: validated, source });
           setError('');
-        } else open(validated, source);
+        } else void open(validated, source);
       } catch (e) {
-        studio.patch({ message: (e as Error).message });
+        studio.patch({ opening: null, message: (e as Error).message });
       }
     },
     [dirty, open],
@@ -270,7 +286,7 @@ export function useProjectFile(ready: boolean, blocked = false) {
     try {
       await recover();
       if (pending.kind === 'close') window.studioDesktop?.confirmClose();
-      else open(pending.data, pending.source);
+      else void open(pending.data, pending.source);
     } catch (e) {
       setError('Could not keep the recovery copy: ' + (e as Error).message);
     }

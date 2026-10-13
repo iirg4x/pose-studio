@@ -130,6 +130,7 @@ export function TransformOptions({ compact = false }: { compact?: boolean }) {
           {(open === 'orientation' ? orientations : pivots).map(([id, name, Icon, description]) => (
             <button
               key={id}
+              title={description}
               role="menuitemradio"
               aria-checked={(open === 'orientation' ? s.transformSpace : s.transformPivot) === id}
               onClick={() => {
