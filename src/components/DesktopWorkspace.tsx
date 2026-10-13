@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { CSSProperties, ReactNode } from 'react';
 import {
   MousePointer2,
@@ -71,6 +72,7 @@ export function DesktopWorkspace({
   sizes,
   resize,
   retarget,
+  toolbarSlot,
 }: {
   scene: ReactNode;
   controls: ReactNode;
@@ -80,6 +82,8 @@ export function DesktopWorkspace({
   sizes: { controls: number; inspector: number; timeline: number };
   resize: (panel: 'controls' | 'inspector' | 'timeline', size: number) => void;
   retarget: boolean;
+  /** Title bar element that hosts the tool and panel toolbars. */
+  toolbarSlot?: HTMLElement | null;
 }) {
   const [layout, setLayout] = useState(loadLayout),
     s = useStudioChrome({ frame: 'none' }),
@@ -139,6 +143,84 @@ export function DesktopWorkspace({
       : right.value === 'animations'
         ? 'Animations'
         : 'Workspace tools';
+  const toolbars = (
+    <>
+      <nav className="desktop-tools" aria-label="Animation tools" data-editor-overlay>
+        {(
+          [
+            ['select', MousePointer2, 'Select (Q)'],
+            ['translate', Move, 'Move (W)'],
+            ['rotate', RotateCw, 'Rotate (E)'],
+          ] as const
+        ).map(([mode, Icon, label]) => (
+          <button
+            key={mode}
+            title={label}
+            aria-label={label}
+            aria-pressed={s.mode === mode}
+            onClick={() => studio.patch({ mode })}
+          >
+            <Icon size={18} />
+          </button>
+        ))}
+        <i />
+        <TransformOptions />
+        <i />
+        <button aria-label="Undo" title="Undo (Ctrl Z)" onClick={() => studio.undo()}>
+          <Undo2 size={17} />
+        </button>
+        <button aria-label="Redo" title="Redo (Ctrl Y)" onClick={() => studio.redo()}>
+          <Redo2 size={17} />
+        </button>
+      </nav>
+      <nav className="desktop-panel-nav" aria-label="Workspace panels" data-editor-overlay>
+        <button
+          className="desktop-clip-trigger"
+          title="Browse animations"
+          aria-label="Animations panel"
+          aria-expanded={layout.right === 'animations'}
+          onClick={() => change({ right: layout.right === 'animations' ? null : 'animations' })}
+        >
+          <Library size={16} />
+          <strong>{s.project?.name ?? 'Animations'}</strong>
+          <ChevronDown size={12} />
+        </button>
+        <i />
+        <button
+          aria-label="Rig panel"
+          title="Rig controls"
+          aria-expanded={layout.rig}
+          onClick={() => change({ rig: !layout.rig })}
+        >
+          <Waypoints size={18} />
+        </button>
+        <button
+          aria-label="Pose panel"
+          title="Pose properties"
+          aria-expanded={layout.right === 'properties'}
+          onClick={() => change({ right: layout.right === 'properties' ? null : 'properties' })}
+        >
+          <SlidersHorizontal size={18} />
+        </button>
+        <button
+          aria-label="Tools panel"
+          title="Workspace tools"
+          aria-expanded={layout.right === 'tools'}
+          onClick={() => change({ right: layout.right === 'tools' ? null : 'tools' })}
+        >
+          <Settings2 size={18} />
+        </button>
+        <button
+          aria-label={layout.timeline ? 'Hide timeline' : 'Show timeline'}
+          title="Timeline"
+          aria-expanded={layout.timeline}
+          onClick={() => change({ timeline: !layout.timeline })}
+        >
+          <ListVideo size={18} />
+        </button>
+      </nav>
+    </>
+  );
   const style = {
     '--dock-left': layout.rig && layout.dockRig ? sizes.controls + 'px' : '0px',
     '--dock-right': layout.right && layout.dockRight ? sizes.inspector + 'px' : '0px',
@@ -158,80 +240,7 @@ export function DesktopWorkspace({
     >
       <div className="desktop-scene">
         {scene}
-        <nav className="desktop-tools" aria-label="Animation tools" data-editor-overlay>
-          {(
-            [
-              ['select', MousePointer2, 'Select (Q)'],
-              ['translate', Move, 'Move (W)'],
-              ['rotate', RotateCw, 'Rotate (E)'],
-            ] as const
-          ).map(([mode, Icon, label]) => (
-            <button
-              key={mode}
-              title={label}
-              aria-label={label}
-              aria-pressed={s.mode === mode}
-              onClick={() => studio.patch({ mode })}
-            >
-              <Icon size={18} />
-            </button>
-          ))}
-          <i />
-          <TransformOptions />
-          <i />
-          <button aria-label="Undo" title="Undo (Ctrl Z)" onClick={() => studio.undo()}>
-            <Undo2 size={17} />
-          </button>
-          <button aria-label="Redo" title="Redo (Ctrl Y)" onClick={() => studio.redo()}>
-            <Redo2 size={17} />
-          </button>
-        </nav>
-        <nav className="desktop-panel-nav" aria-label="Workspace panels" data-editor-overlay>
-          <button
-            className="desktop-clip-trigger"
-            title="Browse animations"
-            aria-label="Animations panel"
-            aria-expanded={layout.right === 'animations'}
-            onClick={() => change({ right: layout.right === 'animations' ? null : 'animations' })}
-          >
-            <Library size={16} />
-            <strong>{s.project?.name ?? 'Animations'}</strong>
-            <ChevronDown size={12} />
-          </button>
-          <i />
-          <button
-            aria-label="Rig panel"
-            title="Rig controls"
-            aria-expanded={layout.rig}
-            onClick={() => change({ rig: !layout.rig })}
-          >
-            <Waypoints size={18} />
-          </button>
-          <button
-            aria-label="Pose panel"
-            title="Pose properties"
-            aria-expanded={layout.right === 'properties'}
-            onClick={() => change({ right: layout.right === 'properties' ? null : 'properties' })}
-          >
-            <SlidersHorizontal size={18} />
-          </button>
-          <button
-            aria-label="Tools panel"
-            title="Workspace tools"
-            aria-expanded={layout.right === 'tools'}
-            onClick={() => change({ right: layout.right === 'tools' ? null : 'tools' })}
-          >
-            <Settings2 size={18} />
-          </button>
-          <button
-            aria-label={layout.timeline ? 'Hide timeline' : 'Show timeline'}
-            title="Timeline"
-            aria-expanded={layout.timeline}
-            onClick={() => change({ timeline: !layout.timeline })}
-          >
-            <ListVideo size={18} />
-          </button>
-        </nav>
+        {toolbarSlot ? createPortal(toolbars, toolbarSlot) : toolbars}
         {!timing.value && <DesktopTransport />}
       </div>
       {rig.value && (
@@ -314,28 +323,26 @@ function DesktopPanel({
       inert={exiting || undefined}
       data-editor-overlay
     >
-      <header>
-        <h2>{title}</h2>
-        <div>
-          <button
-            aria-label={(docked ? 'Undock ' : 'Dock ') + title}
-            title={docked ? 'Float over scene' : 'Dock beside scene'}
-            aria-pressed={docked}
-            onClick={toggleDock}
-          >
-            {docked ? (
-              <PinOff size={15} />
-            ) : side === 'bottom' ? (
-              <PanelBottomClose size={15} />
-            ) : (
-              <PanelRightClose size={15} />
-            )}
-          </button>
-          <button aria-label={'Close ' + title} title="Close panel" onClick={close}>
-            <X size={17} />
-          </button>
-        </div>
-      </header>
+      {/* No title bar: the panel's own first row carries these. */}
+      <div className="desktop-panel-actions">
+        <button
+          aria-label={(docked ? 'Undock ' : 'Dock ') + title}
+          title={docked ? 'Float over scene' : 'Dock beside scene'}
+          aria-pressed={docked}
+          onClick={toggleDock}
+        >
+          {docked ? (
+            <PinOff size={15} />
+          ) : side === 'bottom' ? (
+            <PanelBottomClose size={15} />
+          ) : (
+            <PanelRightClose size={15} />
+          )}
+        </button>
+        <button aria-label={'Close ' + title} title="Close panel" onClick={close}>
+          <X size={17} />
+        </button>
+      </div>
       <div className="desktop-panel-content">{children}</div>
       <div
         className="desktop-panel-resize"

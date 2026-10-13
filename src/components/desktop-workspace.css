@@ -89,7 +89,7 @@
   font-weight: 500;
 }
 .desktop-scene .desktop-pose-context > .active-layer-control {
-  top: 68px;
+  top: 12px;
   right: 12px;
 }
 .desktop-stage.has-floating-right .desktop-pose-context > .active-layer-control {
@@ -99,10 +99,10 @@
   display: none;
 }
 .desktop-scene .pose-view-label {
-  top: 65px;
+  top: 12px;
 }
 .desktop-scene .preview-border {
-  top: 90px;
+  top: 36px;
 }
 .desktop-scene .desktop-pose-context > .selection-pose-tools {
   bottom: 84px;
@@ -165,7 +165,7 @@
 .desktop-panel.floating {
   position: absolute;
   border-radius: 12px;
-  top: 64px;
+  top: 12px;
   bottom: calc(var(--dock-bottom) + 96px);
   width: var(--inspector-width, 300px);
 }
@@ -201,35 +201,6 @@
 .desktop-panel.panel-bottom.docked {
   grid-column: 1/-1;
   grid-row: 2;
-}
-.desktop-panel > header {
-  flex: none;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 8px 4px 12px;
-  border-bottom: 1px solid var(--border);
-}
-.desktop-panel > header h2 {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--secondary);
-}
-.desktop-panel > header > div {
-  display: flex;
-  gap: 2px;
-}
-.desktop-panel > header button {
-  width: 28px;
-  height: 28px;
-  min-height: 28px;
-  padding: 4px;
-  color: var(--muted);
-}
-.desktop-panel > header button:hover {
-  color: var(--text);
 }
 .desktop-panel-content {
   display: flex;
@@ -456,4 +427,131 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+}
+
+/* Toolbars live in the title bar, not on top of the scene. */
+.titlebar .title-spacer:has(.desktop-tools) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.titlebar .desktop-tools,
+.titlebar .desktop-panel-nav {
+  position: static;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  -webkit-app-region: no-drag;
+}
+.titlebar .desktop-tools button,
+.titlebar .desktop-panel-nav button {
+  height: 28px;
+  min-height: 28px;
+}
+
+/* Panels have no title bar; dock/close sit at the end of the panel's first row. */
+.desktop-panel-actions {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  /* .animation-bar keeps z-index 80 from its old top-bar role. */
+  z-index: 90;
+  display: flex;
+  gap: 2px;
+}
+.desktop-panel-actions button {
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 4px;
+  color: var(--muted);
+}
+.desktop-panel-actions button:hover {
+  color: var(--text);
+}
+.desktop-panel .control-list > header,
+.desktop-panel .property-context-tabs,
+.desktop-panel .embedded-library-tabs {
+  padding-right: 64px;
+}
+.desktop-panel .touch-settings {
+  padding-top: 40px;
+}
+
+/* Docked timeline: one toolbar row (view, transport, layer, tools), then tracks. */
+.desktop-panel .timeline {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  grid-template-rows: 38px minmax(0, 1fr);
+  border-top: 0;
+}
+.desktop-panel .timeline > .timeline-tabs {
+  display: contents;
+}
+.desktop-panel .timeline > * {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-height: 0;
+}
+.desktop-panel .timeline-tabs > *,
+.desktop-panel .timeline > .transport {
+  grid-row: 1;
+  align-self: center;
+}
+.desktop-panel .timeline .timeline-tab-group {
+  grid-column: 1;
+  margin-left: 8px;
+}
+.desktop-panel .timeline > .transport {
+  grid-column: 2;
+  min-height: 0;
+  height: 38px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+}
+.desktop-panel .timeline .timeline-context {
+  display: none;
+}
+.desktop-panel .timeline .timeline-tabs > .active-layer-control {
+  grid-column: 4;
+  position: static;
+}
+.desktop-panel .timeline .timeline-window-tools {
+  grid-column: 5;
+  margin-right: 64px;
+}
+.desktop-panel .timeline::before {
+  content: '';
+  grid-column: 1 / -1;
+  grid-row: 1;
+  background: #2a3440;
+  border-bottom: 1px solid #ffffff14;
+}
+/* The panel itself says what it is; keep room for the count and visibility toggles. */
+.desktop-panel .control-list > header .context-flair {
+  display: none;
+}
+
+.desktop-panel .timeline > .transport {
+  flex-wrap: nowrap;
+}
+/* Narrow windows: keep one toolbar row by dropping text labels; icons and tooltips remain. */
+@media (max-width: 1280px) {
+  .desktop-panel .timeline .timeline-tab-group span,
+  .desktop-panel .timeline .frame-label > span:first-child,
+  .desktop-panel .timeline .auto-key span,
+  .desktop-panel .timeline .insert-key span {
+    display: none;
+  }
+  .desktop-panel .timeline .timeline-tab-group button {
+    min-width: 0;
+  }
+  .desktop-panel .timeline > .transport {
+    gap: 6px;
+    padding: 0 6px;
+  }
 }

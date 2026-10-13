@@ -76,6 +76,7 @@ export default function App() {
     runtime = useRef<StudioScene | null>(null),
     [thumbs, setThumbs] = useState<string[]>([]),
     [menu, setMenu] = useState(false),
+    [titleSlot, setTitleSlot] = useState<HTMLDivElement | null>(null),
     [exporting, setExporting] = useState(false),
     [recording, setRecording] = useState(false),
     [characterExport, setCharacterExport] = useState(false),
@@ -647,7 +648,7 @@ export default function App() {
         >
           {saved === 'Saving…' ? <LoaderCircle size={14} /> : <Check size={14} />}
         </span>
-        <div className="title-spacer" />
+        <div className="title-spacer" ref={setTitleSlot} />
         {nativeAndroid && (
           <Updates
             file={file}
@@ -716,6 +717,7 @@ export default function App() {
           sizes={panels.sizes}
           resize={panels.change}
           retarget={retarget}
+          toolbarSlot={titleSlot}
         />
       ) : (
         <div className="workspace">
