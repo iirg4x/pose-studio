@@ -222,7 +222,30 @@ export abstract class SceneCore {
       label.setAttribute('y', String(44 - dir.y * 34));
     }
   }
+  /** Cinematic frames render the scene several times (beauty, reflection and AO
+   * passes, preview camera). Transforms do not change between those passes, so world
+   * and skinning matrices are computed once per frame instead of once per pass. */
   protected render() {
+    const skeletons = new Set<T.Skeleton>();
+    try {
+      this.renderPasses(skeletons);
+    } finally {
+      this.scene.matrixWorldAutoUpdate = true;
+      for (const skeleton of skeletons) delete (skeleton as { update?: unknown }).update;
+    }
+  }
+  private freezeMatrices(skeletons: Set<T.Skeleton>) {
+    this.scene.updateMatrixWorld();
+    this.scene.matrixWorldAutoUpdate = false;
+    this.scene.traverse((o) => {
+      const skeleton = (o as T.SkinnedMesh).isSkinnedMesh ? (o as T.SkinnedMesh).skeleton : null;
+      if (!skeleton || skeletons.has(skeleton)) return;
+      skeleton.update();
+      skeletons.add(skeleton);
+      skeleton.update = () => {};
+    });
+  }
+  private renderPasses(skeletons: Set<T.Skeleton>) {
     const character = this.previewCharacter,
       reference = this.store.state.retargetMode && this.store.state.retargetRest;
     const first = !reference && this.store.state.project?.editing !== 'body',
@@ -261,6 +284,7 @@ export abstract class SceneCore {
           this.previewProject.editing,
         );
     }
+    this.freezeMatrices(skeletons);
     this.renderer.setScissorTest(false);
     this.renderer.setViewport(0, 0, this.width, this.height);
     if (!this.store.state.playerView) {
