@@ -173,9 +173,3 @@
     margin-top: -8px;
   }
 }
-/* Prevent Safari's input focus zoom from moving the 3D stage off screen. */
-.web.android input:not([type='checkbox']):not([type='range']),
-.web.android select,
-.web.android textarea {
-  font-size: 16px;
-}

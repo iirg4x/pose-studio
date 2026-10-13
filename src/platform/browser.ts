@@ -44,10 +44,33 @@ async function importModel() {
   await writeAsset('asset:' + asset, data);
   return { asset, name: file.name.replace(/\.glb$/i, ''), data };
 }
+/** Installed on an iPhone or iPad, CSS viewport units can report less than the screen
+ * (the gap is the status bar's height), leaving a strip at the bottom. The installed app
+ * always owns the whole screen, so size it from the screen itself. */
+function fillInstalledScreen() {
+  const nav = navigator as Navigator & { standalone?: boolean };
+  if (!nav.standalone) return;
+  const root = document.documentElement;
+  root.classList.add('ios-standalone');
+  const measure = () => {
+    const long = Math.max(screen.width, screen.height),
+      short = Math.min(screen.width, screen.height),
+      landscape = matchMedia('(orientation: landscape)').matches;
+    const full = landscape ? short : long;
+    // Only the status-bar-sized shortfall is the bug; a windowed app (iPad split view,
+    // Stage Manager) really is smaller than the screen.
+    const height = full - innerHeight > 0 && full - innerHeight <= 80 ? full : innerHeight;
+    root.style.setProperty('--app-height', height + 'px');
+  };
+  measure();
+  addEventListener('resize', measure);
+  addEventListener('orientationchange', measure);
+}
 export async function initializeBrowser() {
   if (window.studioDesktop) return;
   if (isTouch) document.documentElement.classList.add('android');
   document.documentElement.classList.add('web');
+  fillInstalledScreen();
   void initializePwa();
   const { AndroidAnimationImport } = await import('./androidAnimation');
   const animations = new AndroidAnimationImport(async () => {

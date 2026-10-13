@@ -1,0 +1,294 @@
+/* Touch timeline: one bar with what every edit needs, an overflow menu for the rest,
+ * so the panel stays short and the 3D result stays in view while keys are edited. */
+:root.android .touch-timeline-bar {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 52px;
+  min-height: 52px;
+  padding: 0 6px;
+  overflow: visible;
+  background: var(--tl-ruler);
+  border-bottom: 1px solid #00000066;
+}
+:root.android .touch-timeline-bar :is(button, select) {
+  flex: none;
+}
+:root.android .touch-timeline-bar > button,
+:root.android .touch-timeline-bar .insert-key-group > button,
+:root.android .timeline-more-anchor > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  border-radius: var(--ds-radius);
+  color: var(--secondary);
+}
+:root.android .touch-timeline-bar .timeline-tab-group {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--ds-radius);
+  background: var(--inset);
+}
+:root.android .touch-timeline-bar .timeline-tab-group button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 44px;
+  width: auto;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 3px;
+}
+:root.android .touch-timeline-bar .timeline-tab-group button.active {
+  background: var(--selection);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+:root.android .touch-timeline-bar .timeline-tab-group button.active::after {
+  display: none;
+}
+:root.android .touch-timeline-bar .touch-timeline-play {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+:root.android .touch-timeline-bar .frame-label {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+:root.android .touch-timeline-bar .frame-label input {
+  width: 46px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 4px;
+  text-align: center;
+}
+:root.android .touch-timeline-bar .insert-key-group {
+  display: flex;
+  flex: none;
+  border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
+  border-radius: var(--ds-radius);
+}
+:root.android .touch-timeline-bar .insert-key-group > button {
+  height: 42px;
+  min-height: 42px;
+  color: var(--amber);
+}
+:root.android .touch-timeline-bar .insert-key-group > button + button {
+  min-width: 30px;
+  padding: 0 4px;
+  border-left: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
+}
+:root.android .touch-timeline-bar .auto-key i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+:root.android .touch-timeline-bar .auto-key.enabled {
+  color: var(--red);
+}
+:root.android .touch-timeline-bar .auto-key.enabled i {
+  background: var(--red);
+}
+:root.android .touch-timeline-bar .title-spacer {
+  flex: 1;
+  min-width: 0;
+}
+:root.android .timeline-more-anchor {
+  position: relative;
+  flex: none;
+}
+:root.android .timeline-more {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 90;
+  display: grid;
+  gap: 8px;
+  width: min(320px, calc(100vw - 16px));
+  max-height: calc(var(--touch-timeline) - 64px);
+  padding: 8px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--raised);
+  box-shadow: var(--ds-shadow);
+}
+:root.android .timeline-more-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+:root.android .timeline-more-row > button {
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+}
+:root.android .timeline-more-row select {
+  height: 44px;
+  min-height: 44px;
+}
+:root.android .timeline-more .active-layer-control {
+  position: relative;
+  inset: auto;
+  transform: none;
+}
+
+/* The grid's own tool row stays one compact line. */
+:root.android .timeline .key-edit-tools {
+  min-height: 44px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+/* Phones: icon-only bar items; names stay as accessible labels. */
+@media (max-width: 700px), (max-height: 540px) {
+  :root.android .touch-timeline-bar {
+    height: 48px;
+    min-height: 48px;
+    gap: 2px;
+    padding: 0 4px;
+  }
+  :root.android .touch-timeline-bar :is(.timeline-tab-group, .insert-key-group, .auto-key) span {
+    display: none;
+  }
+  :root.android .touch-timeline-bar > button,
+  :root.android .touch-timeline-bar .insert-key-group > button:first-child,
+  :root.android .timeline-more-anchor > button {
+    min-width: 40px;
+    padding: 0 6px;
+  }
+  :root.android .touch-timeline-bar .timeline-tab-group button {
+    min-width: 40px;
+    height: 38px;
+    min-height: 38px;
+    padding: 0 8px;
+  }
+  :root.android .touch-timeline-bar .frame-label input {
+    width: 38px;
+  }
+}
+
+/* Bar items size themselves here, not from the generic 48px touch button. */
+:root.android .app .touch-timeline-bar > button,
+:root.android .app .touch-timeline-bar .insert-key-group > button,
+:root.android .app .timeline-more-anchor > button {
+  position: static;
+  width: auto;
+}
+:root.android .app .touch-timeline-bar .auto-key {
+  gap: 6px;
+}
+:root.android .app .touch-timeline-bar .auto-key :is(i, span) {
+  position: static;
+  width: auto;
+  flex: none;
+}
+:root.android .app .touch-timeline-bar .auto-key i {
+  width: 9px;
+}
+:root.android .timeline-more-length {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  color: var(--secondary);
+}
+:root.android .timeline-more-length input {
+  width: 72px;
+  height: 44px;
+  min-height: 44px;
+}
+@media (max-width: 700px), (max-height: 540px) {
+  :root.android .app .touch-timeline-bar > button,
+  :root.android .app .touch-timeline-bar .insert-key-group > button:first-child,
+  :root.android .app .timeline-more-anchor > button {
+    width: 40px;
+    min-width: 40px;
+    padding: 0;
+  }
+  :root.android .app .touch-timeline-bar .insert-key-group > button + button {
+    width: 28px;
+    min-width: 28px;
+  }
+  :root.android .app .touch-timeline-bar .timeline-tab-group button {
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+  :root.android .app .touch-timeline-bar .frame-label > :not(:first-child) {
+    display: none;
+  }
+  :root.android .timeline-more-length {
+    display: flex;
+  }
+}
+
+/* The overflow menu sits above the grid's sticky ruler and labels. */
+:root.android .app .touch-timeline-bar {
+  z-index: 20;
+}
+:root.android .app .touch-timeline-bar .auto-key span {
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+/* Curves on touch: one scrollable tool row, the graph gets the rest of the panel. */
+:root.android .timeline .curve-tools {
+  flex-wrap: nowrap;
+  height: 48px;
+  min-height: 48px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+:root.android .timeline .curve-tools > * {
+  flex: none;
+}
+:root.android .timeline .curve-selection-tools:not(:has(.curve-selection-count)) {
+  display: none;
+}
+@media (max-width: 700px), (max-height: 540px) {
+  :root.android .app .timeline .curve-editor.tracks-hidden {
+    grid-template-columns: 0 minmax(0, 1fr);
+  }
+  :root.android .app .timeline .curve-editor:not(.tracks-hidden) {
+    grid-template-columns: 120px minmax(0, 1fr);
+  }
+  :root.android .timeline .curve-tools {
+    height: 44px;
+    min-height: 44px;
+    gap: 2px;
+  }
+  :root.android .timeline .curve-tools :is(button, summary) {
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+  :root.android
+    .timeline
+    .curve-tools
+    :is(.curve-cleanup, .curve-key-lock, .curve-clipboard-tools button, button)
+    > span,
+  :root.android .timeline .curve-tools .curve-bone-flair,
+  :root.android .timeline .curve-help {
+    display: none;
+  }
+}
