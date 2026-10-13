@@ -747,8 +747,8 @@
   --key-state: #e8843c;
 }
 .property-vector[data-key-state] .vector-inputs label {
-  background: color-mix(in srgb, var(--key-state) 16%, var(--inset));
-  border-color: color-mix(in srgb, var(--key-state) 50%, var(--line));
+  background: color-mix(in srgb, var(--key-state) 28%, var(--inset));
+  border-color: color-mix(in srgb, var(--key-state) 75%, var(--line));
 }
 .property-vector[data-key-state] .key-row {
   color: var(--key-state);
