@@ -1,4 +1,4 @@
-import{a as xr}from"./index-0--AVp2H.js";import"./three-C88qyTJg.js";/*!
+import{a as xr}from"./index-Bs-gF77_.js";import"./three-C88qyTJg.js";/*!
  * Copyright (c) 2026-present, Vanilagy and contributors
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
