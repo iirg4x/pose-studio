@@ -24,8 +24,8 @@ beforeAll(async () => {
       )
     ).scene,
   );
-  source = JSON.parse(await fs.readFile('tests/fixtures/axe-equip-idle.json', 'utf8'))
-    .clips[0].project;
+  source = JSON.parse(await fs.readFile('tests/fixtures/axe-equip-idle.json', 'utf8')).clips[0]
+    .project;
 });
 describe('imported knee poles', () => {
   it('repairs the old identity import without changing authored animation curves', () => {
