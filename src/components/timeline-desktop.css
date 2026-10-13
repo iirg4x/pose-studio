@@ -1,19 +1,19 @@
-/* Desktop timeline. Three elevations (recessed tracks, raised labels, raised ruler and
+/* Desktop timeline, on the desktop system tokens (desktop-system.css). Three elevations (recessed tracks, raised labels, raised ruler and
  * toolbar); colour does work: keys and hold bars carry their control's colour, the
  * accent marks time and selection. */
 .app.desktop-workspace .timeline {
-  --tl-ground: #0e1218;
+  --tl-ground: var(--inset);
   --tl-row-alt: #121720;
   --tl-row-hover: #18202b;
   --tl-group: #141a23;
-  --tl-labels: #171d26;
-  --tl-ruler: #1d2530;
+  --tl-labels: var(--panel);
+  --tl-ruler: var(--raised);
   --tl-rule: #ffffff0f;
   --tl-grid: #ffffff08;
-  --tl-text: #e3e9f1;
-  --tl-text-2: #b9c3cf;
-  --tl-muted: #7f8c9d;
-  --tl-accent: #5ed3ea;
+  --tl-text: var(--text);
+  --tl-text-2: var(--secondary);
+  --tl-muted: var(--muted);
+  --tl-accent: var(--accent);
   --tl-ink: #0a0d11;
   --track-ink: var(--tl-ground);
   --track-surface: var(--tl-labels);
@@ -214,7 +214,7 @@
 }
 .app.desktop-workspace .timeline .playhead-cap output {
   background: var(--tl-accent);
-  color: #06222a;
+  color: var(--accent-ink);
   font-variant-numeric: tabular-nums;
   box-shadow: 0 2px 6px #00000080;
 }

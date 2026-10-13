@@ -26,6 +26,7 @@ import { LoopControls } from './LoopControls';
 import { ScrubNumber } from './ScrubNumber';
 import './desktop-workspace.css';
 import './timeline-desktop.css';
+import './desktop-system.css';
 
 export type DesktopLayout = { editors: boolean; properties: boolean };
 const LAYOUT_KEY = 'pose-desktop-layout-v3';

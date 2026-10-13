@@ -714,22 +714,17 @@
 }
 
 /* The editor panel shows the timeline or one bone's curves; these buttons move between them. */
-.editor-go {
+.app.desktop-workspace .timeline .editor-go {
   display: inline-flex;
   flex: none;
   align-items: center;
   gap: 4px;
-  height: 24px;
-  min-height: 24px;
   padding: 0 8px 0 6px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--canvas);
   color: var(--text);
-  font-size: 11px;
+  font-weight: 500;
 }
-.editor-go:hover:not(:disabled) {
-  border-color: var(--accent);
+.app.desktop-workspace .timeline .editor-go svg {
+  color: var(--accent);
 }
 .curve-channel-chips {
   display: flex;

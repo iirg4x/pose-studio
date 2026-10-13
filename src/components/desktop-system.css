@@ -1,0 +1,201 @@
+/* Desktop design system. One palette, one accent, one control scale for every desktop
+ * surface: title bar, panels, editors, time bar, menus and dialogs. Older sheets style
+ * through the shared tokens, so redefining them here moves the whole desktop at once;
+ * the primitives below replace the per-panel variants that grew over time. The tablet
+ * keeps its own values (everything here is scoped to the desktop workspace). */
+.app.desktop-workspace,
+.app.desktop-workspace ~ * {
+  /* Surfaces, darkest to lightest: recessed wells, app ground, panels, raised bars. */
+  --inset: #0e1218;
+  --canvas: #12171e;
+  --panel: #171d26;
+  --surface: var(--panel);
+  --raised: #1d2530;
+  --hover: #252e3a;
+  --line: #232b36;
+  --border: #2c3644;
+  /* Text: primary, secondary, muted. */
+  --text: #e3e9f1;
+  --secondary: #b9c3cf;
+  --muted: #7f8c9d;
+  /* The single accent: time, focus, selection. */
+  --accent: #5ed3ea;
+  --accent-ink: #06222a;
+  --selection: #243e49;
+  /* Scale. */
+  --ds-control: 24px;
+  --ds-inner: 20px;
+  --ds-radius: 4px;
+  --ds-radius-lg: 6px;
+  --ds-font: 12px;
+  --ds-font-sm: 11px;
+  --ds-font-xs: 10px;
+  --ds-shadow: 0 10px 28px #0000008c, 0 0 0 1px #00000066;
+}
+
+/* ---- Surfaces ---------------------------------------------------------------------- */
+.app.desktop-workspace .titlebar,
+.app.desktop-workspace .time-slider,
+.app.desktop-workspace .statusbar {
+  background: var(--canvas);
+}
+.app.desktop-workspace .titlebar {
+  border-bottom: 1px solid var(--line);
+}
+.app.desktop-workspace .time-slider {
+  border-top: 1px solid var(--line);
+}
+.app.desktop-workspace .statusbar {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+}
+.app.desktop-workspace .area-side,
+.app.desktop-workspace .area-side .inspector,
+.app.desktop-workspace .area-side .inspector-scroll {
+  background: var(--panel);
+}
+
+/* ---- Type -------------------------------------------------------------------------- */
+.app.desktop-workspace .area-side {
+  font-size: var(--ds-font);
+}
+.app.desktop-workspace .area-side :is(label, small, p) {
+  font-size: var(--ds-font-sm);
+}
+
+/* ---- Segmented controls: one look for every either/or choice ------------------------ */
+.app.desktop-workspace :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs) {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 2px;
+  height: var(--ds-control);
+  min-height: var(--ds-control);
+  padding: 1px;
+  border: 1px solid var(--line);
+  border-radius: var(--ds-radius);
+  background: var(--inset);
+  box-shadow: none;
+}
+.app.desktop-workspace
+  :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs)
+  > button {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-size: var(--ds-font-sm);
+  font-weight: 500;
+}
+.app.desktop-workspace
+  :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs)
+  > button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+.app.desktop-workspace
+  :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs)
+  > button[aria-pressed='true'] {
+  background: var(--selection);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* ---- Toggle buttons (independent on/off) share the pressed look ------------------- */
+.app.desktop-workspace .attachment-inherit button {
+  height: var(--ds-control);
+  min-height: var(--ds-control);
+  border: 1px solid var(--line);
+  border-radius: var(--ds-radius);
+  background: var(--inset);
+  color: var(--muted);
+  font-size: var(--ds-font-sm);
+}
+.app.desktop-workspace .attachment-inherit button[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: var(--selection);
+  color: var(--text);
+}
+
+/* ---- Command buttons in panels ----------------------------------------------------- */
+.app.desktop-workspace .area-side button.ground-key-command {
+  height: var(--ds-control);
+  min-height: var(--ds-control);
+  border: 1px solid var(--border);
+  border-radius: var(--ds-radius);
+  background: var(--raised);
+  color: var(--text);
+  font-size: var(--ds-font-sm);
+}
+.app.desktop-workspace .area-side button.ground-key-command:hover {
+  background: var(--hover);
+}
+
+/* ---- Fields ------------------------------------------------------------------------ */
+.app.desktop-workspace .area-side :is(input:not([type='range'], [type='checkbox']), select) {
+  height: var(--ds-control);
+  min-height: var(--ds-control);
+  border: 1px solid var(--line);
+  border-radius: var(--ds-radius);
+  background-color: var(--inset);
+  color: var(--text);
+  font-size: var(--ds-font);
+}
+.app.desktop-workspace :is(input, select, textarea):focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* ---- Property rows: one label column, left aligned, for every labelled control ---- */
+.app.desktop-workspace .area-side .property-row {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+.app.desktop-workspace .area-side .property-row > span {
+  color: var(--secondary);
+  text-align: left;
+}
+
+/* ---- Panel structure --------------------------------------------------------------- */
+.app.desktop-workspace .property-context-tabs {
+  background: var(--raised);
+  border-bottom: 1px solid var(--line);
+}
+.app.desktop-workspace .property-context-tabs button {
+  color: var(--muted);
+  font-size: var(--ds-font-sm);
+}
+.app.desktop-workspace
+  .property-context-tabs
+  button:is(.active, [aria-selected='true'], [aria-pressed='true']) {
+  color: var(--text);
+  box-shadow: inset 0 -2px var(--accent);
+}
+.app.desktop-workspace .property-section {
+  border-bottom: 1px solid var(--line);
+}
+.app.desktop-workspace .property-header {
+  color: var(--text);
+  font-size: var(--ds-font-sm);
+  font-weight: 600;
+}
+
+/* ---- Overlays: menus, popovers, dialogs -------------------------------------------- */
+.app.desktop-workspace
+  :is(.menubar-dropdown, .library-popover, .curve-view-menu, .track-options-menu),
+:is(.dialog, [role='dialog']):where(.app.desktop-workspace *) {
+  border: 1px solid var(--border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--raised);
+  box-shadow: var(--ds-shadow);
+}
+
+/* ---- Focus ------------------------------------------------------------------------- */
+.app.desktop-workspace :is(button, summary, [role='menuitem']):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
