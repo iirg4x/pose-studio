@@ -7,7 +7,6 @@ import { AttachmentPanel } from './AttachmentPanel';
 import { PropSettings } from './PropSettings';
 import type { AttachmentTarget } from '../scene/attachments';
 import type { LayerSpace } from '../core/layerSpaces';
-import { boneFollowing } from '../core/boneFollowing';
 import { ScrubNumber } from './ScrubNumber';
 import { LayerPanel } from './LayerPanel';
 import { PropertySection } from './PropertySection';
@@ -17,19 +16,17 @@ import { BodyBasePanel } from './BodyBasePanel';
 import { controlTint } from '../core/controlStyle';
 import type { CSSProperties } from 'react';
 import { useState } from 'react';
-import { Unlink, Hand, Bone, Layers, ChevronRight } from 'lucide-react';
-import { Euler, Quaternion } from 'three';
+import { Hand, Bone, Layers, ChevronRight } from 'lucide-react';
 import { useStudioChrome } from '../hooks';
 import { studio } from '../core/store';
 import { controlLabels, clone, limbMode, controlEnabled, evaluate } from '../core/model';
 import { CONTROLS, isOffsetControl, isBoneControl } from '../core/controls';
 import type { LimbId, LimbMode } from '../core/controls';
-import type { ControlId, ParentId, Pose, Q4, Interpolation, Project } from '../core/model';
+import type { Pose, Interpolation, Project } from '../core/model';
 export function Inspector({
   runtime,
   thumbs,
   switchLimb,
-  setBoneFollowing,
   attach,
   pick,
 }: {
@@ -37,7 +34,6 @@ export function Inspector({
   attach: (target: AttachmentTarget, position: boolean, rotation: boolean) => void;
   pick: () => void;
   thumbs: string[];
-  setBoneFollowing: (position: boolean, rotation: boolean) => void;
   switchLimb: (limb: LimbId, mode: LimbMode) => void;
 }) {
   const s = useStudioChrome({ edits: 'live' }),
@@ -62,13 +58,10 @@ export function Inspector({
     id = s.selected,
     hand = id.startsWith('hand'),
     body = isOffsetControl(id),
-    parent = studio.parent(),
     definition = CONTROLS[id],
     enabled = controlEnabled(s.project, id, s.frame),
     limb = definition.limb,
     activeLayer = activeAnimationLayer(s.project);
-  const following = boneFollowing(s.project, s.frame)[id];
-  const layerOffset = !!s.project.tracks[id].additive;
   const edit = (value: Pose) => (body ? studio.editRaw(id, value) : studio.editWorld(id, value));
   const grip = (index: number, value: number) => {
     const next = clone(p);

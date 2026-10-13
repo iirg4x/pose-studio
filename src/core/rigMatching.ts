@@ -1,5 +1,5 @@
 import { keyingFrame } from './layers';
-import { Matrix4, Quaternion, Vector3 } from 'three';
+import { Matrix4, Vector3 } from 'three';
 import { clone, evaluate, fromMatrix, limbMode, pose, putKey, rawForWorld } from './model';
 import type { ControlId, LimbId, LimbMode, Pose, Project, Q4, V3 } from './model';
 import type { MannyRig } from '../scene/rig';

@@ -534,7 +534,9 @@ export class ProportionalRig extends MannyRig {
     frame: number,
     config: RetargetCharacter,
     referencePose = false,
-    sceneTransform = new T.Matrix4(),
+    // shortcut: callers pass the first-person camera delta, but sampling does not use it yet;
+    // preview and export agree. Apply it here if retargeted arms drift from the camera.
+    _sceneTransform = new T.Matrix4(),
   ) {
     if (this.referenceRig !== source || this.referenceRevision !== source.motionRevision) {
       this.referenceRig = source;

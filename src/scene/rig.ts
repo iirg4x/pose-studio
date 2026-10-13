@@ -1,6 +1,6 @@
 import { measureFoot, footControlShape } from './footControls';
 import type { FootGeometry, FootPivot } from './footControls';
-import { prepareSkinRoot, skinWeightFor } from './skinInfluences';
+import { prepareSkinRoot } from './skinInfluences';
 import { MeshGrounding } from './meshGrounding';
 import type { ControllerConstraints } from '../core/controllerConstraints';
 import * as T from 'three';

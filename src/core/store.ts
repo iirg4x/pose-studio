@@ -22,9 +22,9 @@ import { controllerConstraints, validateControllerConstraints } from './controll
 import type { ControllerConstraint } from './controllerConstraints';
 import { copyPoseTracks } from './poseEdits';
 import { readPreference, readRecovery, RECOVERY, isTouch as isAndroid } from '../platform/storage';
-import { blankProject, hydratePropTracks, projectProps, isProp } from './assets';
+import { blankProject, hydratePropTracks, projectProps } from './assets';
 import type { PropAsset } from './assets';
-import { registerPropControl, CONTROLS } from './controls';
+import { registerPropControl } from './controls';
 import type { RetargetCharacter } from './retarget';
 import type { TransformOrientation, TransformPivot } from '../scene/transformOptions';
 import {

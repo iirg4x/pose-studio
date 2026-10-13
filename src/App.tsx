@@ -474,9 +474,6 @@ export default function App() {
       }
       pick={() => runtime.current?.pickAttachment()}
       thumbs={thumbs}
-      setBoneFollowing={(position, rotation) =>
-        runtime.current?.setBoneFollowing(position, rotation)
-      }
       switchLimb={(limb, mode) => runtime.current?.switchLimb(limb, mode)}
     />
   );

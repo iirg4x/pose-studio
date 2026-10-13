@@ -3,17 +3,14 @@ import { validateFolder } from './animationFolders';
 import { inferPoseLinks } from '../../shared/pose-links.mjs';
 import { refreshPoseLinks } from './poseReferences';
 import { registerPropControl } from './controls';
-import { hydratePropTracks, projectProps } from './assets';
+import { projectProps } from './assets';
 import { validateCharacters } from './retarget';
 import type { RetargetCharacter } from './retarget';
 import { keyingFrame } from './layers';
-import { Matrix4 } from 'three';
 import {
-  activeSpace,
   controlParent,
   clone,
   evaluate,
-  fromMatrix,
   IDS,
   matrix,
   putKey,
@@ -21,7 +18,6 @@ import {
   validateProject,
   visibleControls,
   limbMode,
-  forLayer,
 } from './model';
 import type { LimbId, LimbMode } from './model';
 import type { ControlId, Pose, Project, RigLayer, ProjectValidationOptions } from './model';

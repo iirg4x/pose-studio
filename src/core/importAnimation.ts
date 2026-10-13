@@ -4,7 +4,7 @@ import type { MotionTolerance } from './sparseMotion';
 import { blankProject } from './assets';
 import { BONE_CONTROLS, CONTROLS } from './controls';
 import { clone, pose, fromMatrix, CAMERA_REFERENCE } from './model';
-import type { ControlId, Key, Project, Q4, RigLayer, V3 } from './model';
+import type { ControlId, Project, Q4, RigLayer, V3 } from './model';
 import type { MannyRig } from '../scene/rig';
 export interface AnimationInspection {
   token: string;

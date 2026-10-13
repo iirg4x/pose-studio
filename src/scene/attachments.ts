@@ -1,14 +1,14 @@
 import { controllerConstraints } from '../core/controllerConstraints';
-import { Bone, Matrix4, Quaternion, Vector3 } from 'three';
+import { Bone, Matrix4, Vector3 } from 'three';
 import { CONTROLS, isBoneControl } from '../core/controls';
-import { IDS, matrix, fromMatrix, rootChild, controlEnabled, controlParent } from '../core/model';
-import type { ControlId, Pose, Project, Q4, V3 } from '../core/model';
+import { IDS, matrix, fromMatrix, rootChild } from '../core/model';
+import type { ControlId, Pose, Project } from '../core/model';
 import { boneFollowing, followedBone, unfollowedBone } from '../core/boneFollowing';
 import type { BoneFollowing } from '../core/boneFollowing';
 import type { MannyRig } from './rig';
 
 export type AttachmentTarget = ControlId | 'world' | 'native';
-export const boneControl = (rig: MannyRig, name: string): ControlId | undefined =>
+export const boneControl = (name: string): ControlId | undefined =>
   IDS.find((id) => CONTROLS[id].bone === name && isBoneControl(id)) ??
   IDS.find((id) => CONTROLS[id].bone === name);
 export function controlWorld(rig: MannyRig, values: Record<ControlId, Pose>, id: ControlId) {
@@ -51,7 +51,7 @@ export class AttachmentSolver {
       if (bone) {
         let parent = bone.parent;
         while (parent instanceof Bone) {
-          const control = boneControl(rig, parent.name);
+          const control = boneControl(parent.name);
           if (control && control !== id) resolve(control);
           parent = parent.parent;
         }

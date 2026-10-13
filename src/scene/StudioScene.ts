@@ -50,7 +50,6 @@ import {
   fromMatrix,
   IDS,
   matrix,
-  pose,
   forLayer,
   layerFrame,
   CAMERA_REFERENCE,
@@ -58,7 +57,6 @@ import {
   controlEnabled,
   controlLabel,
   clone,
-  activeSpace,
   controlParent,
 } from '../core/model';
 import type { ControlId, Pose, Project, Q4, V3 } from '../core/model';
@@ -329,7 +327,6 @@ export class StudioScene {
   private lastPlaybackSeek = -1;
   private lastPlaybackClip = '';
   private lastSelected = '';
-  private lastMode = '';
   private lastLayer = '';
   private trailKey = '';
   private trailJob?: {
@@ -854,8 +851,7 @@ export class StudioScene {
     this.previewCharacter?.updateParts(c);
   }
   private syncRetarget() {
-    const s = this.store.state,
-      c = this.currentCharacter(),
+    const c = this.currentCharacter(),
       asset = c?.asset ?? '';
     if (asset === this.targetAsset) return;
     this.targetAsset = asset;
@@ -1277,31 +1273,6 @@ export class StudioScene {
       this.store.patch({ message: (e as Error).message });
       this.apply(s.frame);
     }
-  }
-  setBoneFollowing(position: boolean, rotation: boolean) {
-    const state = this.store.state,
-      id = state.selected;
-    if (
-      !state.project ||
-      state.project.editing !== 'body' ||
-      !isBoneControl(id) ||
-      !this.store.canEditLayer(id) ||
-      !controlEnabled(state.project, id, state.frame)
-    )
-      return;
-    const next = clone(state.project);
-    for (const [control, value] of Object.entries(state.drafts))
-      putKey(next.tracks[control as ControlId], keyingFrame(next, state.frame), value!);
-    this.apply(state.frame, next);
-    const event = this.bodyRig!.captureFollowing(id, state.frame, position, rotation),
-      track = next.tracks[id];
-    track.following = (track.following ?? [])
-      .filter((k) => k.frame !== state.frame)
-      .concat(event)
-      .sort((a, b) => a.frame - b.frame);
-    this.store.commit(next, 'Bone following keyed at frame ' + state.frame);
-    this.store.patch({ drafts: {} });
-    this.apply(state.frame);
   }
   switchLimb(limb: LimbId, mode: LimbMode) {
     const s = this.store.state;
@@ -2366,7 +2337,7 @@ export class StudioScene {
       r.h,
       x - r.x,
       y - r.y,
-      (id) => !!this.store.state.project,
+      () => !!this.store.state.project,
     );
   }
   private pointerUp = (e: PointerEvent) => {
@@ -2412,10 +2383,7 @@ export class StudioScene {
             for (let k = 0; k < 4; k++)
               if (weight.getComponent(vertex, k) > largest) {
                 largest = weight.getComponent(vertex, k);
-                id = boneControl(
-                  this.bodyRig!,
-                  mesh.skeleton.bones[index.getComponent(vertex, k)].name,
-                );
+                id = boneControl(mesh.skeleton.bones[index.getComponent(vertex, k)].name);
               }
         }
       }
@@ -3136,8 +3104,7 @@ export class StudioScene {
       ).toArray();
     for (let f = range.start; f <= range.end; f++) {
       this.apply(f, project, false);
-      const v = evaluate(forLayer(project, 'firstPerson'), layerFrame(project, 'firstPerson', f)),
-        body = evaluate(forLayer(project, 'body'), layerFrame(project, 'body', f));
+      const v = evaluate(forLayer(project, 'firstPerson'), layerFrame(project, 'firstPerson', f));
       const exportBody =
           project.motionRig && this.previewCharacter ? this.previewCharacter.body : this.bodyRig!,
         exportFirst =
