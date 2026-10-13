@@ -1,0 +1,267 @@
+/* Pose design system, shared by desktop and tablet. One palette, one accent and one look
+ * for every control kind. Older sheets style through these tokens, so defining them here
+ * moves the whole app at once. This sheet sets appearance only: sizes, touch targets and
+ * layout stay with each workspace (components/desktop-system.css for the desktop, tablet.css
+ * for touch), so the tablet keeps its interactions while matching the desktop's design. */
+:root {
+  /* Surfaces, darkest to lightest: recessed wells, app ground, panels, raised bars. */
+  --inset: #0e1218;
+  --canvas: #12171e;
+  --panel: #171d26;
+  --surface: var(--panel);
+  --raised: #1d2530;
+  --hover: #252e3a;
+  --line: #232b36;
+  --border: #2c3644;
+  /* Text: primary, secondary, muted. */
+  --text: #e3e9f1;
+  --secondary: #b9c3cf;
+  --muted: #7f8c9d;
+  /* The single accent: time, focus, selection. */
+  --accent: #5ed3ea;
+  --accent-ink: #06222a;
+  --selection: #243e49;
+  --ds-radius: 4px;
+  --ds-radius-lg: 6px;
+  --ds-shadow: 0 10px 28px #0000008c, 0 0 0 1px #00000066;
+}
+
+/* ---- Segmented controls: one look for every either/or choice ------------------------ */
+:root .app :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs) {
+  border: 1px solid var(--line);
+  border-radius: var(--ds-radius);
+  background: var(--inset);
+  box-shadow: none;
+}
+:root .app :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs) > button {
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+}
+:root
+  .app
+  :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs)
+  > button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+:root
+  .app
+  :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs)
+  > button[aria-pressed='true'] {
+  background: var(--selection);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* ---- Toggle buttons (independent on/off) share the pressed look ------------------- */
+:root .app .attachment-inherit button {
+  border: 1px solid var(--line);
+  border-radius: var(--ds-radius);
+  background: var(--inset);
+  color: var(--muted);
+}
+:root .app .attachment-inherit button[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: var(--selection);
+  color: var(--text);
+}
+
+/* ---- Command buttons in panels ----------------------------------------------------- */
+:root .app button.ground-key-command {
+  border: 1px solid var(--border);
+  border-radius: var(--ds-radius);
+  background: var(--raised);
+  color: var(--text);
+}
+:root .app button.ground-key-command:hover {
+  background: var(--hover);
+}
+
+/* ---- Fields ------------------------------------------------------------------------ */
+:root
+  .app
+  :is(.properties-editor, .inspector)
+  :is(input:not([type='range'], [type='checkbox']), select) {
+  border: 1px solid var(--line);
+  border-radius: var(--ds-radius);
+  background-color: var(--inset);
+  color: var(--text);
+}
+:root .app :is(input, select, textarea):focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* ---- Panel structure --------------------------------------------------------------- */
+:root .app .property-context-tabs {
+  background: var(--raised);
+  border-bottom: 1px solid var(--line);
+}
+:root .app .property-context-tabs button {
+  color: var(--muted);
+}
+:root
+  .app
+  .property-context-tabs
+  button:is(.active, [aria-selected='true'], [aria-pressed='true']) {
+  color: var(--text);
+  box-shadow: inset 0 -2px var(--accent);
+}
+:root .app .property-section {
+  border-bottom: 1px solid var(--line);
+}
+:root .app .property-header {
+  color: var(--text);
+  font-weight: 600;
+}
+:root .app .property-row > span {
+  color: var(--secondary);
+}
+
+/* ---- Overlays: menus, popovers, dialogs, sheets ------------------------------------ */
+:root
+  .app
+  :is(
+    .menubar-dropdown,
+    .transform-popover,
+    .active-layer-menu,
+    .library-popover,
+    .curve-view-menu,
+    .track-options-menu,
+    .file-menu
+  ),
+:root .app :is(.dialog, [role='dialog']) {
+  border: 1px solid var(--border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--raised);
+  box-shadow: var(--ds-shadow);
+}
+/* Menus carry no heading label; the trigger already names them. */
+:root .app :is(.transform-popover h4, .active-layer-menu > header) {
+  display: none;
+}
+:root .app :is(.transform-popover, .active-layer-menu) button {
+  border: 0;
+  border-radius: var(--ds-radius);
+  background: none;
+  color: var(--text);
+  font-weight: 400;
+  text-align: left;
+}
+:root .app :is(.transform-popover, .active-layer-menu) button > svg:first-child {
+  color: var(--secondary);
+}
+:root .app :is(.transform-popover, .active-layer-menu) button > svg:last-child:not(:first-child) {
+  color: var(--accent);
+}
+:root .app :is(.transform-popover, .active-layer-menu) button small {
+  color: var(--muted);
+}
+:root .app :is(.transform-popover, .active-layer-menu) button:is(:hover, :focus-visible) {
+  background: var(--selection);
+  outline: none;
+}
+:root .app .transform-popover button[aria-checked='true'],
+:root .app .active-layer-menu > button[aria-pressed='true'] {
+  background: none;
+  box-shadow: none;
+  color: var(--text);
+}
+:root .app .transform-popover .cursor-reset,
+:root .app .active-layer-menu > footer {
+  border-top: 1px solid var(--border);
+}
+:root .app .transform-popover .cursor-reset,
+:root .app .active-layer-menu > footer button {
+  color: var(--secondary);
+}
+
+/* ---- Export choices: icon and text read left to right like every other list -------- */
+:root .app .android-export-options button {
+  justify-content: flex-start;
+  border-radius: var(--ds-radius-lg);
+  text-align: left;
+}
+
+/* ---- Focus ------------------------------------------------------------------------- */
+:root .app :is(button, summary, [role='menuitem']):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* ---- Touch: the same look on the tablet's floating surfaces ------------------------
+ * Layout, sizes and touch targets stay in tablet.css; this only aligns appearance. */
+:root.android
+  .app
+  :is(
+    .titlebar,
+    .touch-view-toggle,
+    .touch-pose-rail,
+    .touch-panel-rail,
+    .selection-pose-tools,
+    .touch-transport,
+    .tablet-sheet
+  ) {
+  border-color: var(--touch-divider);
+  border-radius: 12px;
+  background: var(--panel);
+}
+/* Panel titles are headings inside the panel, as on the desktop, not tabs on its edge. */
+:root.android .app .tablet-sheet > header {
+  position: relative;
+  inset: auto;
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+:root.android .app .tablet-sheet > header h2 {
+  position: static;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  transform: none;
+}
+:root.android .app :is(.touch-settings h3, .control-list header > .context-flair) {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+:root.android .app .active-layer-trigger .attached-flair {
+  display: none;
+}
+/* Either/or tiles use the segmented pressed look. */
+:root.android .app .touch-setting-pair button {
+  border: 1px solid var(--line);
+  background: var(--inset);
+  color: var(--secondary);
+}
+:root.android .app .touch-setting-pair button:is([aria-pressed='true'], .active) {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: var(--selection);
+  color: var(--text);
+}
+/* Per-control visibility: a quiet icon toggle, as in the desktop's lists. */
+:root .app .control-eye {
+  background: transparent;
+  color: var(--muted);
+}
+:root .app .control-eye:hover {
+  background: var(--hover);
+  color: var(--text);
+}

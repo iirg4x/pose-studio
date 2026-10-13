@@ -1,36 +1,11 @@
-/* Desktop design system. One palette, one accent, one control scale for every desktop
- * surface: title bar, panels, editors, time bar, menus and dialogs. Older sheets style
- * through the shared tokens, so redefining them here moves the whole desktop at once;
- * the primitives below replace the per-panel variants that grew over time. The tablet
- * keeps its own values (everything here is scoped to the desktop workspace). */
+/* Desktop sizes and layout on top of the shared design system (src/design-system.css):
+ * one control scale for the title bar, panels and menus, compact for mouse use. Colours
+ * and control looks come from the shared sheet, so desktop and tablet match. */
 .app.desktop-workspace,
 .app.desktop-workspace ~ * {
-  /* Surfaces, darkest to lightest: recessed wells, app ground, panels, raised bars. */
-  --inset: #0e1218;
-  --canvas: #12171e;
-  --panel: #171d26;
-  --surface: var(--panel);
-  --raised: #1d2530;
-  --hover: #252e3a;
-  --line: #232b36;
-  --border: #2c3644;
-  /* Text: primary, secondary, muted. */
-  --text: #e3e9f1;
-  --secondary: #b9c3cf;
-  --muted: #7f8c9d;
-  /* The single accent: time, focus, selection. */
-  --accent: #5ed3ea;
-  --accent-ink: #06222a;
-  --selection: #243e49;
-  /* Scale. */
   --ds-control: 24px;
-  --ds-inner: 20px;
-  --ds-radius: 4px;
-  --ds-radius-lg: 6px;
   --ds-font: 12px;
   --ds-font-sm: 11px;
-  --ds-font-xs: 10px;
-  --ds-shadow: 0 10px 28px #0000008c, 0 0 0 1px #00000066;
 }
 
 /* ---- Surfaces ---------------------------------------------------------------------- */
@@ -63,7 +38,7 @@
   font-size: var(--ds-font-sm);
 }
 
-/* ---- Segmented controls: one look for every either/or choice ------------------------ */
+/* ---- Control scale ----------------------------------------------------------------- */
 .app.desktop-workspace :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs) {
   display: inline-flex;
   align-items: stretch;
@@ -71,10 +46,6 @@
   height: var(--ds-control);
   min-height: var(--ds-control);
   padding: 1px;
-  border: 1px solid var(--line);
-  border-radius: var(--ds-radius);
-  background: var(--inset);
-  box-shadow: none;
 }
 .app.desktop-workspace
   :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs)
@@ -83,72 +54,19 @@
   height: auto;
   min-height: 0;
   padding: 0 10px;
-  border: 0;
-  border-radius: 3px;
-  background: transparent;
-  box-shadow: none;
-  color: var(--muted);
   font-size: var(--ds-font-sm);
   font-weight: 500;
 }
-.app.desktop-workspace
-  :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs)
-  > button:hover:not(:disabled) {
-  background: var(--hover);
-  color: var(--text);
-}
-.app.desktop-workspace
-  :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs)
-  > button[aria-pressed='true'] {
-  background: var(--selection);
-  color: var(--text);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
-}
-
-/* ---- Toggle buttons (independent on/off) share the pressed look ------------------- */
-.app.desktop-workspace .attachment-inherit button {
-  height: var(--ds-control);
-  min-height: var(--ds-control);
-  border: 1px solid var(--line);
-  border-radius: var(--ds-radius);
-  background: var(--inset);
-  color: var(--muted);
-  font-size: var(--ds-font-sm);
-}
-.app.desktop-workspace .attachment-inherit button[aria-pressed='true'] {
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
-  background: var(--selection);
-  color: var(--text);
-}
-
-/* ---- Command buttons in panels ----------------------------------------------------- */
+.app.desktop-workspace .attachment-inherit button,
 .app.desktop-workspace .area-side button.ground-key-command {
   height: var(--ds-control);
   min-height: var(--ds-control);
-  border: 1px solid var(--border);
-  border-radius: var(--ds-radius);
-  background: var(--raised);
-  color: var(--text);
   font-size: var(--ds-font-sm);
 }
-.app.desktop-workspace .area-side button.ground-key-command:hover {
-  background: var(--hover);
-}
-
-/* ---- Fields ------------------------------------------------------------------------ */
 .app.desktop-workspace .area-side :is(input:not([type='range'], [type='checkbox']), select) {
   height: var(--ds-control);
   min-height: var(--ds-control);
-  border: 1px solid var(--line);
-  border-radius: var(--ds-radius);
-  background-color: var(--inset);
-  color: var(--text);
   font-size: var(--ds-font);
-}
-.app.desktop-workspace :is(input, select, textarea):focus-visible {
-  border-color: var(--accent);
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 /* ---- Property rows: one label column, left aligned, for every labelled control ---- */
@@ -156,54 +74,11 @@
   grid-template-columns: 72px minmax(0, 1fr);
 }
 .app.desktop-workspace .area-side .property-row > span {
-  color: var(--secondary);
   text-align: left;
 }
-
-/* ---- Panel structure --------------------------------------------------------------- */
-.app.desktop-workspace .property-context-tabs {
-  background: var(--raised);
-  border-bottom: 1px solid var(--line);
-}
-.app.desktop-workspace .property-context-tabs button {
-  color: var(--muted);
-  font-size: var(--ds-font-sm);
-}
-.app.desktop-workspace
-  .property-context-tabs
-  button:is(.active, [aria-selected='true'], [aria-pressed='true']) {
-  color: var(--text);
-  box-shadow: inset 0 -2px var(--accent);
-}
-.app.desktop-workspace .property-section {
-  border-bottom: 1px solid var(--line);
-}
+.app.desktop-workspace .property-context-tabs button,
 .app.desktop-workspace .property-header {
-  color: var(--text);
   font-size: var(--ds-font-sm);
-  font-weight: 600;
-}
-
-/* ---- Overlays: menus, popovers, dialogs -------------------------------------------- */
-.app.desktop-workspace
-  :is(
-    .menubar-dropdown,
-    .transform-popover,
-    .library-popover,
-    .curve-view-menu,
-    .track-options-menu
-  ),
-:is(.dialog, [role='dialog']):where(.app.desktop-workspace *) {
-  border: 1px solid var(--border);
-  border-radius: var(--ds-radius-lg);
-  background: var(--raised);
-  box-shadow: var(--ds-shadow);
-}
-
-/* ---- Focus ------------------------------------------------------------------------- */
-.app.desktop-workspace :is(button, summary, [role='menuitem']):focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
 }
 
 /* ---- Transform orientation and pivot: dropdowns and menus like the menu bar's ------ */
@@ -221,11 +96,7 @@
 .app.desktop-workspace
   .titlebar
   .transform-options
-  > :is(.orientation-trigger, .pivot-trigger):hover,
-.app.desktop-workspace
-  .titlebar
-  .transform-options
-  > :is(.orientation-trigger, .pivot-trigger)[aria-expanded='true'] {
+  > :is(.orientation-trigger, .pivot-trigger):is(:hover, [aria-expanded='true']) {
   border-color: var(--border);
   background: var(--hover);
 }
@@ -243,9 +114,6 @@
   right: 0;
   left: auto;
 }
-.app.desktop-workspace .titlebar .transform-popover h4 {
-  display: none;
-}
 .app.desktop-workspace .titlebar .transform-popover button {
   display: grid;
   grid-template-columns: 18px 1fr 14px;
@@ -255,44 +123,19 @@
   min-height: 26px;
   margin: 0;
   padding: 0 8px 0 4px;
-  border: 0;
-  border-radius: var(--ds-radius);
-  background: none;
-  color: var(--text);
   font-size: var(--ds-font);
-  font-weight: 400;
-  text-align: left;
 }
 .app.desktop-workspace .titlebar .transform-popover button > svg:first-child {
   justify-self: center;
-  color: var(--secondary);
 }
-.app.desktop-workspace .titlebar .transform-popover button > svg:last-child:not(:first-child) {
-  color: var(--accent);
-}
+/* One line per item; the description is the item's tooltip. */
 .app.desktop-workspace .titlebar .transform-popover button small {
   display: none;
-}
-.app.desktop-workspace .titlebar .transform-popover button:is(:hover, :focus-visible) {
-  background: var(--selection);
-  outline: none;
-}
-.app.desktop-workspace .titlebar .transform-popover button[aria-checked='true'] {
-  background: none;
-  color: var(--text);
-}
-.app.desktop-workspace
-  .titlebar
-  .transform-popover
-  button[aria-checked='true']:is(:hover, :focus-visible) {
-  background: var(--selection);
 }
 .app.desktop-workspace .titlebar .transform-popover .cursor-reset {
   grid-template-columns: 18px 1fr;
   margin-top: 4px;
-  border-top: 1px solid var(--border);
   border-radius: 0 0 var(--ds-radius) var(--ds-radius);
-  color: var(--secondary);
 }
 .app.desktop-workspace .titlebar .transform-popover .cursor-reset > svg {
   justify-self: center;
@@ -314,9 +157,6 @@
   width: 260px;
   padding: 4px;
 }
-.app.desktop-workspace .titlebar .active-layer-menu > header {
-  display: none;
-}
 .app.desktop-workspace .titlebar .active-layer-menu > button {
   display: grid;
   grid-template-columns: 18px 1fr 16px;
@@ -326,20 +166,11 @@
   height: auto;
   min-height: 0;
   padding: 5px 8px 5px 4px;
-  border: 0;
-  border-radius: var(--ds-radius);
-  background: none;
-  color: var(--text);
-  text-align: left;
 }
 .app.desktop-workspace .titlebar .active-layer-menu > button > svg:first-child {
   justify-self: center;
   width: 15px;
   height: 15px;
-  color: var(--secondary);
-}
-.app.desktop-workspace .titlebar .active-layer-menu > button > svg:last-child:not(:first-child) {
-  color: var(--accent);
 }
 .app.desktop-workspace .titlebar .active-layer-menu > button span {
   display: grid;
@@ -355,25 +186,12 @@
   white-space: nowrap;
 }
 .app.desktop-workspace .titlebar .active-layer-menu > button small {
-  color: var(--muted);
   font-size: var(--ds-font-sm);
-}
-.app.desktop-workspace .titlebar .active-layer-menu > button:is(:hover, :focus-visible) {
-  background: var(--selection);
-  outline: none;
-}
-.app.desktop-workspace .titlebar .active-layer-menu > button[aria-pressed='true'] {
-  background: none;
-  box-shadow: none;
-}
-.app.desktop-workspace .titlebar .active-layer-menu > button[aria-pressed='true']:hover {
-  background: var(--selection);
 }
 .app.desktop-workspace .titlebar .active-layer-menu > footer {
   display: grid;
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px solid var(--border);
 }
 .app.desktop-workspace .titlebar .active-layer-menu > footer button {
   display: grid;
@@ -383,21 +201,12 @@
   height: 26px;
   min-height: 26px;
   padding: 0 8px 0 4px;
-  border: 0;
-  border-radius: var(--ds-radius);
-  background: none;
-  color: var(--secondary);
   font-size: var(--ds-font);
-  text-align: left;
 }
 .app.desktop-workspace .titlebar .active-layer-menu > footer button svg {
   justify-self: center;
   width: 15px;
   height: 15px;
-}
-.app.desktop-workspace .titlebar .active-layer-menu > footer button:hover {
-  background: var(--selection);
-  color: var(--text);
 }
 
 /* ---- Title bar at narrower widths: labels give way to icons, nothing overlaps ------- */
@@ -431,12 +240,8 @@
   }
 }
 
-/* ---- Export choices: icon and text read left to right like every other list -------- */
-.app.desktop-workspace ~ * .android-export-options button,
+/* ---- Export choices ---------------------------------------------------------------- */
 .app.desktop-workspace .android-export-options button {
-  justify-content: flex-start;
   gap: 14px;
   padding: 14px 16px;
-  border-radius: var(--ds-radius-lg);
-  text-align: left;
 }
