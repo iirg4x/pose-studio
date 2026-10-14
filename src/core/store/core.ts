@@ -1,5 +1,4 @@
 import { DisplayClock } from '../displayClock';
-import { isTouch } from '../../platform/storage';
 import type { TimelineFilter } from '../timelineChannels';
 import type { FootPivot } from '../../scene/footControls';
 import { mirrorDriver, preserveMirrorTargets } from '../liveMirror';
@@ -78,7 +77,7 @@ export abstract class StoreCore {
     multiSelect: false,
     boxSelection: null,
     interacting: false,
-    timelineFilter: isTouch ? 'selected' : 'animated',
+    timelineFilter: 'selected',
     retargetMode: false,
     retargetRest: false,
     retargetCompare: false,

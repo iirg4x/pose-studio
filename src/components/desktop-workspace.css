@@ -1,45 +1,4 @@
-/* Desktop animator layout. Tablet keeps its own workspace (tablet.css). */
-.app.desktop-workspace,
-.app.desktop-workspace.curves-open,
-.app.desktop-workspace:not(.curves-open) {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: 32px minmax(0, 1fr) 20px;
-  min-width: 800px;
-}
-.app.desktop-workspace > .titlebar {
-  grid-row: 1;
-  grid-column: 1;
-  gap: 8px;
-  padding: 0 8px;
-}
-.app.desktop-workspace > .statusbar {
-  grid-row: 3;
-  grid-column: 1;
-}
-
-.animate-layout {
-  --area-header: 26px;
-  grid-row: 2;
-  grid-column: 1;
-  display: grid;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  grid-template-columns: minmax(0, 1fr) 4px var(--side-width);
-  grid-template-rows: minmax(120px, 1fr) 4px var(--editors-height) 28px;
-  grid-template-areas:
-    'view split-side side'
-    'split-editors split-side side'
-    'editors split-side side'
-    'slider slider slider';
-  background: var(--line);
-}
-.animate-layout[data-side='false'] {
-  grid-template-columns: minmax(0, 1fr) 0 0;
-}
-.animate-layout[data-editors='false'] {
-  grid-template-rows: minmax(120px, 1fr) 0 0 28px;
-}
+/* Desktop overlays share one scene-sized containing block. */
 .area {
   position: relative;
   min-width: 0;
@@ -49,18 +8,9 @@
   overflow: hidden;
   background: var(--panel);
 }
-.area-viewport {
-  grid-area: view;
-}
 .area-viewport > .viewport {
   flex: 1;
   min-height: 0;
-}
-.area-editors {
-  grid-area: editors;
-}
-.area-side {
-  grid-area: side;
 }
 .area-splitter {
   touch-action: none;
@@ -72,16 +22,14 @@
   outline: none;
 }
 .split-editors {
-  grid-area: split-editors;
   cursor: ns-resize;
 }
 .split-side {
-  grid-area: split-side;
   cursor: ew-resize;
 }
 
 /* Title bar: tools on the left; animation, layer and panel toggles on the right. */
-.titlebar .title-spacer:has(.desktop-tools) {
+.titlebar .title-spacer:has(.desktop-context-cluster) {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -89,29 +37,34 @@
   min-width: 0;
 }
 .desktop-tools,
-.desktop-panel-nav {
+.desktop-panel-nav,
+.desktop-utilities,
+.desktop-context-cluster {
   display: flex;
   align-items: center;
-  gap: 1px;
+  gap: 8px;
   min-width: 0;
   -webkit-app-region: no-drag;
 }
 .desktop-tools > i,
-.desktop-panel-nav > i {
+.desktop-panel-nav > i,
+.desktop-utilities > i {
   width: 1px;
   height: 16px;
   margin: 0 5px;
   background: var(--border);
 }
 .titlebar .desktop-tools button,
-.titlebar .desktop-panel-nav button {
+.titlebar .desktop-panel-nav button,
+.titlebar .desktop-utilities button {
   height: 24px;
   min-height: 24px;
   padding: 3px 5px;
   border-radius: 4px;
 }
 .desktop-tools button[aria-pressed='true'],
-.desktop-panel-nav button[aria-pressed='true'] {
+.desktop-panel-nav button[aria-pressed='true'],
+.desktop-utilities button[aria-pressed='true'] {
   background: var(--selection);
   color: var(--cyan);
 }
@@ -135,7 +88,7 @@
   display: none;
 }
 .area-viewport .pose-view-label {
-  top: 8px;
+  display: none;
 }
 .area-viewport .preview-border {
   top: 28px;
@@ -146,8 +99,9 @@
 
 /* Side column: icon tabs are the header. */
 .side-content {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
+  max-height: calc(100vh - 152px);
   display: flex;
   flex-direction: column;
   overflow: auto;
@@ -156,7 +110,8 @@
 .side-content > .inspector,
 .side-content > .character-panel {
   width: 100%;
-  height: 100%;
+  height: auto;
+  max-height: inherit;
   min-height: 0;
   flex: 1;
   border: 0;
@@ -333,57 +288,6 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 15%, transparent);
 }
 
-@media (max-width: 1100px) {
-  .desktop-clip-trigger {
-    max-width: 120px;
-  }
-
-  /* The title bar has two jobs at this width: project navigation and animator
-   * tools. Keep both rows readable instead of letting the flex item for the
-   * transform tools overflow into the animation controls. The second row gets
-   * the full window width, so orientation, pivot, undo/redo, action switching,
-   * the active layer and the animation picker remain direct controls. */
-  .app.desktop-workspace,
-  .app.desktop-workspace.curves-open,
-  .app.desktop-workspace:not(.curves-open) {
-    grid-template-rows: 56px minmax(0, 1fr) 20px;
-  }
-  .app.desktop-workspace > .titlebar {
-    display: grid;
-    grid-template-columns: auto auto auto minmax(0, 1fr);
-    grid-template-rows: 32px 24px;
-    column-gap: 8px;
-    row-gap: 0;
-    align-content: stretch;
-  }
-  .app.desktop-workspace > .titlebar > .brand-mark {
-    grid-column: 1;
-    grid-row: 1;
-  }
-  .app.desktop-workspace > .titlebar > .menubar {
-    grid-column: 2;
-    grid-row: 1;
-  }
-  .app.desktop-workspace > .titlebar > .workspace-tabs {
-    grid-column: 3;
-    grid-row: 1;
-  }
-  .app.desktop-workspace > .titlebar > .save-indicator {
-    grid-column: 4;
-    grid-row: 1;
-    justify-self: start;
-  }
-  .app.desktop-workspace > .titlebar > .title-spacer {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    width: auto;
-    min-width: 0;
-  }
-  .app.desktop-workspace > .titlebar .desktop-tools,
-  .app.desktop-workspace > .titlebar .desktop-panel-nav {
-    flex-shrink: 0;
-  }
-}
 .delete-animation-dialog {
   width: 420px;
   max-width: calc(100vw - 32px);
@@ -429,13 +333,341 @@
   color: var(--red);
 }
 
-/* Density: animator tools use flat sections, 24px rows and 11px text. */
+/* ---- Full-screen scene shell -------------------------------------------------------
+ * The scene owns the window. Editors and inspectors are overlays, so opening them
+ * never changes the canvas box or camera aspect. This block supersedes the legacy
+ * grid geometry above while retaining its component-level density rules. */
+.app.desktop-workspace,
+.app.desktop-workspace.curves-open,
+.app.desktop-workspace:not(.curves-open) {
+  position: relative;
+  display: block;
+  min-width: 800px;
+  overflow: hidden;
+  background: var(--canvas);
+}
+
+.app.desktop-workspace > .titlebar {
+  position: absolute;
+  z-index: 70;
+  inset: 12px 12px auto;
+  display: flex;
+  width: auto;
+  height: 40px;
+  min-height: 40px;
+  gap: 8px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
+.app.desktop-workspace > .titlebar > *,
+.app.desktop-workspace > .titlebar .desktop-tools,
+.app.desktop-workspace > .titlebar .desktop-panel-nav,
+.app.desktop-workspace > .titlebar .desktop-utilities {
+  pointer-events: auto;
+}
+.app.desktop-workspace > .titlebar > :is(.menubar, .workspace-tabs, .project-title-input),
+.app.desktop-workspace > .titlebar .desktop-tools,
+.app.desktop-workspace > .titlebar .desktop-panel-nav {
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-group, 8px);
+  background: var(--surface-quick);
+  box-shadow: var(--shadow-tools, 0 2px 5px #060a1030, 0 6px 18px #060a1040);
+}
+.app.desktop-workspace > .titlebar .brand-mark {
+  width: 32px;
+  height: 32px;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 6px);
+  background: var(--surface-menu);
+  box-shadow: var(--shadow-tools, 0 2px 5px #060a1030, 0 6px 18px #060a1040);
+}
+.app.desktop-workspace > .titlebar .title-spacer {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: space-between;
+  min-width: 0;
+  pointer-events: none;
+}
+.app.desktop-workspace > .titlebar .desktop-tools,
+.app.desktop-workspace > .titlebar .desktop-panel-nav {
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  gap: 0;
+  overflow: visible;
+}
+.app.desktop-workspace
+  > .titlebar
+  :is(.desktop-tools, .desktop-panel-nav, .desktop-utilities)
+  > button {
+  height: 30px;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 0;
+}
+.app.desktop-workspace
+  > .titlebar
+  :is(.desktop-tools, .desktop-panel-nav, .desktop-utilities)
+  > button
+  + button {
+  border-inline-start: 1px solid var(--border);
+}
+.app.desktop-workspace
+  > .titlebar
+  :is(.desktop-tools, .desktop-panel-nav, .desktop-utilities)
+  > button:first-child {
+  border-start-start-radius: 7px;
+  border-end-start-radius: 7px;
+}
+.app.desktop-workspace
+  > .titlebar
+  :is(.desktop-tools, .desktop-panel-nav, .desktop-utilities)
+  > button:last-child {
+  border-start-end-radius: 7px;
+  border-end-end-radius: 7px;
+}
+.app.desktop-workspace > .titlebar :is(.desktop-tools, .desktop-panel-nav, .desktop-utilities) > i {
+  width: 1px;
+  height: 20px;
+  margin: 5px 4px;
+}
+.app.desktop-workspace > .titlebar .desktop-utilities .active-layer-control {
+  margin: 0;
+}
+.app.desktop-workspace > .titlebar .desktop-context-cluster {
+  gap: 8px;
+  min-width: 0;
+}
+.app.desktop-workspace > .titlebar .desktop-utilities {
+  flex: none;
+}
+
+.animate-layout,
+.animate-layout.setup-layout {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+}
+.animate-layout > .area-viewport {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background: var(--canvas);
+}
+.animate-layout > .area-viewport > .viewport {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.animate-layout > .area-side {
+  --motion-offset: 8px 0;
+  position: absolute;
+  z-index: 42;
+  top: 60px;
+  right: 12px;
+  bottom: auto;
+  width: clamp(320px, var(--side-width), 440px);
+  max-height: calc(100vh - 112px);
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel, 12px);
+  overflow: hidden;
+  background: var(--surface-quick);
+  box-shadow: var(--shadow-panel, 0 3px 10px #05090f45, 0 18px 44px -10px #05090f80);
+  transition:
+    max-height var(--motion-surface) var(--motion-ease),
+    opacity var(--motion-surface) var(--motion-ease),
+    translate var(--motion-surface) var(--motion-ease);
+}
+.animate-layout > .split-side {
+  position: absolute;
+  z-index: 43;
+  top: 72px;
+  right: calc(clamp(320px, var(--side-width), 440px) + 10px);
+  bottom: 56px;
+  width: 4px;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.animate-layout > .area-editors {
+  --motion-offset: 0 8px;
+  position: absolute;
+  z-index: 38;
+  right: 0;
+  bottom: 40px;
+  left: 0;
+  height: clamp(180px, var(--editors-height), 28vh);
+  min-height: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  overflow: hidden;
+  background: transparent;
+  box-shadow: var(--shadow-timeline, 0 -6px 22px -10px #05090f80);
+}
+.animate-layout > .area-editors > .timeline {
+  background: transparent;
+}
+.animate-layout > .split-editors {
+  position: absolute;
+  z-index: 39;
+  right: 0;
+  bottom: calc(clamp(180px, var(--editors-height), 28vh) + 38px);
+  left: 0;
+  height: 4px;
+  background: transparent;
+}
+.animate-layout[data-editors='true'] > .area-side {
+  max-height: calc(100vh - clamp(180px, var(--editors-height), 28vh) - 112px);
+}
+.animate-layout > :is(.split-side, .split-editors)[data-state='closing'] {
+  pointer-events: none;
+}
+
+.animate-layout > .time-slider {
+  position: absolute;
+  z-index: 45;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  height: 40px;
+  min-height: 40px;
+  padding: 4px 12px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface-ruler);
+  box-shadow: var(--shadow-timeline, 0 -6px 22px -10px #05090f80);
+}
+.animate-layout > .time-slider > button {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border-radius: 0;
+}
+.animate-layout > .time-slider > button[aria-label='First frame'] {
+  border-radius: var(--radius-group, 8px) 0 0 var(--radius-group, 8px);
+}
+.animate-layout > .time-slider > button[aria-label='Last frame'] {
+  border-radius: 0 var(--radius-group, 8px) var(--radius-group, 8px) 0;
+}
+.animate-layout > .time-slider > button.play {
+  width: 36px;
+  border-inline: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.animate-layout > .time-slider > .timeline-toggle {
+  width: auto;
+  min-width: 88px;
+  gap: 6px;
+  padding-inline: 10px;
+  border-radius: var(--radius-control, 6px);
+}
+.animate-layout > .time-slider > .timeline-toggle[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.desktop-inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 40px;
+  min-height: 40px;
+  padding: 0 6px 0 12px;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+.desktop-inspector-header h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+.desktop-inspector-header button {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+}
+
+.animate-layout.setup-layout > .area-setup {
+  position: absolute;
+  z-index: 42;
+  top: 60px;
+  bottom: 44px;
+  left: 12px;
+  width: clamp(280px, var(--setup-width), 380px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel, 12px);
+  overflow: hidden;
+  background: var(--surface-menu);
+  box-shadow: var(--shadow-panel, 0 3px 10px #05090f45, 0 18px 44px -10px #05090f80);
+}
+.animate-layout.setup-layout > .split-setup {
+  position: absolute;
+  z-index: 43;
+  top: 72px;
+  bottom: 56px;
+  left: calc(clamp(280px, var(--setup-width), 380px) + 10px);
+  width: 4px;
+  background: transparent;
+}
+
+.app.desktop-workspace > .statusbar {
+  position: absolute;
+  z-index: 48;
+  top: 60px;
+  left: 12px;
+  width: auto;
+  height: 24px;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 6px);
+  background: var(--surface-menu);
+  box-shadow: var(--shadow-tools, 0 2px 5px #060a1030, 0 6px 18px #060a1040);
+  pointer-events: none;
+}
+.app.desktop-workspace > .statusbar > span:last-child {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  .app.desktop-workspace > .titlebar {
+    inset-inline: 8px;
+    gap: 4px;
+  }
+  .app.desktop-workspace > .titlebar .desktop-clip-trigger strong {
+    display: none;
+  }
+}
+
+/* Inspector density follows the 32px desktop control rhythm. */
 .titlebar .active-layer-control .attached-flair {
   display: none;
 }
 .area-side .property-context-tabs {
-  height: 28px;
-  min-height: 28px;
+  height: 32px;
+  min-height: 32px;
 }
 .area-side .property-section {
   margin: 0;
@@ -446,38 +678,38 @@
   box-shadow: none;
 }
 .area-side .property-header {
-  height: 26px;
-  min-height: 26px;
-  padding: 0 8px;
-  font-size: 11px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
 }
 .area-side .property-content {
-  padding: 2px 8px 8px;
-  gap: 4px;
+  padding: 8px 12px 12px;
+  gap: 8px;
 }
 .area-side .property-row {
-  min-height: 24px;
-  gap: 6px;
+  min-height: 32px;
+  gap: 8px;
 }
 .area-side .properties-editor :is(input, select, button) {
-  min-height: 22px;
+  min-height: 32px;
 }
 .area-side .properties-editor .vector-inputs label {
-  height: 22px;
+  height: 32px;
 }
 .area-side .properties-editor .vector-inputs input {
-  min-height: 20px;
-  padding: 2px 6px 2px 2px;
+  min-height: 30px;
+  padding: 4px 8px 4px 4px;
 }
 .area-side .properties-editor .rig-mode-switch,
 .area-side .properties-editor .rig-mode-switch button {
-  height: 22px;
-  min-height: 22px;
+  height: 32px;
+  min-height: 32px;
 }
 .area-side .property-note,
 .area-side .properties-editor p {
   margin: 2px 0 0;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.35;
   color: var(--muted);
 }
@@ -515,18 +747,61 @@
   gap: 1px;
   -webkit-app-region: no-drag;
 }
+.app.desktop-workspace > .titlebar > .title-menu {
+  position: relative;
+  flex: none;
+  height: 32px;
+}
+.app.desktop-workspace > .titlebar > .title-menu > .brand {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 10px;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-group, 8px);
+  background: var(--surface-menu);
+  color: var(--text);
+  box-shadow: var(--shadow-tools, 0 2px 5px #060a1030, 0 6px 18px #060a1040);
+}
+.desktop-command-menu {
+  position: absolute;
+  z-index: 240;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 360px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel, 12px);
+  background: var(--surface-menu);
+  box-shadow: var(--shadow-popover, 0 4px 12px #05090f55, 0 16px 36px -6px #05090f80);
+}
+.desktop-command-menu > .menubar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(100px, 1fr));
+  gap: 2px;
+  width: 100%;
+}
+.desktop-command-menu .menubar-trigger {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+.desktop-command-menu .menubar-dropdown {
+  top: calc(100% + 6px);
+  left: 0;
+}
 .menubar-menu {
   position: relative;
 }
 .menubar-trigger {
-  height: 24px;
-  min-height: 24px;
-  padding: 0 8px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 10px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-control, 6px);
   background: none;
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
 }
 .menubar-trigger:hover,
 .menubar-trigger[aria-expanded='true'] {
@@ -597,49 +872,44 @@
 }
 .workspace-tabs {
   display: flex;
-  gap: 1px;
-  margin-left: 6px;
-  padding: 2px;
-  border-radius: 6px;
-  background: var(--canvas);
+  gap: 0;
+  height: 32px;
+  margin-left: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--radius-group, 8px);
+  background: var(--surface-menu);
   border: 1px solid var(--border);
   -webkit-app-region: no-drag;
 }
-.workspace-tabs button,
-.action-switch button {
-  height: 20px;
-  min-height: 20px;
+.workspace-tabs button {
+  height: 30px;
+  min-height: 30px;
   padding: 0 10px;
   border: 0;
-  border-radius: 4px;
+  border-radius: 0;
   background: none;
   color: var(--muted);
   font-size: 11px;
 }
-.workspace-tabs button[aria-pressed='true'],
-.action-switch button[aria-pressed='true'] {
+.workspace-tabs button[aria-pressed='true'] {
   background: var(--selection);
   color: var(--text);
 }
-.action-switch {
-  display: flex;
-  gap: 1px;
-  padding: 2px;
-  margin-right: 6px;
-  border-radius: 6px;
-  background: var(--canvas);
-  border: 1px solid var(--border);
+.workspace-tabs button + button {
+  border-inline-start: 1px solid var(--border);
 }
 .project-title-input {
   width: 160px;
-  height: 24px;
-  min-height: 24px;
-  padding: 0 6px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: none;
-  color: var(--muted);
-  font-size: 12px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control, 6px);
+  background: var(--surface-menu);
+  color: var(--secondary);
+  font-size: 13px;
+  box-shadow: var(--shadow-tools, 0 2px 5px #060a1030, 0 6px 18px #060a1040);
   -webkit-app-region: no-drag;
 }
 .project-title-input:hover,
@@ -657,12 +927,13 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--panel);
+  background: var(--surface-menu);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 14px 40px #0009;
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-popover);
 }
 .library-popover .animation-bar {
+  background: transparent;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -700,19 +971,8 @@
   min-height: 0;
 }
 
-/* Setup workspace: characters | viewport | mapping, playback only. */
-.animate-layout.setup-layout {
-  grid-template-columns: var(--setup-width) 4px minmax(0, 1fr) 4px var(--side-width);
-  grid-template-rows: minmax(120px, 1fr) 28px;
-  grid-template-areas:
-    'setup split-setup view split-side side'
-    'slider slider slider slider slider';
-}
-.area-setup {
-  grid-area: setup;
-}
+/* Setup lists remain overlays on the same scene-sized workspace. */
 .split-setup {
-  grid-area: split-setup;
   cursor: ew-resize;
 }
 .area-setup > * {
@@ -722,9 +982,9 @@
   border: 0;
 }
 
-/* Viewport stays clear: view and pose commands live in the menus. */
+/* Desktop view settings use the menu; selected-control actions are owned by the
+ * contextual scene ribbon and stay visible near the controller. */
 .app.desktop-workspace .viewport-bottom,
-.app.desktop-workspace .desktop-pose-context > .selection-pose-tools,
 .app.desktop-workspace .touch-view-toggle {
   display: none;
 }
@@ -732,26 +992,6 @@
   position: fixed;
   top: auto;
   z-index: 400;
-}
-
-/* One control vocabulary: 4px corners, 26px controls in panels, 24px in toolbars. */
-.app.desktop-workspace
-  :is(.area-editors, .area-side, .time-slider, .library-popover)
-  button:not(.pose-preset) {
-  border-radius: 4px;
-}
-.app.desktop-workspace
-  .area-side
-  :is(button, select):not(.pose-preset):not(.property-header):not(.key-row):not(.inline-space) {
-  height: 26px;
-  min-height: 26px;
-}
-.app.desktop-workspace .area-side .property-context-tabs button {
-  height: 28px;
-  min-height: 28px;
-}
-.app.desktop-workspace .track-name {
-  border-radius: 4px;
 }
 
 /* The editor panel shows the timeline or one bone's curves; these buttons move between them. */
@@ -800,4 +1040,24 @@
 /* The key tools row appears only once keys are selected. */
 .app.desktop-workspace .timeline.split .curve-selection-tools:not(:has(.curve-selection-count)) {
   display: none;
+}
+
+/* Context is readable without turning the document name into another toolbar. */
+.app.desktop-workspace > .titlebar > .project-title {
+  display: block;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--secondary);
+}
+.transport-history {
+  flex: none;
+  margin-right: 12px;
+}
+.transport-history button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
 }

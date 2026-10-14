@@ -1,302 +1,819 @@
-/* Timeline look, shared by desktop and tablet, on the design system tokens. Three
- * elevations (recessed tracks, raised labels, raised ruler and toolbar); colour does work:
- * keys and hold bars carry their control's colour, the accent marks time and selection.
- * Sizes and the mouse-only details are in the desktop section at the end. */
+/*
+ * Timeline visual language
+ *
+ * Panel backgrounds share the requested 70% transparency. Editing marks,
+ * labels and fields remain opaque; nested bands add only a subtle tint. Motion is carried by the playhead and interpolation shape
+ * between keys; labels do not repeat the same information on every lane.
+ */
 :root .app .timeline {
-  --tl-ground: var(--inset);
-  --tl-row-alt: #121720;
-  --tl-row-hover: #18202b;
-  --tl-group: #141a23;
-  --tl-labels: var(--panel);
-  --tl-ruler: var(--raised);
-  --tl-rule: #ffffff0f;
-  --tl-grid: #ffffff08;
-  --tl-text: var(--text);
-  --tl-text-2: var(--secondary);
-  --tl-muted: var(--muted);
-  --tl-accent: var(--accent);
-  --tl-ink: #0a0d11;
-  --track-ink: var(--tl-ground);
-  --track-surface: var(--tl-labels);
-  --track-raised: #263040;
+  --tl-canvas: var(--canvas, #12171e);
+  --tl-inset: var(--inset, #0e1218);
+  --tl-plot: var(--panel);
+  --tl-band: rgb(25 39 53 / 8%);
+  --tl-data: transparent;
+  --tl-panel: transparent;
+  --tl-raised: rgb(34 49 64 / 14%);
+  --tl-hover: var(--hover, #293645);
+  --tl-pressed: var(--pressed, #334554);
+  --tl-border: var(--border, #344252);
+  --tl-text: var(--text, #e3e9f1);
+  --tl-secondary: var(--secondary, #b9c3cf);
+  --tl-muted: var(--muted, #7f8c9d);
+  --tl-accent: var(--accent, #5ed3ea);
+  --tl-accent-ink: var(--accent-ink, #06222a);
+  --tl-amber: var(--amber, #e6bf77);
+  --tl-red: var(--red, #e98383);
+  --tl-axis-z: var(--axis-z, #75b6f2);
+  --tl-rule: color-mix(in srgb, var(--tl-border) 78%, transparent);
+  --tl-grid: color-mix(in srgb, var(--tl-secondary) 6%, transparent);
+  --track-ink: var(--tl-plot);
+  --track-surface: var(--tl-panel);
+  --track-raised: var(--tl-raised);
   --track-rule: var(--tl-rule);
   --track-text: var(--tl-text);
   --track-muted: var(--tl-muted);
   --track-clock: var(--tl-accent);
-  --track-selected: color-mix(in srgb, var(--tl-accent) 13%, var(--tl-ground));
-  background: var(--tl-ground);
-}
-
-/* Toolbar: raised, quiet until used. */
-:root .app .timeline .key-edit-tools {
-  background: var(--tl-ruler);
-  border-bottom: 1px solid #00000066;
-  box-shadow: 0 1px 0 #ffffff08 inset;
-}
-:root .app .timeline .key-edit-tools button {
-  color: var(--tl-text-2);
-}
-:root .app .timeline .key-edit-tools button:hover:not(:disabled) {
-  background: #ffffff0d;
+  --track-key: var(--tl-amber);
+  --track-selected: color-mix(in srgb, var(--tl-accent) 14%, var(--tl-plot));
+  background: var(--surface-timeline);
   color: var(--tl-text);
+  border: 0;
+  font-variant-numeric: tabular-nums;
 }
+
+:root .app .timeline :is(button, input, select) {
+  font: inherit;
+}
+
+:root .app .timeline button {
+  transition:
+    background-color 130ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 130ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 130ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 130ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+:root .app .timeline button:focus-visible,
+:root .app .timeline :is(input, select):focus-visible {
+  outline: 2px solid var(--tl-accent);
+  outline-offset: -2px;
+}
+
+:root .app .timeline button:disabled {
+  color: color-mix(in srgb, var(--tl-muted) 65%, transparent);
+  opacity: 1;
+}
+
+/* The top bars use the same joined-control language throughout the editor. */
+:root .app .timeline .key-edit-tools,
+:root .app .timeline .curve-tools,
+:root .app .timeline .curve-selection-tools {
+  background: var(--tl-band);
+  border-color: var(--tl-border);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.035);
+}
+
+:root .app .timeline .key-edit-tools {
+  min-height: 38px;
+  padding: 4px 10px;
+  gap: 4px;
+}
+
+:root .app .timeline .key-edit-tools > button,
+:root .app .timeline .track-view-tools > button,
+:root .app .timeline .track-options > button,
+:root .app .timeline .curve-tools > button,
+:root .app .timeline .curve-selection-tools > button {
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 4px 7px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control, 6px);
+  color: var(--tl-secondary);
+  background: transparent;
+}
+
+:root .app .timeline .key-edit-tools > button:hover:not(:disabled),
+:root .app .timeline .track-view-tools > button:hover:not(:disabled),
+:root .app .timeline .track-options > button:hover:not(:disabled),
+:root .app .timeline .curve-tools > button:hover:not(:disabled),
+:root .app .timeline .curve-selection-tools > button:hover:not(:disabled) {
+  color: var(--tl-text);
+  background: var(--tl-hover);
+}
+
+:root .app .timeline .key-edit-tools > button.active,
+:root .app .timeline .curve-tools > button[aria-pressed='true'],
+:root .app .timeline .curve-selection-tools > button[aria-pressed='true'] {
+  color: var(--tl-accent-ink);
+  background: var(--tl-accent);
+  border-color: var(--tl-accent);
+}
+
 :root .app .timeline .key-selection-count {
+  min-width: 80px;
+  margin-inline: 4px auto;
   color: var(--tl-muted);
-  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
-/* Ruler: the most raised surface, readable numbers. */
+:root .app .timeline .selected-key-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--tl-border);
+  border-radius: var(--radius-group, 8px);
+  background: var(--tl-inset);
+  animation: timeline-reveal 130ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+:root .app .timeline .selected-key-actions button {
+  min-width: 30px;
+  min-height: 28px;
+  height: 28px;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: var(--radius-flush, 0);
+  color: var(--tl-secondary);
+}
+
+:root .app .timeline .selected-key-actions button:hover {
+  color: var(--tl-text);
+  background: var(--tl-hover);
+}
+
+/* Touch keeps the same cells, with 44px targets. This selector intentionally
+ * outranks the desktop toolbar rule above so a phone never inherits 30px tools. */
+:root.android .app .timeline :is(.key-edit-tools, .curve-tools, .curve-selection-tools) > button,
+:root.android .app .timeline .track-view-tools > button,
+:root.android .app .timeline .track-options > button {
+  min-width: 44px;
+  min-height: 44px;
+  height: 44px;
+}
+
+:root.android .app .timeline .selected-key-actions {
+  gap: 0;
+  padding: 0;
+}
+
+:root.android .app .timeline .selected-key-actions button {
+  min-width: 44px;
+  min-height: 44px;
+  height: 44px;
+}
+
+:root .app .timeline .track-view-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-inline-start: auto;
+  padding-inline-start: 4px;
+  border-inline-start: 1px solid var(--tl-border);
+}
+
+:root .app .timeline .track-view-tools output {
+  min-width: 28px;
+  color: var(--tl-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+:root .app .timeline .track-options-menu,
+:root .app .timeline .curve-view-menu {
+  padding: 6px;
+  border: 1px solid var(--tl-border);
+  border-radius: var(--radius-panel, 12px);
+  background: var(--surface-menu);
+  box-shadow: var(
+    --shadow-popover,
+    0 4px 12px rgb(5 9 15 / 0.33),
+    0 16px 36px -6px rgb(5 9 15 / 0.5)
+  );
+}
+
+/* Track options and curve view menus are portaled to document.body. Keep the
+ * same timeline surface and menu rhythm when they leave the editor subtree. */
+:root .track-options-menu,
+:root .curve-view-menu {
+  padding: 6px;
+  border: 1px solid var(--tl-border, var(--border));
+  border-radius: var(--radius-panel, 12px);
+  background: var(--surface-menu, #1d2530);
+  color: var(--tl-text, var(--text));
+  box-shadow: var(
+    --shadow-popover,
+    0 4px 12px rgb(5 9 15 / 0.33),
+    0 16px 36px -6px rgb(5 9 15 / 0.5)
+  );
+}
+
+:root .track-options-menu button,
+:root .curve-view-menu button {
+  width: 100%;
+  min-height: 34px;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: var(--radius-control, 6px);
+  color: var(--secondary);
+  background: transparent;
+}
+
+:root .track-options-menu button:hover,
+:root .curve-view-menu button:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+:root.android .track-options-menu button,
+:root.android .curve-view-menu button {
+  min-height: 44px;
+}
+
+:root .app .timeline .track-options-menu button,
+:root .app .timeline .curve-view-menu button {
+  width: 100%;
+  min-height: 34px;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: var(--radius-control, 6px);
+  color: var(--tl-secondary);
+}
+
+:root .app .timeline .track-options-menu button:hover,
+:root .app .timeline .curve-view-menu button:hover {
+  color: var(--tl-text);
+  background: var(--tl-hover);
+}
+
+/* The label side is raised; only the plot itself is recessed. */
+:root .app .timeline .timeline-grid {
+  background: var(--tl-data);
+  scrollbar-color: var(--tl-border) transparent;
+}
+
+:root .app .timeline .track-labels,
+:root .app .timeline .curve-track-tree {
+  background: var(--tl-panel);
+  border-right: 1px solid var(--tl-border);
+  box-shadow: 4px 0 14px rgb(5 9 15 / 0.16);
+}
+
+:root .app .timeline .track-content {
+  background-color: var(--tl-data);
+  background-image: linear-gradient(to right, var(--tl-grid) 1px, transparent 1px);
+  background-size: var(--beat-width, 10%) 100%;
+  background-position: 0 0;
+}
+
 :root .app .timeline .track-ruler-label,
-:root .app .timeline .time-ruler {
-  background: var(--tl-ruler);
-}
-:root .app .timeline .time-ruler {
-  border-bottom: 1px solid #00000080;
-  box-shadow:
-    0 1px 0 #ffffff0a inset,
-    0 4px 10px #00000059;
-}
-:root .app .timeline .time-ruler > .ruler-tick {
-  color: var(--tl-text-2);
-  font-variant-numeric: tabular-nums;
+:root .app .timeline .timeline-search {
+  background: var(--tl-band);
+  border-bottom: 1px solid var(--tl-border);
 }
 
-/* Label column: raised, hierarchy through weight, not colour stripes. */
-:root .app .timeline .track-labels {
-  background: var(--tl-labels);
-  border-right: 1px solid #00000080;
-  box-shadow: 1px 0 0 #ffffff08;
+:root .app .timeline .timeline-search {
+  height: 32px;
+  padding-inline: 10px;
 }
+
+:root .app .timeline .timeline-search input {
+  color: var(--tl-text);
+  font-size: 11px;
+}
+
+:root .app .timeline .timeline-search input::placeholder {
+  color: var(--tl-muted);
+}
+
+:root .app .timeline .track-ruler-label {
+  height: 32px;
+}
+
 :root .app .timeline-track-label {
-  background: var(--tl-labels);
-  border-bottom: 1px solid #ffffff06;
+  background: var(--tl-panel);
+  border-bottom: 1px solid rgb(255 255 255 / 0.045);
 }
+
+:root .app .timeline-track-label:hover {
+  background: color-mix(in srgb, var(--tl-hover) 55%, var(--tl-panel));
+}
+
+:root .app .timeline-track-label.selected {
+  background: var(--tl-selection, #243e49);
+  box-shadow: inset 3px 0 var(--tl-accent);
+}
+
 :root .app .timeline-track-label .track-name {
-  color: var(--tl-text-2);
-  font-weight: 400;
+  color: var(--tl-secondary);
+  font-size: 12px;
 }
-:root .app .timeline-track-label[data-depth='0'] .track-name {
+
+:root .app .timeline-track-label[data-depth='0'] .track-name,
+:root .app .timeline-track-label[data-group='true'] .track-name {
   color: var(--tl-text);
   font-weight: 600;
 }
-:root .app .timeline-track-label.axis-label-row .track-name {
-  margin-left: 24px;
-  color: var(--tl-muted);
-}
-:root .app .timeline-track-label.selected {
-  background: color-mix(in srgb, var(--tl-accent) 14%, var(--tl-labels));
-  box-shadow: none;
-}
+
 :root .app .timeline-track-label.selected .track-name {
-  color: #ffffff;
+  color: var(--tl-text);
 }
 
-/* Rows: recessed, readable alternation, beat grid, groups separated. */
-:root .app .timeline .key-track {
-  background-color: var(--tl-ground);
-  background-image: linear-gradient(to right, var(--tl-grid) 1px, transparent 1px);
-  border-bottom: 1px solid #ffffff05;
-}
-:root .app .timeline .key-track[data-alternate='true'] {
-  background-color: var(--tl-row-alt);
-}
-:root .app .timeline .key-track[data-group='true'] {
-  background-color: var(--tl-group);
-  border-top: 1px solid #ffffff0a;
-}
-:root .app .timeline .key-track.selected-channel {
-  background-color: color-mix(in srgb, var(--tl-accent) 10%, var(--tl-ground));
-  box-shadow:
-    inset 0 1px color-mix(in srgb, var(--tl-accent) 28%, transparent),
-    inset 0 -1px color-mix(in srgb, var(--tl-accent) 28%, transparent);
+:root .app .timeline-track-label .track-disclosure {
+  border-radius: var(--radius-control, 6px);
 }
 
-/* Keys: solid diamonds in the control's colour, dark outline so they read on any row. */
-:root .app .timeline .keyframe {
-  z-index: 2;
-}
-:root .app .timeline .keyframe,
-:root .app .timeline .keyframe:not(.selected):not(.partial) {
-  color: var(--track-color, #b8c4d2);
-}
-:root .app .timeline .keyframe svg {
-  stroke: var(--tl-ink);
-  stroke-width: 2.2;
-}
-:root .app .timeline .keyframe.partial {
-  color: color-mix(in srgb, var(--track-color, #b8c4d2) 55%, var(--tl-ground));
-}
-:root .app .timeline .keyframe.selected {
-  color: #ffffff;
-}
-:root .app .timeline .keyframe.selected svg {
-  stroke: var(--tl-accent);
-  stroke-width: 2.4;
-  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--tl-accent) 70%, transparent));
+:root .app .timeline-track-label .track-disclosure:hover,
+:root .app .timeline-track-label .track-children.folded {
+  color: var(--tl-text);
+  background: var(--tl-raised);
 }
 
-/* Time: an accent playhead with a soft current-frame band. */
-:root .app .timeline .playhead {
-  background: var(--tl-accent);
-  box-shadow:
-    0 0 0 6px color-mix(in srgb, var(--tl-accent) 7%, transparent),
-    0 0 10px color-mix(in srgb, var(--tl-accent) 45%, transparent);
-}
-:root .app .timeline .playhead-cap output {
-  background: var(--tl-accent);
-  color: var(--accent-ink);
-  font-variant-numeric: tabular-nums;
-  box-shadow: 0 2px 6px #00000080;
+:root .app .timeline-track-label.axis-label-row {
+  background: color-mix(in srgb, var(--tl-raised) 60%, var(--tl-panel));
+  box-shadow: inset 18px 0 rgb(0 0 0 / 0.1);
 }
 
-/* ---- Desktop: compact sizes and mouse-only details ---------------------------------- */
-.app.desktop-workspace .timeline .time-ruler > .ruler-tick {
-  font-size: 10px;
-}
-.app.desktop-workspace .timeline .ruler-minors {
-  height: 5px;
-  opacity: 0.55;
-}
-.app.desktop-workspace .timeline-track-label:hover {
-  background: color-mix(in srgb, #ffffff 4%, var(--tl-labels));
-}
-.app.desktop-workspace .timeline-track-label .track-name {
-  font-size: 12px;
-}
-.app.desktop-workspace .timeline-track-label.axis-label-row .track-name {
+:root .app .timeline-track-label.axis-label-row .track-name {
+  color: color-mix(in srgb, var(--track-color, var(--tl-secondary)) 72%, var(--tl-text));
   font-size: 11px;
 }
-.app.desktop-workspace .timeline-track-label .track-children {
-  height: 18px;
-  min-height: 18px;
-  min-width: 0;
-  padding: 0 6px;
-  border-radius: 9px;
-  background: #ffffff0a;
-  color: var(--tl-muted);
-  opacity: 1;
-}
-.app.desktop-workspace .timeline-track-label .track-children.folded {
-  background: #ffffff12;
-  color: var(--tl-text-2);
-}
-.app.desktop-workspace .timeline .key-track:hover {
-  background-color: var(--tl-row-hover);
-}
-.app.desktop-workspace .timeline .keyframe svg {
-  width: 11px;
-  height: 11px;
-  transition:
-    transform 120ms ease,
-    filter 120ms ease;
-}
-.app.desktop-workspace .timeline .keyframe:hover svg {
-  transform: scale(1.25);
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--track-color, #fff) 60%, transparent));
-}
-.app.desktop-workspace .timeline .keyframe.selected svg {
-  width: 13px;
-  height: 13px;
-}
-.app.desktop-workspace .timeline .playhead {
-  width: 2px;
-  margin-left: -1px;
-}
 
-/* Interpolation: a hold bar between keys in the control's colour. The type shows in
- * the bar's form; exact settings stay in the tooltip. (Touch keeps its captions, since
- * it has no hover.) */
-.app.desktop-workspace .timeline .timeline-interpolation {
-  height: 6px;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--track-color, #8fa0b3) 30%, transparent);
-  color: transparent;
-  opacity: 1;
-}
-.app.desktop-workspace .timeline .timeline-interpolation .interpolation-connector,
-.app.desktop-workspace .timeline .timeline-interpolation .interpolation-caption {
-  display: none;
-}
-.app.desktop-workspace .timeline .timeline-interpolation[data-interpolation='linear'] {
-  background:
-    linear-gradient(var(--track-color, #8fa0b3), var(--track-color, #8fa0b3)) center / 100% 1px
-      no-repeat,
-    color-mix(in srgb, var(--track-color, #8fa0b3) 14%, transparent);
-}
-.app.desktop-workspace .timeline .timeline-interpolation[data-interpolation='hold'] {
-  background: none;
-  border: 1px dashed color-mix(in srgb, var(--track-color, #8fa0b3) 60%, transparent);
-}
-.app.desktop-workspace .timeline .timeline-interpolation[data-interpolation='mixed'] {
-  background: color-mix(in srgb, var(--track-color, #8fa0b3) 18%, transparent);
-  border: 1px dotted color-mix(in srgb, var(--track-color, #8fa0b3) 55%, transparent);
-}
-.app.desktop-workspace .timeline .timeline-interpolation:hover,
-.app.desktop-workspace .timeline .selected-channel .timeline-interpolation {
-  background-color: color-mix(in srgb, var(--track-color, #8fa0b3) 45%, transparent);
-}
-
-/* Curves toolbar: the same raised bar as the timeline's, one row. Zoom and guides live
- * in its view menu; lock and clipboard keep their icons and tooltips. */
-.app.desktop-workspace .timeline.split .curve-tools {
-  flex-wrap: nowrap;
-  min-height: 0;
-  height: var(--tl-toolbar-height, 36px);
-  background: var(--tl-ruler);
-  border-bottom: 1px solid #00000066;
-  box-shadow: 0 1px 0 #ffffff08 inset;
-}
-.app.desktop-workspace .timeline.split .curve-tools .curve-secondary-view {
-  display: none;
-}
-.app.desktop-workspace .timeline.split .curve-view-options {
-  display: block;
-}
-.app.desktop-workspace
-  .timeline.split
-  .curve-tools
-  :is(.curve-key-lock, .curve-clipboard-tools button)
-  span {
-  display: none;
-}
-.app.desktop-workspace .timeline.split .curve-tools button {
-  color: var(--tl-text-2);
-}
-.app.desktop-workspace .timeline.split .curve-tools button:hover:not(:disabled) {
-  background: #ffffff0d;
-  color: var(--tl-text);
-}
-.app.desktop-workspace .timeline.split .curve-tools .curve-cleanup {
-  border-color: transparent !important;
-  background: transparent !important;
-  color: var(--tl-text-2) !important;
-}
-
-/* Row height comes from the grid (TimelineGrid sets --track-row): a few tracks grow
- * to fill the panel, many tracks keep the normal height and scroll. */
-:root .app .timeline .timeline-grid :is(.key-track, .timeline-track-label) {
-  height: var(--track-row);
-  min-height: var(--track-row);
-}
-/* Keys sit on the row's centre line, whatever its height. */
-:root .app .timeline .timeline-grid .keyframe {
-  top: calc(50% - 11px);
-}
-:root.android .app .timeline .timeline-grid .keyframe {
-  top: calc(50% - 14px);
-}
-
-/* Channel rows: the row itself carries the channel colour; its name says which. */
-:root .app .timeline-track-label.axis-label-row {
-  background: color-mix(in srgb, var(--track-color) 14%, var(--tl-labels));
-  box-shadow: none;
-}
-:root .app .timeline-track-label.axis-label-row .track-name {
-  color: color-mix(in srgb, var(--track-color) 55%, var(--tl-text));
-}
 :root .app .timeline-track-label.axis-label-row.selected {
-  background: color-mix(in srgb, var(--track-color) 30%, var(--tl-labels));
+  background: color-mix(in srgb, var(--track-color, var(--tl-accent)) 22%, var(--tl-panel));
+  box-shadow: inset 3px 0 var(--track-color, var(--tl-accent));
 }
-:root .app .timeline-track-label.axis-label-row.selected .track-name {
+
+/* The ruler is distinguished by its divider and opaque labels. */
+:root .app .timeline .time-ruler {
+  height: 32px;
+  min-height: 32px;
+  background: var(--tl-band);
+  border-bottom: 1px solid var(--tl-border);
+  box-shadow: 0 4px 12px rgb(5 9 15 / 0.36);
+}
+
+:root .app .timeline .time-ruler > .ruler-tick {
+  color: var(--tl-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+:root .app .timeline .ruler-minors {
+  opacity: 0.22;
+}
+
+:root.android .app .timeline .time-ruler {
+  height: 44px;
+  min-height: 44px;
+}
+
+/* Rows use a quiet beat grid and two levels of contrast instead of loud stripes. */
+:root .app .timeline .key-track {
+  background-color: var(--tl-data);
+  background-image: linear-gradient(to right, var(--tl-grid) 1px, transparent 1px);
+  border-bottom: 1px solid rgb(255 255 255 / 0.045);
+}
+
+:root .app .timeline .key-track[data-alternate='true'] {
+  background-color: color-mix(in srgb, var(--tl-secondary) 3%, transparent);
+}
+
+:root .app .timeline .key-track[data-group='true'],
+:root .app .timeline .key-track.summary-track {
+  background-color: color-mix(in srgb, var(--tl-secondary) 7%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--tl-border) 70%, transparent);
+  border-bottom-color: var(--tl-border);
+}
+
+:root .app .timeline .key-track:hover {
+  background-color: color-mix(in srgb, var(--tl-hover) 26%, transparent);
+}
+
+:root .app .timeline .key-track.selected-channel {
+  background-color: color-mix(in srgb, var(--tl-accent) 11%, transparent);
+  box-shadow:
+    inset 0 1px color-mix(in srgb, var(--tl-accent) 32%, transparent),
+    inset 0 -1px color-mix(in srgb, var(--tl-accent) 24%, transparent);
+}
+
+/* Keys remain amber objects in every state; selection is communicated by a cyan rim. */
+:root .app .timeline .keyframe {
+  z-index: 3;
+  color: var(--tl-amber);
+}
+
+:root .app .timeline .keyframe:not(.selected):not(.partial) {
+  color: var(--tl-amber);
+}
+
+:root .app .timeline .keyframe.partial {
+  color: color-mix(in srgb, var(--tl-amber) 46%, var(--tl-plot));
+}
+
+:root .app .timeline .keyframe svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+  stroke: var(--tl-plot);
+  stroke-width: 1.5;
+  transition:
+    transform 130ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 130ms ease;
+}
+
+:root .app .timeline .keyframe:hover svg {
+  transform: scale(1.22);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--tl-amber) 60%, transparent));
+}
+
+:root .app .timeline .keyframe.selected {
+  color: var(--tl-amber);
+}
+
+:root .app .timeline .keyframe.selected svg {
+  width: 16px;
+  height: 16px;
+  fill: var(--tl-amber);
+  stroke: var(--tl-accent);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--tl-accent) 72%, transparent));
+}
+
+:root .app .timeline .keyframe:focus-visible svg {
+  stroke: var(--tl-text);
+  stroke-width: 2;
+}
+
+/* Interpolation is a shape between keys, never a repeated caption on every lane. */
+:root .app .timeline .timeline-interpolation {
+  top: 50%;
+  height: 24px;
+  transform: translateY(-50%);
+  z-index: 1;
+  color: color-mix(in srgb, var(--track-color, var(--tl-secondary)) 82%, var(--tl-text));
+  opacity: 0.9;
+  container-type: inline-size;
+}
+
+:root .app .timeline .timeline-interpolation .interpolation-connector {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+:root .app .timeline .timeline-interpolation .interpolation-caption {
+  display: none;
+}
+
+:root .app .timeline .timeline-interpolation .interpolation-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+:root .app .timeline .timeline-interpolation[data-interpolation='linear'] {
+  color: color-mix(in srgb, var(--track-color, var(--tl-secondary)) 78%, var(--tl-text));
+}
+
+:root .app .timeline .timeline-interpolation[data-interpolation='hold'] {
+  color: var(--tl-muted);
+}
+
+:root .app .timeline .timeline-interpolation[data-interpolation='hold'] .interpolation-line {
+  stroke-dasharray: 2 5;
+  stroke-width: 1.7;
+}
+
+:root .app .timeline .timeline-interpolation[data-interpolation='mixed'] {
+  color: #bda8de;
+}
+
+:root .app .timeline .timeline-interpolation[data-interpolation='mixed'] .interpolation-line {
+  stroke-dasharray: 6 3;
+}
+
+:root .app .timeline .timeline-interpolation[data-interpolation='step'] .interpolation-line {
+  stroke-width: 2.2;
+}
+
+:root .app .timeline .timeline-interpolation[data-interpolation='spring'] .interpolation-line,
+:root .app .timeline .timeline-interpolation[data-interpolation='bounce'] .interpolation-line {
+  stroke: var(--tl-accent);
+}
+
+:root .app .timeline .timeline-interpolation:hover,
+:root .app .timeline .selected-channel .timeline-interpolation {
+  opacity: 1;
+}
+
+:root .app .timeline .interpolation-connector .interpolation-modifier-line {
+  stroke: var(--tl-accent);
+  stroke-dasharray: 1 5;
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+/* Playhead: a narrow line and attached frame chip, with no broad glow. */
+:root .app .timeline .playhead,
+:root .app .timeline .playhead-cap {
+  background: var(--tl-accent);
+}
+
+:root .app .timeline .playhead {
+  width: 2px;
+  margin-inline-start: -1px;
+  box-shadow:
+    0 0 0 1px rgb(6 34 42 / 0.5),
+    0 0 8px rgb(94 211 234 / 0.35);
+}
+
+:root .app .timeline .playhead-cap output {
+  padding: 3px 7px;
+  border-radius: var(--radius-flair, 4px);
+  background: var(--tl-accent);
+  color: var(--tl-accent-ink);
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 2px 7px rgb(5 9 15 / 0.48);
+}
+
+/* Curve editor shares the same bands, with a solid inspector and dark graph. */
+:root .app .timeline .curve-editor,
+:root .app .timeline .curve-center {
+  background: var(--tl-data);
+}
+
+:root .app .timeline .curve-tools {
+  min-height: 38px;
+  padding: 4px 8px;
+  gap: 3px;
+}
+
+:root .app .timeline .curve-tools strong {
   color: var(--tl-text);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+:root .app .timeline .curve-tools strong small,
+:root .app .timeline .curve-help,
+:root .app .timeline .curve-note {
+  color: var(--tl-muted);
+}
+
+:root .app .timeline .curve-canvas text {
+  fill: var(--tl-muted);
+  font-size: 10px;
+}
+
+:root .app .timeline .curve-grid-line {
+  stroke: rgb(185 195 207 / 0.1);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+:root .app .timeline .curve-grid-line.quiet {
+  stroke: rgb(185 195 207 / 0.045);
+}
+:root .app .timeline .curve-zero-line {
+  stroke: rgb(185 195 207 / 0.18);
+}
+
+:root .app .timeline .curve-playhead {
+  stroke: var(--tl-accent);
+  opacity: 0.86;
+}
+
+:root .app .timeline .curve-key {
+  fill: var(--tl-amber);
+  stroke: var(--tl-plot);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+:root .app .timeline .curve-key-target:hover .curve-key,
+:root .app .timeline .curve-key-target:focus-visible .curve-key {
+  fill: var(--tl-amber);
+  stroke: var(--tl-accent);
+  stroke-width: 2;
+}
+
+:root .app .timeline .curve-key.selected {
+  fill: var(--tl-amber);
+  stroke: var(--tl-accent);
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 4px rgb(94 211 234 / 0.48));
+}
+
+:root .app .timeline .tangent-line {
+  stroke: var(--tl-amber);
+  opacity: 0.55;
+}
+
+:root .app .timeline .tangent-handle {
+  fill: var(--tl-plot);
+  stroke: var(--tl-amber);
+  stroke-width: 1.5;
+}
+
+:root .app .timeline .tangent-handle:hover,
+:root .app .timeline .tangent-handle:focus-visible {
+  fill: var(--tl-amber);
+  stroke: var(--tl-text);
+}
+
+:root .app .timeline .curve-properties {
+  background: var(--tl-panel);
+  border-color: var(--tl-border);
+  box-shadow: -5px 0 16px rgb(5 9 15 / 0.24);
+}
+
+:root .app .timeline .curve-property-tabs {
+  background: var(--tl-band);
+  border-color: var(--tl-border);
+}
+
+:root .app .timeline .curve-property-tabs button.active {
+  color: var(--tl-accent);
+  background: var(--tl-selection, #243e49);
+}
+
+:root .app .timeline .curve-field input,
+:root .app .timeline .curve-field select,
+:root .app .timeline .curve-selection-tools input,
+:root .app .timeline .curve-selection-tools select {
+  background: var(--tl-inset);
+  border-color: var(--tl-border);
+  color: var(--tl-text);
+}
+
+:root .app .timeline .selection-marquee,
+:root .app .timeline .curve-marquee {
+  border-color: var(--tl-accent);
+  background: rgb(94 211 234 / 0.12);
+}
+
+:root .app .timeline .timeline-linked-strip {
+  color: var(--tl-secondary);
+  background: color-mix(in srgb, var(--tl-accent) 8%, var(--tl-plot));
+  border-color: color-mix(in srgb, var(--tl-accent) 24%, var(--tl-border));
+}
+
+@keyframes timeline-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1100px) {
+  :root .app .timeline {
+    --track-label-width: 190px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root .app .timeline *,
+  :root .app .timeline *::before,
+  :root .app .timeline *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Desktop and touch share Keys / Curves navigation and disclose key actions on selection. */
+:root .app .timeline.split > .timeline-tabs {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 4px 12px;
+  background: var(--tl-band);
+  border-bottom: 1px solid var(--border-subtle);
+}
+:root .app .timeline.split .timeline-tab-group {
+  display: flex;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-group);
+  overflow: hidden;
+}
+:root .app .timeline.split .timeline-tab-group button {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 12px;
+  gap: 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--secondary);
+  font-size: 13px;
+}
+:root .app .timeline.split .timeline-tab-group button + button {
+  border-inline-start: 1px solid var(--border-subtle);
+}
+:root .app .timeline.split .timeline-tab-group button.active {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+:root .app .timeline.split .touch-timeline-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+:root .app .timeline.split .touch-timeline-end button {
+  min-height: 32px;
+}
+:root .app .timeline.split .timeline-header-tools .track-view-tools {
+  display: flex;
+  margin: 0;
+  border: 0;
+}
+:root .app .timeline.split .key-edit-tools[data-header-tools='true'][data-active='false'] {
+  display: none;
+}
+:root .app .timeline.split .timeline-more-anchor {
+  position: relative;
+}
+:root .app .timeline.split .timeline-more {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  bottom: auto;
+  min-width: 200px;
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-panel);
+  background: var(--surface-menu);
+  box-shadow: var(--shadow-popover);
+  z-index: 60;
+}
+:root .app .timeline.split .timeline-more-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* More is portaled to body so the timeline's clipping and occlusion layers can
+ * never mask the menu. Keep its layout independent from the editor shell. */
+.timeline-more-portal {
+  position: fixed;
+  z-index: 1000;
+  display: grid;
+  box-sizing: border-box;
+  gap: 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  color: var(--tl-text, var(--text));
+  border: 1px solid var(--border-subtle, var(--border));
+  border-radius: var(--radius-panel);
+  background: var(--surface-menu);
+  box-shadow: var(--shadow-popover);
+}
+.timeline-more-portal-desktop {
+  min-width: 200px;
+  max-width: calc(100vw - 24px);
+  padding: 12px;
+}
+.timeline-more-portal-touch {
+  width: min(340px, calc(100vw - 16px));
+  max-width: calc(100vw - 16px);
+  padding: 10px;
+}
+.timeline-more-portal .timeline-more-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.timeline-more-portal .timeline-more-length {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--tl-secondary, var(--secondary));
+  font-size: 12px;
+}
+.timeline-more-portal .timeline-more-length input {
+  width: 48px;
+  min-height: 30px;
+}
+.timeline-more-portal :is(button, input, select) {
+  font: inherit;
 }

@@ -1,72 +1,87 @@
-/* Depth belongs to floating surfaces, not to every button inside them. */
+/* Pose Studio elevation vocabulary. Shadows lift complete surfaces, never the
+ * controls nested inside them. Keep this file as the only shadow owner. */
 :root {
   --shadow-tools: 0 2px 5px #060a1030, 0 6px 18px #060a1040;
   --shadow-panel: 0 3px 10px #05090f45, 0 18px 44px -10px #05090f80;
   --shadow-popover: 0 4px 12px #05090f55, 0 16px 36px -6px #05090f80;
   --shadow-dialog: 0 8px 24px #03070d55, 0 28px 80px -12px #03070da0;
+  --shadow-timeline: 0 -6px 22px -10px #05090f80;
 }
-.selection-pose-tools,
-.scene-selection-tools,
-.desktop-pose-context > .active-layer-control > .active-layer-trigger {
+
+/* Persistent tools and the controller ribbon are shallowly lifted from the
+ * scene. Their children remain flat so the group reads as one instrument. */
+:root .selection-pose-tools,
+:root .scene-selection-tools,
+:root .desktop-pose-context > .active-layer-control > .active-layer-trigger,
+:root.android .app > .titlebar,
+:root.android .touch-pose-rail,
+:root.android .touch-panel-rail,
+:root.android .touch-transport,
+:root.android .touch-view-toggle,
+:root.android .app > .active-layer-control > .active-layer-trigger {
   box-shadow: var(--shadow-tools);
 }
-.android .app > .titlebar,
-.android .touch-pose-rail,
-.android .touch-panel-rail,
-.android .touch-transport,
-.android .touch-view-toggle,
-.android .app > .active-layer-control > .active-layer-trigger {
-  box-shadow: var(--shadow-tools);
-}
-.android .tablet-sheet,
-.android .app > .timeline,
-.asset-library {
+
+/* Edge panels need enough separation from a detailed scene without turning
+ * into opaque cards. */
+:root .app > .control-list,
+:root .app > .character-panel,
+:root .workspace > .inspector,
+:root .workspace > .retarget-inspector,
+:root.android .tablet-sheet,
+:root .asset-library {
   box-shadow: var(--shadow-panel);
 }
-.app > .control-list,
-.app > .character-panel {
-  position: relative;
-  z-index: 1;
-  box-shadow: 6px 0 18px -8px #05090f70;
+
+/* The timeline is a docked editing surface; the shadow sits on its scene edge. */
+:root .app > .timeline,
+:root.android .app > .timeline {
+  box-shadow: var(--shadow-timeline);
 }
-.workspace > .inspector,
-.workspace > .retarget-inspector {
-  position: relative;
-  z-index: 1;
-  box-shadow: -6px 0 18px -8px #05090f70;
-}
-.app > .timeline {
-  box-shadow: 0 -6px 22px -10px #05090f80;
-}
-.file-menu,
-.animation-context-menu,
-.keyframe-menu,
-.keyframe-settings,
-.transform-popover,
-.active-layer-menu,
-.track-options-menu,
-.curve-view-menu,
-.library-panel {
+
+/* Menus and popovers are one level above panels. */
+:root .file-menu,
+:root .animation-context-menu,
+:root .keyframe-menu,
+:root .keyframe-settings,
+:root .transform-popover,
+:root .active-layer-menu,
+:root .loop-panel,
+:root .animation-mirror-panel,
+:root .curve-reducer,
+:root .track-options-menu,
+:root .curve-view-menu,
+:root .library-panel,
+:root .attachment-popover,
+:root.android .touch-pose-rail .transform-popover,
+:root.android .viewport-bottom.view-options-open > div {
   box-shadow: var(--shadow-popover);
 }
-.android .touch-pose-rail .transform-popover,
-.android .viewport-bottom.view-options-open > div {
-  box-shadow: var(--shadow-popover);
-}
-.modal,
-.android .modal {
+
+:root .modal,
+:root.android .modal {
   box-shadow: var(--shadow-dialog);
 }
+
 @media (max-width: 900px) {
-  .timeline .curve-properties {
+  :root .timeline .curve-properties {
     box-shadow: var(--shadow-popover);
   }
 }
-/* Embedded content shares its sheet's elevation. */
-.android .tablet-sheet .library-panel,
-.android .tablet-sheet .inspector,
-.android .tablet-sheet .retarget-inspector,
-.android .tablet-sheet .control-list,
-.android .tablet-sheet .character-panel {
+
+/* Embedded content shares its host sheet's elevation. */
+:root.android .tablet-sheet .library-panel,
+:root.android .tablet-sheet .inspector,
+:root.android .tablet-sheet .retarget-inspector,
+:root.android .tablet-sheet .control-list,
+:root.android .tablet-sheet .character-panel {
   box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root .selection-pose-tools,
+  :root .scene-selection-tools,
+  :root .app > .timeline {
+    transition: none !important;
+  }
 }

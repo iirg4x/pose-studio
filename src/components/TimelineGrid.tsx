@@ -37,11 +37,11 @@ import {
   ListTree,
   FoldVertical,
   Ghost,
+  Check,
   ZoomIn,
   Filter,
   ZoomOut,
   Settings2,
-  MoreHorizontal,
 } from 'lucide-react';
 import { studio } from '../core/store';
 import { useStudioChrome, useStudioSelector } from '../hooks';
@@ -78,10 +78,13 @@ type Drag =
 export const TimelineGrid = memo(function TimelineGrid({
   tracks,
   viewSwitch,
+  headerTools,
 }: {
   tracks: TimelineTracksState;
   /** Desktop: Timeline/Curves switch shown first in the tool row. */
   viewSwitch?: ReactNode;
+  /** Touch: share the Keys/Curves header instead of creating an idle tools row. */
+  headerTools?: HTMLElement | null;
 }) {
   const [toolsOpen, setToolsOpen] = useState(false),
     toolsRoot = useRef<HTMLDivElement>(null),
@@ -131,7 +134,7 @@ export const TimelineGrid = memo(function TimelineGrid({
   }, [toolsOpen]);
   const [zoom, setZoom] = useState(1),
     baseRowHeight = useTimelineRowHeight(),
-    rulerHeight = isAndroid ? 40 : 30;
+    rulerHeight = isAndroid ? 44 : 32;
   const s = useStudioChrome({ frame: 'none' }),
     scroll = useRef<HTMLDivElement>(null),
     root = useRef<HTMLDivElement>(null),
@@ -205,13 +208,9 @@ export const TimelineGrid = memo(function TimelineGrid({
     reveal.current = null;
   }, [collapsed, tracks.expanded, tracks.query, s.selected, s.selection, ids]);
   const [viewport, setViewport] = useState({ top: 0, height: 360, width: 800 });
-  // A few tracks share the panel height instead of leaving it empty; once they no longer
-  // fit, rows return to their normal height and scroll.
-  const fill = rows.length ? Math.floor((viewport.height - rulerHeight) / rows.length) : 0,
-    // A nearly empty track list should use the available space without turning one
-    // control into a giant lane.  Keep the grid easy to read and leave the rest of
-    // the panel available for the graph; larger track lists still use normal scroll.
-    rowHeight = Math.max(baseRowHeight, Math.min(isAndroid ? 48 : 40, fill));
+  // Keep lanes at the interaction contract size. The data area scrolls instead of
+  // stretching a sparse track into a giant lane or shrinking a touch target.
+  const rowHeight = baseRowHeight;
   useEffect(() => {
     const el = scroll.current;
     if (!el) return;
@@ -443,6 +442,164 @@ export const TimelineGrid = memo(function TimelineGrid({
   const interval =
     baseInterval *
     Math.max(1, Math.ceil((p.end * 40) / (Math.max(1, viewport.width) * baseInterval)));
+  const trackTools = (
+    <div className="track-view-tools">
+      {
+        <>
+          <button
+            aria-label="Zoom out timeline"
+            disabled={zoom === 1}
+            onClick={() => setZoom((v) => Math.max(1, v - 1))}
+          >
+            <ZoomOut size={18} />
+          </button>
+          <output aria-label="Timeline zoom">{zoom}×</output>
+          <button
+            aria-label="Zoom in timeline"
+            disabled={zoom === 8}
+            onClick={() => setZoom((v) => Math.min(8, v + 1))}
+          >
+            <ZoomIn size={18} />
+          </button>
+        </>
+      }
+      <div className="track-options" ref={toolsRoot}>
+        <button
+          ref={toolsButton}
+          aria-label="Track options"
+          aria-expanded={toolsOpen}
+          onClick={() => setToolsOpen(!toolsOpen)}
+        >
+          <ListTree size={20} />
+        </button>
+        {createPortal(
+          <MotionPresence show={toolsOpen}>
+            <div
+              ref={toolsMenu}
+              className="track-options-menu"
+              role="menu"
+              aria-label="Track display options"
+              data-editor-overlay
+              onKeyDown={(event) => {
+                if (event.key !== 'Escape') return;
+                event.preventDefault();
+                event.stopPropagation();
+                setToolsOpen(false);
+                toolsButton.current?.focus();
+              }}
+              style={{ left: toolsPosition.left, top: toolsPosition.top }}
+            >
+              <button
+                role="menuitemcheckbox"
+                aria-label="Box select timeline keys"
+                aria-checked={armed}
+                onClick={() => {
+                  root.current?.focus();
+                  setArmed(!armed);
+                  setToolsOpen(false);
+                }}
+              >
+                <BoxSelect size={17} />
+                <span>Box select keys</span>
+                {armed && (
+                  <Check size={16} aria-hidden="true" style={{ marginInlineStart: 'auto' }} />
+                )}
+              </button>
+              <button
+                role="menuitemcheckbox"
+                aria-label="Multi select keyframes"
+                aria-checked={multiSelect}
+                onClick={() => {
+                  finish(true);
+                  setMultiSelect(!multiSelect);
+                  setToolsOpen(false);
+                }}
+              >
+                <ListChecks size={17} />
+                <span>Multi-select keys</span>
+                {multiSelect && (
+                  <Check size={16} aria-hidden="true" style={{ marginInlineStart: 'auto' }} />
+                )}
+              </button>
+              <button
+                aria-label="Zoom out timeline"
+                disabled={zoom === 1}
+                onClick={() => {
+                  setZoom((v) => Math.max(1, v - 1));
+                  setToolsOpen(false);
+                }}
+              >
+                <ZoomOut size={17} />
+                <span>Zoom out</span>
+              </button>
+              <button
+                aria-label="Zoom in timeline"
+                disabled={zoom === 8}
+                onClick={() => {
+                  setZoom((v) => Math.min(8, v + 1));
+                  setToolsOpen(false);
+                }}
+              >
+                <ZoomIn size={17} />
+                <span>Zoom in</span>
+              </button>
+              <button
+                onClick={() => {
+                  fold(new Set());
+                  setToolsOpen(false);
+                }}
+              >
+                <ListTree size={17} />
+                Expand all tracks
+              </button>
+              <button
+                onClick={() => {
+                  fold(new Set(ids.filter((id) => id !== 'root')));
+                  setToolsOpen(false);
+                }}
+              >
+                <FoldVertical size={17} />
+                Collapse track groups
+              </button>
+              <button
+                role="menuitemcheckbox"
+                aria-label="Show only selected controls"
+                aria-checked={s.timelineFilter === 'selected'}
+                onClick={() => {
+                  studio.patch({
+                    timelineFilter: s.timelineFilter === 'selected' ? 'animated' : 'selected',
+                  });
+                  setToolsOpen(false);
+                }}
+              >
+                <Filter size={17} />
+                <span>Selected controls only</span>
+                {s.timelineFilter === 'selected' && (
+                  <Check size={16} aria-hidden="true" style={{ marginInlineStart: 'auto' }} />
+                )}
+              </button>
+              {p.bodyBase && (
+                <button
+                  aria-label="Source reference keys"
+                  aria-pressed={showReferences}
+                  onClick={() => {
+                    setShowReferences(!showReferences);
+                    try {
+                      localStorage.setItem('pose-timeline-references', String(!showReferences));
+                    } catch {}
+                  }}
+                >
+                  <Ghost size={17} />
+                  Source reference keys
+                </button>
+              )}
+            </div>
+          </MotionPresence>,
+          document.body,
+        )}
+      </div>
+    </div>
+  );
   return (
     <div
       className={'dope-sheet' + (armed ? ' box-armed' : '')}
@@ -497,7 +654,11 @@ export const TimelineGrid = memo(function TimelineGrid({
         y={keyMenu?.y ?? 0}
         close={closeKeyMenu}
       />
-      <div className="key-edit-tools">
+      <div
+        className="key-edit-tools"
+        data-header-tools={!!headerTools}
+        data-active={selection.length > 0 || !!s.keyClipboard || armed || multiSelect}
+      >
         {viewSwitch}
         <button
           aria-label="Box select timeline keys"
@@ -525,22 +686,6 @@ export const TimelineGrid = memo(function TimelineGrid({
           <ListChecks size={18} />
           <span>{multiSelect ? 'Multi on' : 'Multi'}</span>
         </button>
-        {!isAndroid && (
-          <button
-            aria-label="Show only selected controls"
-            title="Show only selected controls"
-            aria-pressed={s.timelineFilter === 'selected'}
-            className={s.timelineFilter === 'selected' ? 'active' : ''}
-            onClick={() =>
-              studio.patch({
-                timelineFilter: s.timelineFilter === 'selected' ? 'animated' : 'selected',
-              })
-            }
-          >
-            <Filter size={17} />
-            <span>Selected only</span>
-          </button>
-        )}
         <span className="key-selection-count">
           {preview?.kind === 'move'
             ? preview.delta + ' frames'
@@ -593,96 +738,18 @@ export const TimelineGrid = memo(function TimelineGrid({
             <span>Paste</span>
           </button>
         )}
-        <div className="track-view-tools">
-          {
-            <>
-              <button
-                aria-label="Zoom out timeline"
-                disabled={zoom === 1}
-                onClick={() => setZoom((v) => Math.max(1, v - 1))}
-              >
-                <ZoomOut size={18} />
-              </button>
-              <output aria-label="Timeline zoom">{zoom}×</output>
-              <button
-                aria-label="Zoom in timeline"
-                disabled={zoom === 8}
-                onClick={() => setZoom((v) => Math.min(8, v + 1))}
-              >
-                <ZoomIn size={18} />
-              </button>
-            </>
-          }
-          <div className="track-options" ref={toolsRoot}>
-            <button
-              ref={toolsButton}
-              aria-label="Track options"
-              aria-expanded={toolsOpen}
-              onClick={() => setToolsOpen(!toolsOpen)}
-            >
-              <MoreHorizontal size={20} />
-            </button>
-            {createPortal(
-              <MotionPresence show={toolsOpen}>
-                <div
-                  ref={toolsMenu}
-                  className="track-options-menu"
-                  role="menu"
-                  aria-label="Track display options"
-                  data-editor-overlay
-                  onKeyDown={(event) => {
-                    if (event.key !== 'Escape') return;
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setToolsOpen(false);
-                    toolsButton.current?.focus();
-                  }}
-                  style={{ left: toolsPosition.left, top: toolsPosition.top }}
-                >
-                  <button
-                    onClick={() => {
-                      fold(new Set());
-                      setToolsOpen(false);
-                    }}
-                  >
-                    <ListTree size={17} />
-                    Expand all tracks
-                  </button>
-                  <button
-                    onClick={() => {
-                      fold(new Set(ids.filter((id) => id !== 'root')));
-                      setToolsOpen(false);
-                    }}
-                  >
-                    <FoldVertical size={17} />
-                    Collapse track groups
-                  </button>
-                  {p.bodyBase && (
-                    <button
-                      aria-label="Source reference keys"
-                      aria-pressed={showReferences}
-                      onClick={() => {
-                        setShowReferences(!showReferences);
-                        try {
-                          localStorage.setItem('pose-timeline-references', String(!showReferences));
-                        } catch {}
-                      }}
-                    >
-                      <Ghost size={17} />
-                      Source reference keys
-                    </button>
-                  )}
-                </div>
-              </MotionPresence>,
-              document.body,
-            )}
-          </div>
-        </div>
+        {headerTools ? createPortal(trackTools, headerTools) : trackTools}
       </div>
       <div
         className="timeline-grid"
         ref={scroll}
-        style={{ '--timeline-zoom': zoom, '--track-row': rowHeight + 'px' } as CSSProperties}
+        style={
+          {
+            '--timeline-zoom': zoom,
+            '--track-row': rowHeight + 'px',
+            '--beat-width': (interval / p.end) * 100 + '%',
+          } as CSSProperties
+        }
       >
         <div className="track-labels">
           <div className="track-ruler-label">

@@ -1,93 +1,117 @@
-/* Pose properties: two task contexts, quiet sections, rig and layer identity. */
+/* Pose properties: one compact context row, quiet sections, rig and layer identity. */
 .properties-editor {
   overflow: hidden;
 }
-.property-context-tabs {
+.properties-heading {
   display: flex;
+  align-items: center;
   flex: none;
-  padding: 0 8px;
-  gap: 12px;
-  height: 36px;
-  border-bottom: 1px solid var(--line);
-  background: var(--inset);
+  gap: 4px;
+  min-height: 64px;
+  padding: 12px 8px 12px 16px;
 }
-.property-context-tabs button {
-  position: relative;
-  gap: 7px;
+.properties-heading-title {
+  flex: 1;
   min-width: 0;
-  border: 0;
-  border-radius: 0;
-  padding: 0 4px;
-  height: 36px;
-  font-size: 11px;
-  color: var(--muted);
 }
-.property-context-tabs button[aria-selected='true'] {
-  color: var(--text);
-  background: none;
-  box-shadow: inset 0 -2px var(--cyan);
+:root .properties-editor .properties-heading h2 {
+  font-size: 15px;
+  line-height: 20px;
+  margin: 0 0 4px;
+  font-weight: 600;
 }
-.property-context-tabs button[aria-selected='true'] svg {
-  color: var(--cyan);
-}
-.property-context-tabs button:last-child[aria-selected='true'] {
-  box-shadow: inset 0 -2px var(--green);
-}
-.property-context-tabs button:last-child[aria-selected='true'] svg {
-  color: var(--green);
+.properties-heading .properties-close {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  flex: none;
+  background: transparent;
 }
 .property-context-heading {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 37px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--line);
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
 }
 .property-context-heading i {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   background: var(--control-tint);
-  border-radius: 2px;
+  border-radius: var(--radius-flair);
   flex: none;
 }
 .property-context-heading strong {
-  font-size: 12px;
+  min-width: 0;
+  font-size: 13px;
   font-weight: 500;
+  color: var(--control-tint);
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
 }
 .property-context-heading small {
-  margin-left: auto;
+  margin-left: 8px;
   font-size: 10px;
   color: var(--muted);
   white-space: nowrap;
 }
+.property-context-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  min-height: 28px;
+  margin-left: auto;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  color: var(--secondary);
+  font-size: 11px;
+}
+.property-context-switch:hover {
+  border-color: var(--line);
+  background: var(--hover);
+  color: var(--text);
+}
+.property-context-switch svg {
+  color: var(--cyan);
+}
+.properties-editor[data-context='animation'] .property-context-switch svg {
+  color: var(--green);
+}
 .properties-content {
-  padding: 8px;
+  padding: 0 12px 12px;
   overflow-x: hidden;
 }
 .property-section {
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  background: var(--panel);
-  margin-bottom: 5px;
+  margin: 0;
   min-width: 0;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle, color-mix(in srgb, var(--line) 55%, transparent));
+  border-radius: 0;
+  background: transparent;
+}
+.property-section:last-child {
+  border-bottom: 0;
 }
 .property-header {
   display: flex;
   justify-content: flex-start;
   gap: 7px;
-  padding: 0 8px;
+  padding: 0 4px;
   width: 100%;
-  min-height: 29px;
-  height: 29px;
-  font-size: 11px;
+  min-height: 36px;
+  height: 36px;
+  font-size: 13px;
   font-weight: 500;
   border: 0;
-  border-radius: 2px;
-  background: var(--raised);
+  border-radius: 0;
+  background: transparent;
   color: var(--text);
 }
 .property-header svg {
@@ -97,8 +121,53 @@
 .property-header:hover {
   background: var(--hover);
 }
+.property-header-with-action {
+  align-items: center;
+  justify-content: space-between;
+}
+.property-header-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
+  gap: 7px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.property-header-toggle:hover {
+  background: var(--hover);
+}
+.property-header-toggle > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.property-header-action {
+  display: flex;
+  align-items: center;
+  flex: none;
+  min-width: 0;
+}
+.property-header-action .inline-space {
+  width: 104px;
+  max-width: 104px;
+  height: 32px;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
 .property-content {
-  padding: 8px;
+  padding: 6px 4px 12px;
 }
 .property-row {
   display: grid;
@@ -123,7 +192,7 @@
   min-height: 27px;
   padding: 4px 8px;
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: var(--radius-control);
   background-color: var(--inset);
 }
 .property-row output {
@@ -175,7 +244,7 @@
   pointer-events: none;
 }
 .property-vector {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 .property-vector:last-child {
   margin-bottom: 0;
@@ -185,31 +254,71 @@
   align-items: center;
   margin-bottom: 5px;
   gap: 8px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--secondary);
 }
 .property-vector-label small {
-  margin-left: auto;
-  font-size: 10px;
+  margin-left: -4px;
+  font-size: inherit;
   color: var(--muted);
 }
+.property-vector-label small::before {
+  content: '· ';
+}
+/* The approved tablet inspector gives Transform one soft inset group. */
+:root
+  .app
+  .properties-editor[data-layout='full']
+  .property-section[data-property-section='transform'] {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-panel);
+  padding: 4px 8px;
+  margin-bottom: 4px;
+  background: color-mix(in srgb, var(--inset) 8%, transparent);
+}
 .properties-editor .vector-inputs {
-  gap: 4px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
 }
 .properties-editor .vector-inputs label {
-  height: 28px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 32px;
+  min-height: 32px;
   background: var(--inset);
-  border-color: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  overflow: hidden;
 }
 .properties-editor .vector-inputs input {
-  padding: 4px 10px 4px 3px;
+  width: 100%;
+  height: 30px;
+  padding: 4px 8px 4px 3px;
   min-width: 0;
-  min-height: 26px;
+  min-height: 30px;
   font-size: 11px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: right;
+}
+/* design-system.css gives every standalone input a field shell; the label
+ * owns that shell for vector controls so the axis token remains a quiet part
+ * of the same opaque cell. */
+:root .app .properties-editor .property-vector .vector-inputs input {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .properties-editor .vector-inputs label > span {
+  width: 18px;
   padding-left: 7px;
   flex: none;
+  font-size: 10px;
 }
 .property-edit-target {
   display: flex;
@@ -243,6 +352,7 @@
   margin: 0;
   background: var(--inset);
   border-color: var(--line);
+  border-radius: var(--radius-group);
 }
 .property-layer-editor .layer-row {
   min-height: 30px;
@@ -301,6 +411,7 @@
   min-height: 23px;
   padding: 3px;
   border: 1px solid var(--line);
+  border-radius: var(--radius-control);
   background: var(--raised);
 }
 .property-stack-tools > span {
@@ -335,6 +446,7 @@
   background: var(--inset);
   padding: 4px;
   border: 1px solid var(--line);
+  border-radius: var(--radius-group);
   margin-top: 5px;
 }
 .property-add-layer button {
@@ -383,15 +495,15 @@
 }
 .properties-editor .rig-mode-switch {
   display: flex;
-  height: 27px;
+  height: 32px;
   margin: 0;
-  min-width: 0;
+  min-width: 128px;
 }
 .properties-editor .rig-mode-switch button {
   flex: 1;
-  height: 25px;
-  min-height: 25px;
-  font-size: 10px;
+  height: 32px;
+  min-height: 32px;
+  font-size: 13px;
   padding: 3px;
 }
 .properties-editor .slider-row {
@@ -554,7 +666,7 @@
   overflow: hidden;
   background: var(--raised);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-panel);
   padding: 5px;
   font-size: 11px;
 }
@@ -640,7 +752,7 @@
   padding: 12px;
   background: var(--inset);
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: var(--radius-group);
 }
 .action-source-summary > svg {
   color: var(--cyan);
@@ -677,7 +789,7 @@
 .shared-export-characters {
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-group);
   margin-bottom: 16px;
 }
 .shared-export-characters > div {
@@ -690,7 +802,7 @@
   background: var(--inset);
   border: 1px solid var(--border);
   padding: 4px 8px;
-  border-radius: 3px;
+  border-radius: var(--radius-control);
   font-size: 12px;
 }
 .shared-export-characters > p {
@@ -714,42 +826,207 @@
   overflow-wrap: anywhere;
 }
 
-/* Inline coordinate space and per-row keying. */
+/* Coordinate space, keying and vectors share one quiet edit rhythm. On a fine
+ * pointer the space selector sits in the Transform header; touch keeps it in
+ * the document flow as a full-size labeled field. */
+.property-row .inline-space,
 .property-vector-label .inline-space {
-  height: 20px;
-  min-height: 20px;
+  width: 104px;
   max-width: 104px;
-  padding: 0 4px;
+  height: 32px;
+  min-height: 32px;
+  padding: 4px 8px;
   font-size: 11px;
 }
-.property-vector-label .key-row {
-  width: 22px;
-  height: 20px;
-  min-height: 20px;
-  padding: 3px;
-  border-radius: 4px;
+.transform-edit-space .inline-space {
+  justify-self: start;
+}
+.properties-editor .property-vector-editor {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+.properties-editor .property-vector-editor .vector-inputs {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.property-vector-editor .key-row {
+  flex: 0 0 28px;
+  width: 28px;
+  min-width: 28px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
   color: var(--muted);
 }
-.property-vector-label .key-row:hover:not(:disabled) {
+.property-vector-editor .key-row:hover:not(:disabled) {
   color: var(--text);
+  background: var(--hover);
 }
-/* Key state, Blender's convention: amber keyed here, green animated, orange changed and not keyed. */
-.property-vector[data-key-state] {
-  --key-state: transparent;
+.property-vector-editor .key-row > svg {
+  width: 16px;
+  height: 16px;
 }
-.property-vector[data-key-state='keyed'] {
-  --key-state: #e3b341;
-}
-.property-vector[data-key-state='animated'] {
-  --key-state: #5fbf7f;
-}
-.property-vector[data-key-state='changed'] {
-  --key-state: #e8843c;
-}
+/* Key state remains visible in the key command; fields stay opaque and calm. */
 .property-vector[data-key-state] .vector-inputs label {
-  background: color-mix(in srgb, var(--key-state) 28%, var(--inset));
-  border-color: color-mix(in srgb, var(--key-state) 75%, var(--line));
+  background: var(--inset);
+  border-color: var(--line);
 }
-.property-vector[data-key-state] .key-row {
-  color: var(--key-state);
+.property-vector[data-key-state='keyed'] .key-row {
+  color: var(--amber);
+}
+.property-vector[data-key-state='animated'] .key-row {
+  color: var(--green);
+}
+.property-vector[data-key-state='changed'] .key-row {
+  color: var(--amber);
+}
+
+/* Desktop has one complete inspector; only the control-specific tabs are
+ * disclosed on touch so Transform, Rig and Layer keep their full routes. */
+.property-control-tabs {
+  display: none;
+}
+@media (min-width: 701px) and (min-height: 541px) and (pointer: fine) {
+  .properties-editor .transform-edit-space-header {
+    display: flex;
+    align-items: center;
+  }
+}
+@media (pointer: coarse), (max-width: 700px), (max-height: 540px) {
+  :root .app .properties-editor .property-control-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    margin: 0 8px 4px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-group);
+    overflow: hidden;
+    background: var(--inset);
+  }
+  :root .app .properties-editor .property-control-tabs button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+    min-height: 44px;
+    height: 44px;
+    padding: 0 7px;
+    border: 0;
+    border-radius: 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  :root .app .properties-editor .property-control-tabs button + button {
+    border-inline-start: 1px solid var(--line);
+  }
+  :root .app .properties-editor .property-control-tabs button[aria-selected='true'] {
+    background: var(--cyan);
+    color: var(--accent-ink);
+  }
+  :root .app .properties-editor .property-control-tabs button:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: -2px;
+  }
+  :root .app .properties-editor .property-context-heading {
+    min-height: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+  }
+  :root .app .properties-editor .properties-close {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+  :root .app .properties-editor .property-context-switch {
+    min-height: 44px;
+    height: 44px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  :root .app .properties-editor .properties-content {
+    padding: 0 12px 12px;
+  }
+  :root .app .properties-editor .property-header {
+    min-height: 44px;
+    height: 44px;
+    font-size: 14px;
+  }
+  :root .app .properties-editor .property-content {
+    padding: 8px 4px 14px;
+  }
+  :root .app .properties-editor .property-vector-label {
+    min-height: 28px;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  :root .app .properties-editor .property-vector-editor .key-row {
+    flex-basis: 44px;
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    height: 44px;
+  }
+  :root .app .properties-editor .property-vector-editor .key-row > svg {
+    width: 20px;
+    height: 20px;
+  }
+  :root .app .properties-editor .property-row,
+  :root .app .properties-editor .property-row > span {
+    font-size: 14px;
+  }
+  :root .app .properties-editor .property-row > :is(input, select, output) {
+    min-height: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+  :root .app .properties-editor .vector-inputs {
+    min-height: 44px;
+  }
+  :root .app .properties-editor .vector-inputs label,
+  :root .app .properties-editor .vector-inputs input {
+    min-height: 44px;
+    height: 44px;
+  }
+  :root .app .properties-editor .vector-inputs input {
+    font-size: 16px;
+  }
+  :root .app .properties-editor .vector-inputs label > span {
+    width: 24px;
+    padding: 0;
+    text-align: center;
+    font-size: 14px;
+  }
+  :root .app .properties-editor .transform-edit-space {
+    position: static;
+    width: auto;
+    margin: 3px 0;
+  }
+  :root .app .properties-editor .transform-edit-space > span {
+    display: block;
+  }
+}
+
+/* At phone widths, put the key command beside the vector label so signed
+ * values retain the full field width without reducing their 16px text. */
+@media (max-width: 360px) {
+  .properties-editor .property-vector {
+    position: relative;
+  }
+  :root .app .properties-editor .property-vector-label {
+    min-height: 44px;
+    padding-right: 52px;
+    margin-bottom: 4px;
+  }
+  :root .app .properties-editor .property-vector-editor .key-row {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
 }

@@ -1,8 +1,10 @@
-/* An editing surface should settle, without bouncing or delaying a command. */
+/* Shared UI motion: responsive, calm and frame-rate independent. Commands take
+ * effect immediately; only the surface around them settles into place. */
 :root {
   --motion-quick: 130ms;
   --motion-surface: 200ms;
   --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-reduced: 80ms;
 }
 [data-motion],
 .android .tablet-sheet,
@@ -188,14 +190,16 @@
 }
 .timeline .dope-sheet,
 .timeline .curve-editor {
-  animation: editor-settle 150ms ease-out;
+  animation: editor-settle var(--motion-surface) var(--motion-ease);
 }
 @keyframes editor-settle {
   from {
-    opacity: 0.35;
+    opacity: 0.98;
+    translate: 0 2px;
   }
   to {
     opacity: 1;
+    translate: 0 0;
   }
 }
 @media (max-width: 700px) {
@@ -301,79 +305,6 @@
 @media (prefers-reduced-motion: reduce) {
   .timeline .curve-editor {
     transition: none;
-  }
-}
-
-/* Foot tools are contextual and keep anatomical pivots within thumb reach. */
-.foot-pose-tools {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 2px 0;
-  margin-top: 6px;
-  border-top: 1px solid #425362;
-}
-.foot-pivot-options {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.foot-pivot-options > span {
-  font-size: 10px;
-  color: var(--secondary);
-}
-.foot-pivot-options > div {
-  display: flex;
-  gap: 2px;
-  background: #111c26;
-  border: 1px solid #3b4f60;
-  border-radius: 8px;
-  padding: 2px;
-}
-.foot-pose-tools button {
-  min-width: 40px;
-  min-height: 32px;
-  font-size: 11px;
-  padding: 4px 7px;
-  border-radius: 5px;
-}
-.foot-pose-tools button[aria-pressed='true'] {
-  color: #d2f5fc;
-  background: #315766;
-}
-.foot-pose-tools .ground-toes-command {
-  margin-left: auto;
-  gap: 5px;
-  color: #b9dcd6;
-}
-.android .foot-pose-tools button {
-  min-height: 40px;
-}
-.android .pose-action-buttons {
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.android .pose-action-buttons button {
-  flex: 1 1 48px;
-  min-width: 48px;
-}
-@media (max-width: 700px) {
-  .foot-pivot-options {
-    gap: 4px;
-  }
-  .foot-pivot-options > span {
-    max-width: 32px;
-  }
-  .foot-pose-tools {
-    gap: 4px;
-  }
-  .foot-pose-tools button {
-    padding-inline: 5px;
-    min-width: 36px;
-  }
-  .foot-pose-tools .ground-toes-command {
-    font-size: 10px;
   }
 }
 

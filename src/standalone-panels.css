@@ -9,10 +9,10 @@
 }
 
 :root:not(.android) {
-  --standalone-viewport-top: 40px;
+  --standalone-viewport-top: 0px;
   --standalone-viewport-left: 0px;
   --standalone-viewport-width: 100vw;
-  --standalone-viewport-height: calc(100vh - 40px);
+  --standalone-viewport-height: 100vh;
 }
 
 .modal-backdrop {
@@ -28,6 +28,66 @@
 .modal-backdrop > .modal {
   max-height: calc(var(--standalone-viewport-height) - 32px);
   margin: 0;
+}
+
+.standalone-settings-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(520px, calc(var(--standalone-viewport-width) - 32px));
+  max-height: calc(var(--standalone-viewport-height) - 32px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-dialog, 16px);
+  background: var(--raised);
+  box-shadow: var(--shadow-dialog, 0 8px 24px #03070d55, 0 28px 80px -12px #03070da0);
+}
+.standalone-settings-dialog > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 52px;
+  min-height: 52px;
+  padding: 0 8px 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+.standalone-settings-dialog > header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.standalone-settings-dialog > header button {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+}
+.standalone-settings-dialog > .touch-settings {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  overflow: auto;
+}
+.standalone-settings-dialog .touch-settings h3 {
+  margin: 0 0 8px;
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.standalone-settings-dialog .touch-setting-pair,
+.standalone-settings-dialog .touch-settings-actions {
+  display: flex;
+  gap: 8px;
+}
+.standalone-settings-dialog .touch-setting-pair > button {
+  flex: 1;
+}
+.standalone-settings-dialog .touch-settings-actions {
+  flex-direction: column;
+}
+.standalone-settings-dialog .touch-settings-actions button {
+  justify-content: flex-start;
 }
 
 /* Asset browsing is a task surface rather than a scene-attached inspector. */

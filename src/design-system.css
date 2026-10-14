@@ -1,115 +1,323 @@
-/* Pose design system, shared by desktop and tablet. One palette, one accent and one look
- * for every control kind. Older sheets style through these tokens, so defining them here
- * moves the whole app at once. This sheet sets appearance only: sizes, touch targets and
- * layout stay with each workspace (components/desktop-system.css for the desktop, tablet.css
- * for touch), so the tablet keeps its interactions while matching the desktop's design. */
+/*
+ * Pose Studio shared visual contract.
+ *
+ * This is the semantic style layer. Workspace sheets own geometry and device
+ * layout; they consume these tokens rather than creating a second palette or
+ * radius scale. The scene stays quiet and the editing surfaces stay legible.
+ */
 :root {
-  /* Surfaces, darkest to lightest: recessed wells, app ground, panels, raised bars. */
-  --inset: #0e1218;
+  color-scheme: dark;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+
+  /* Elevation surfaces: a cool graphite workbench, lifted in small steps. */
   --canvas: #12171e;
-  --panel: #171d26;
+  --inset: #1b2835;
+  --panel: #192735;
   --surface: var(--panel);
-  --raised: #1d2530;
-  --hover: #252e3a;
-  --line: #232b36;
-  --border: #2c3644;
-  /* Text: primary, secondary, muted. */
+  --raised: #223140;
+  --hover: #2d4153;
+  --pressed: #365064;
+  --border: #3a4d60;
+  --border-subtle: color-mix(in srgb, var(--border) 45%, transparent);
+  --line: var(--border);
+
+  /* Text hierarchy. */
   --text: #e3e9f1;
   --secondary: #b9c3cf;
   --muted: #7f8c9d;
-  /* The single accent: time, focus, selection. */
-  --accent: #5ed3ea;
+
+  /* Pose's one action/focus accent and semantic key colours. */
+  --accent: #42d8e9;
   --accent-ink: #06222a;
+  --accent-hover: #7bdef0;
+  --accent-pressed: #4dbdd4;
   --selection: #243e49;
-  --ds-radius: 4px;
-  --ds-radius-lg: 6px;
-  --ds-shadow: 0 10px 28px #0000008c, 0 0 0 1px #00000066;
+  --amber: #e6bf77;
+  --red: #e98383;
+  --green: #95ccb4;
+  --axis-z: #75b6f2;
+  --violet: #ac9aeb;
+
+  /* Compatibility names used by the existing render and editor sheets. */
+  --cyan: var(--accent);
+  --blue: var(--accent);
+  --scroll-thumb: #3a495c;
+  --scroll-hover: #58718e;
+  --timeline-grid-line: #93acc312;
+  --library-surface: var(--raised);
+  --library-inset: var(--inset);
+  --library-hover: var(--hover);
+  --library-active: var(--selection);
+  --library-text: var(--text);
+  --library-secondary: var(--secondary);
+  --library-muted: var(--muted);
+
+  /* One radius language. */
+  --radius-flush: 0px;
+  --radius-flair: 4px;
+  --radius-control: 6px;
+  --radius-group: 8px;
+  --radius-panel: 12px;
+  --radius-dialog: 16px;
+  /* Legacy names migrate into the shared scale. */
+  --ds-radius: var(--radius-control);
+  --ds-radius-lg: var(--radius-group);
+  --tool-radius: var(--radius-panel);
+
+  /* Surface alpha is part of the component contract, not a container opacity. */
+  --surface-quick: rgb(18 29 40 / 70%);
+  --surface-menu: rgb(18 29 40 / 70%);
+  --surface-timeline: rgb(18 29 40 / 70%);
+  --surface-ruler: rgb(18 29 40 / 70%);
 }
 
-/* The page behind the app matches it, so overscroll and the iOS home-screen app show
- * no mismatched strip at the edges. */
 html,
 body {
   background: var(--canvas);
+  color: var(--text);
 }
 
-/* ---- Segmented controls: one look for every either/or choice ------------------------ */
-:root .app :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs) {
-  border: 1px solid var(--line);
-  border-radius: var(--ds-radius);
-  background: var(--inset);
-  box-shadow: none;
+/* Native controls inherit the same readable type and geometry. More specific
+ * timeline/transport rules can intentionally use flush edges. */
+:root .app :is(button, input, select, textarea) {
+  font-family: inherit;
 }
-:root .app :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs) > button {
-  border: 0;
-  border-radius: 3px;
-  background: transparent;
-  box-shadow: none;
+:root .app button {
+  border-radius: var(--radius-control);
+}
+:root .app :is(input, select, textarea) {
+  border-radius: var(--radius-control);
+}
+
+/* Four contrast levels are used by the panels without whole-panel opacity. */
+:root .app :is(label, .property-row > span, .property-vector-label) {
+  color: var(--secondary);
+}
+:root .app :is(small, .property-note, .metadata, [data-muted='true']) {
   color: var(--muted);
+}
+
+/* Joined controls. The wrapper owns the silhouette; selected children fill
+ * their cells so neighbouring choices read as one continuous instrument. */
+:root
+  .app
+  :is(
+    .joined,
+    .workspace-tabs,
+    .action-switch,
+    .segmented,
+    .embedded-library-tabs,
+    .rig-mode-switch,
+    .export-modes,
+    .shared-export-range > .segmented,
+    .constraint-reach,
+    .attachment-inherit > div
+  ) {
+  display: inline-flex;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-group);
+  background: var(--inset);
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: none;
 }
 :root
   .app
-  :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs)
+  :is(
+    .joined,
+    .workspace-tabs,
+    .action-switch,
+    .segmented,
+    .embedded-library-tabs,
+    .rig-mode-switch,
+    .export-modes,
+    .shared-export-range > .segmented,
+    .constraint-reach,
+    .attachment-inherit > div
+  )
+  > button {
+  margin: 0;
+  border: 0;
+  border-radius: var(--radius-flush);
+  box-shadow: none;
+  background: transparent;
+  color: var(--secondary);
+}
+:root
+  .app
+  :is(
+    .joined,
+    .workspace-tabs,
+    .action-switch,
+    .segmented,
+    .embedded-library-tabs,
+    .rig-mode-switch,
+    .export-modes,
+    .shared-export-range > .segmented,
+    .constraint-reach,
+    .attachment-inherit > div
+  )
+  > button
+  + button {
+  border-inline-start: 1px solid var(--border);
+}
+:root
+  .app
+  :is(
+    .joined,
+    .workspace-tabs,
+    .action-switch,
+    .segmented,
+    .embedded-library-tabs,
+    .rig-mode-switch,
+    .export-modes,
+    .shared-export-range > .segmented,
+    .constraint-reach,
+    .attachment-inherit > div
+  )
   > button:hover:not(:disabled) {
   background: var(--hover);
   color: var(--text);
 }
 :root
   .app
-  :is(.workspace-tabs, .action-switch, .segmented, .embedded-library-tabs)
-  > button[aria-pressed='true'] {
-  background: var(--selection);
-  color: var(--text);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+  :is(
+    .joined,
+    .workspace-tabs,
+    .action-switch,
+    .segmented,
+    .embedded-library-tabs,
+    .rig-mode-switch,
+    .export-modes,
+    .shared-export-range > .segmented,
+    .constraint-reach,
+    .attachment-inherit > div
+  )
+  > button:is([aria-pressed='true'], [aria-selected='true'], .active, :checked) {
+  background: var(--accent);
+  color: var(--accent-ink);
 }
-
-/* ---- Toggle buttons (independent on/off) share the pressed look ------------------- */
-:root .app .attachment-inherit button {
-  border: 1px solid var(--line);
-  border-radius: var(--ds-radius);
-  background: var(--inset);
-  color: var(--muted);
-}
-:root .app .attachment-inherit button[aria-pressed='true'] {
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
-  background: var(--selection);
-  color: var(--text);
-}
-
-/* ---- Command buttons in panels ----------------------------------------------------- */
-:root .app button.ground-key-command {
-  border: 1px solid var(--border);
-  border-radius: var(--ds-radius);
-  background: var(--raised);
-  color: var(--text);
-}
-:root .app button.ground-key-command:hover {
-  background: var(--hover);
-}
-
-/* ---- Fields ------------------------------------------------------------------------ */
 :root
   .app
-  :is(.properties-editor, .inspector)
-  :is(input:not([type='range'], [type='checkbox']), select) {
-  border: 1px solid var(--line);
-  border-radius: var(--ds-radius);
-  background-color: var(--inset);
+  :is(
+    .joined,
+    .workspace-tabs,
+    .action-switch,
+    .segmented,
+    .embedded-library-tabs,
+    .rig-mode-switch,
+    .export-modes,
+    .shared-export-range > .segmented,
+    .constraint-reach,
+    .attachment-inherit > div
+  )
+  > button:is([aria-pressed='true'], [aria-selected='true'], .active, :checked):hover:not(
+    :disabled
+  ) {
+  background: var(--accent-hover);
+  color: var(--accent-ink);
+}
+:root
+  .app
+  :is(
+    .joined,
+    .workspace-tabs,
+    .action-switch,
+    .segmented,
+    .embedded-library-tabs,
+    .rig-mode-switch,
+    .export-modes,
+    .shared-export-range > .segmented,
+    .constraint-reach,
+    .attachment-inherit > div
+  )
+  > button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+:root
+  .app
+  :is(
+    .joined,
+    .workspace-tabs,
+    .action-switch,
+    .segmented,
+    .embedded-library-tabs,
+    .rig-mode-switch,
+    .export-modes,
+    .shared-export-range > .segmented,
+    .constraint-reach,
+    .attachment-inherit > div
+  )
+  > button:is([aria-pressed='true'], [aria-selected='true'], .active):focus-visible {
+  outline-color: var(--accent-ink);
+}
+
+/* Independent fields and buttons retain a compact 6px shape. */
+:root
+  .app
+  :is(
+    .properties-editor,
+    .inspector,
+    .modal,
+    .library-panel,
+    .attachment-popover,
+    .keyframe-settings
+  )
+  :is(input:not([type='range'], [type='checkbox']), select, textarea) {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--inset);
   color: var(--text);
 }
 :root .app :is(input, select, textarea):focus-visible {
   border-color: var(--accent);
-  outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+:root .app :is(button, summary, [role='button'], [role='menuitem']):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
-/* ---- Panel structure --------------------------------------------------------------- */
+/* Commands have transient feedback; they do not acquire a selected-state fill. */
+:root .app :is(.ground-key-command, .pose-reset-command, [data-command='true']) {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--raised);
+  color: var(--text);
+}
+:root
+  .app
+  :is(.ground-key-command, .pose-reset-command, [data-command='true']):hover:not(:disabled) {
+  background: var(--hover);
+}
+:root
+  .app
+  :is(.ground-key-command, .pose-reset-command, [data-command='true']):active:not(:disabled) {
+  background: var(--pressed);
+}
+
+/* Inspector hierarchy. The optional inspector is translucent at its surface
+ * while fields remain solid enough to edit against a bright scene. */
+:root .app :is(.inspector, .workspace > .inspector, .retarget-inspector) {
+  background: var(--surface-quick);
+  border-color: var(--border);
+}
+:root .app :is(.area-side, .tablet-sheet) .properties-editor {
+  background: transparent;
+}
 :root .app .property-context-tabs {
   background: var(--raised);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
 }
 :root .app .property-context-tabs button {
   color: var(--muted);
+  border-radius: var(--radius-flush);
 }
 :root
   .app
@@ -119,89 +327,118 @@ body {
   box-shadow: inset 0 -2px var(--accent);
 }
 :root .app .property-section {
-  border-bottom: 1px solid var(--line);
+  border-color: var(--border-subtle);
+  border-radius: var(--radius-flush);
+  background: transparent;
 }
 :root .app .property-header {
   color: var(--text);
-  font-weight: 600;
+  font-weight: 500;
+  border-radius: var(--radius-flush);
+}
+:root .app .property-header:hover {
+  background: var(--hover);
 }
 :root .app .property-row > span {
   color: var(--secondary);
 }
 
-/* ---- Overlays: menus, popovers, dialogs, sheets ------------------------------------ */
+/* Menus and popovers sit above the scene without turning their text hazy. */
 :root
-  .app
   :is(
     .menubar-dropdown,
     .transform-popover,
     .active-layer-menu,
     .library-popover,
+    .library-panel,
+    .loop-panel,
+    .animation-mirror-panel,
+    .curve-reducer,
     .curve-view-menu,
     .track-options-menu,
-    .file-menu
-  ),
-:root .app :is(.dialog, [role='dialog']) {
+    .file-menu,
+    .animation-context-menu,
+    .keyframe-menu,
+    .keyframe-settings,
+    .attachment-popover
+  ) {
   border: 1px solid var(--border);
-  border-radius: var(--ds-radius-lg);
-  background: var(--raised);
-  box-shadow: var(--ds-shadow);
+  border-radius: var(--radius-panel);
+  background: var(--surface-menu);
 }
-/* Menus carry no heading label; the trigger already names them. */
-:root .app :is(.transform-popover h4, .active-layer-menu > header) {
-  display: none;
+:root :is(.dialog, .modal, dialog, [role='dialog']) {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-dialog);
+  background: var(--surface-menu);
 }
-:root .app :is(.transform-popover, .active-layer-menu) button {
+:root :is(.transform-popover, .active-layer-menu) button {
   border: 0;
-  border-radius: var(--ds-radius);
-  background: none;
+  border-radius: var(--radius-control);
+  background: transparent;
   color: var(--text);
   font-weight: 400;
   text-align: left;
 }
-:root .app :is(.transform-popover, .active-layer-menu) button > svg:first-child {
-  color: var(--secondary);
-}
-:root .app :is(.transform-popover, .active-layer-menu) button > svg:last-child:not(:first-child) {
-  color: var(--accent);
-}
-:root .app :is(.transform-popover, .active-layer-menu) button small {
-  color: var(--muted);
-}
-:root .app :is(.transform-popover, .active-layer-menu) button:is(:hover, :focus-visible) {
+:root :is(.transform-popover, .active-layer-menu) button:hover:not(:disabled),
+:root :is(.transform-popover, .active-layer-menu) button:focus-visible {
   background: var(--selection);
   outline: none;
 }
-:root .app .transform-popover button[aria-checked='true'],
-:root .app .active-layer-menu > button[aria-pressed='true'] {
-  background: none;
-  box-shadow: none;
+:root .transform-popover button[aria-checked='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+/* Layer rows carry descriptive text, so selection uses a quiet list highlight. */
+:root .active-layer-menu > button[aria-pressed='true'] {
+  background: var(--selection);
   color: var(--text);
+  box-shadow: inset 2px 0 var(--accent);
 }
-:root .app .transform-popover .cursor-reset,
-:root .app .active-layer-menu > footer {
-  border-top: 1px solid var(--border);
-}
-:root .app .transform-popover .cursor-reset,
-:root .app .active-layer-menu > footer button {
+:root .active-layer-menu > button[aria-pressed='true'] small {
   color: var(--secondary);
 }
-
-/* ---- Export choices: icon and text read left to right like every other list -------- */
-:root .app .android-export-options button {
-  justify-content: flex-start;
-  border-radius: var(--ds-radius-lg);
-  text-align: left;
+:root .active-layer-menu > button[aria-pressed='true'] > svg {
+  color: var(--accent);
 }
 
-/* ---- Focus ------------------------------------------------------------------------- */
-:root .app :is(button, summary, [role='menuitem']):focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
+/* Standalone controls use the larger dialog radius; embedded panels do not. */
+:root .modal,
+:root dialog {
+  box-shadow: var(--shadow-dialog);
+}
+:root .context-flair {
+  border-radius: var(--radius-flair);
+  background: var(--raised);
+  color: var(--secondary);
+}
+:root .app .active-layer-trigger {
+  border-radius: var(--radius-control);
 }
 
-/* ---- Touch: the same look on the tablet's floating surfaces ------------------------
- * Layout, sizes and touch targets stay in tablet.css; this only aligns appearance. */
+/* Axis identity is redundant with labels but remains useful at a glance. */
+:root .app .vector-inputs label:nth-child(1) > span {
+  color: var(--red);
+}
+:root .app .vector-inputs label:nth-child(2) > span {
+  color: var(--green);
+}
+:root .app .vector-inputs label:nth-child(3) > span {
+  color: var(--axis-z);
+}
+
+/* The grid/floor remains visible in the viewport and game view; this layer only
+ * prevents editor chrome from painting over the scene. */
+:root .app .control-eye {
+  background: transparent;
+  color: var(--muted);
+}
+:root .app .control-eye:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+/* Touch sheets use the same surfaces, with dimensions supplied by the device
+ * layout sheets. */
 :root.android
   .app
   :is(
@@ -213,62 +450,131 @@ body {
     .touch-transport,
     .tablet-sheet
   ) {
-  border-color: var(--touch-divider);
-  border-radius: 12px;
-  background: var(--panel);
+  border-color: var(--border);
+  background: var(--surface-quick);
 }
-/* Panel titles are headings inside the panel, as on the desktop, not tabs on its edge. */
 :root.android .app .tablet-sheet > header {
-  position: relative;
-  inset: auto;
-  display: flex;
-  align-items: center;
-  flex: none;
-  height: 44px;
-  min-height: 44px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--line);
+  border-bottom-color: var(--border);
 }
 :root.android .app .tablet-sheet > header h2 {
-  position: static;
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  background: none;
   color: var(--text);
-  font-size: 14px;
-  font-weight: 600;
-  transform: none;
-}
-:root.android .app :is(.touch-settings h3, .control-list header > .context-flair) {
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--secondary);
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 600;
 }
-:root.android .app .active-layer-trigger .attached-flair {
-  display: none;
-}
-/* Either/or tiles use the segmented pressed look. */
 :root.android .app .touch-setting-pair button {
-  border: 1px solid var(--line);
+  border-color: var(--border);
   background: var(--inset);
   color: var(--secondary);
 }
 :root.android .app .touch-setting-pair button:is([aria-pressed='true'], .active) {
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
-  background: var(--selection);
-  color: var(--text);
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
 }
-/* Per-control visibility: a quiet icon toggle, as in the desktop's lists. */
-:root .app .control-eye {
-  background: transparent;
-  color: var(--muted);
+
+@media (pointer: coarse) {
+  :root .app :is(input, select, textarea) {
+    font-size: 16px;
+  }
 }
-:root .app .control-eye:hover {
-  background: var(--hover);
-  color: var(--text);
+
+/* Touch property controls keep the same hierarchy as desktop while exposing
+ * a real 44px hit target. The coordinate-space selector intentionally keeps a
+ * 104px readable width; key buttons stay wide enough to hit without changing
+ * the compact visual language of the inspector. */
+:root.android .app .properties-editor .property-row > :is(input, select, output),
+:root.android .app .properties-editor .property-row {
+  min-height: 44px;
+}
+:root.android .app .properties-editor .property-row > :is(input, select) {
+  height: 44px;
+  min-height: 44px;
+  font-size: 16px;
+}
+:root.android .app .properties-editor .transform-edit-space .inline-space {
+  width: 104px;
+  min-width: 104px;
+  max-width: 104px;
+  height: 44px;
+  min-height: 44px;
+  padding-inline: 8px;
+  font-size: 16px;
+}
+:root.android .app .properties-editor .property-vector-label {
+  min-height: 24px;
+  margin-bottom: 4px;
+}
+:root.android .app .properties-editor .property-vector-editor .key-row {
+  width: 48px;
+  min-width: 48px;
+  height: 44px;
+  min-height: 44px;
+  padding: 10px;
+  touch-action: manipulation;
+}
+:root.android .app .properties-editor .vector-inputs label {
+  height: 44px;
+  min-height: 44px;
+}
+:root.android .app .properties-editor .vector-inputs input {
+  height: 44px;
+  min-height: 44px;
+  font-size: 16px;
+}
+:root.android .app .properties-editor .rig-mode-switch {
+  height: 44px;
+  min-height: 44px;
+}
+:root.android .app .properties-editor .rig-mode-switch > button {
+  height: 44px;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+/* A coarse pointer can also be reported by a non-Android tablet browser. */
+@media (pointer: coarse) {
+  :root .app .properties-editor .property-row > :is(input, select, output),
+  :root .app .properties-editor .property-row {
+    min-height: 44px;
+  }
+  :root .app .properties-editor .property-row > :is(input, select) {
+    height: 44px;
+    min-height: 44px;
+    font-size: 16px;
+  }
+  :root .app .properties-editor .transform-edit-space .inline-space {
+    width: 104px;
+    min-width: 104px;
+    max-width: 104px;
+    height: 44px;
+    min-height: 44px;
+    font-size: 16px;
+  }
+  :root .app .properties-editor .property-vector-label {
+    min-height: 24px;
+    margin-bottom: 4px;
+  }
+  :root .app .properties-editor .property-vector-editor .key-row {
+    width: 48px;
+    min-width: 48px;
+    height: 44px;
+    min-height: 44px;
+    padding: 10px;
+    touch-action: manipulation;
+  }
+  :root .app .properties-editor .vector-inputs label {
+    height: 44px;
+    min-height: 44px;
+  }
+  :root .app .properties-editor .vector-inputs input {
+    height: 44px;
+    min-height: 44px;
+    font-size: 16px;
+  }
+  :root .app .properties-editor .rig-mode-switch,
+  :root .app .properties-editor .rig-mode-switch > button {
+    height: 44px;
+    min-height: 44px;
+    touch-action: manipulation;
+  }
 }

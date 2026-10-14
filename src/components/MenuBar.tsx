@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { Check } from 'lucide-react';
+import { consumeSceneDismiss } from '../hooks/transientPopover';
+import { MotionPresence } from './Motion';
 
 type MenuItem =
   | {
@@ -24,6 +26,7 @@ export function MenuBar({ menus, disabled = false }: { menus: Menu[]; disabled?:
   const [open, setOpen] = useState<number | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const triggers = useRef<(HTMLButtonElement | null)[]>([]);
+  const dropdowns = useRef<(HTMLDivElement | null)[]>([]);
   const close = (focusTrigger = false) => {
     if (focusTrigger && open !== null) triggers.current[open]?.focus();
     setOpen(null);
@@ -31,24 +34,40 @@ export function MenuBar({ menus, disabled = false }: { menus: Menu[]; disabled?:
   useEffect(() => {
     if (open === null) return;
     const outside = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(null);
+      if (!root.current?.contains(e.target as Node)) {
+        consumeSceneDismiss(e);
+        setOpen(null);
+      }
     };
     document.addEventListener('pointerdown', outside, true);
     return () => document.removeEventListener('pointerdown', outside, true);
   }, [open]);
   useEffect(() => {
     if (open === null) return;
-    root.current
-      ?.querySelector<HTMLElement>('[role=menu] [role^=menuitem]:not(:disabled)')
-      ?.focus();
+    dropdowns.current[open]?.querySelector<HTMLElement>('[role^=menuitem]:not(:disabled)')?.focus();
   }, [open]);
-  const items = () => [
-    ...(root.current?.querySelectorAll<HTMLButtonElement>(
-      '[role=menu] [role^=menuitem]:not(:disabled)',
-    ) ?? []),
-  ];
   const onMenuKey = (e: ReactKeyboardEvent) => {
-    const list = items(),
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close(true);
+      return;
+    }
+    if (e.key === 'Tab') {
+      // Let normal tab order reach footer fields before leaving this menu.
+      const menu = e.currentTarget;
+      requestAnimationFrame(() => {
+        if (!menu.contains(document.activeElement)) close();
+      });
+      return;
+    }
+    if (
+      e.target instanceof Element &&
+      e.target.closest('input, textarea, select, [contenteditable="true"]')
+    )
+      return;
+    const list = [
+        ...e.currentTarget.querySelectorAll<HTMLButtonElement>('[role^=menuitem]:not(:disabled)'),
+      ],
       i = list.indexOf(document.activeElement as HTMLButtonElement);
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
@@ -61,9 +80,6 @@ export function MenuBar({ menus, disabled = false }: { menus: Menu[]; disabled?:
       e.preventDefault();
       const step = e.key === 'ArrowRight' ? 1 : -1;
       setOpen((o) => (o === null ? o : (o + step + menus.length) % menus.length));
-    } else if (e.key === 'Escape' || e.key === 'Tab') {
-      if (e.key === 'Escape') e.preventDefault();
-      close(e.key === 'Escape');
     }
   };
   return (
@@ -95,8 +111,11 @@ export function MenuBar({ menus, disabled = false }: { menus: Menu[]; disabled?:
           >
             {menu.label}
           </button>
-          {open === m && (
+          <MotionPresence show={open === m}>
             <div
+              ref={(el) => {
+                dropdowns.current[m] = el;
+              }}
               className="menubar-dropdown"
               role="menu"
               aria-label={menu.label}
@@ -105,7 +124,7 @@ export function MenuBar({ menus, disabled = false }: { menus: Menu[]; disabled?:
               {renderItems(menu.items, () => close(true))}
               {menu.footer}
             </div>
-          )}
+          </MotionPresence>
         </div>
       ))}
     </div>
@@ -145,26 +164,33 @@ export function ContextMenu({
   label,
   items,
   close,
+  exiting = false,
 }: {
   x: number;
   y: number;
   label: string;
   items: MenuItem[];
   close: () => void;
+  exiting?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const [at, setAt] = useState({ x, y });
   useLayoutEffect(() => {
+    if (exiting) return;
     const r = root.current!.getBoundingClientRect();
     setAt({
       x: Math.max(4, Math.min(x, innerWidth - r.width - 4)),
       y: Math.max(4, Math.min(y, innerHeight - r.height - 4)),
     });
     root.current?.querySelector<HTMLElement>('[role^=menuitem]:not(:disabled)')?.focus();
-  }, [x, y]);
+  }, [x, y, exiting]);
   useEffect(() => {
+    if (exiting) return;
     const outside = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) close();
+      if (!root.current?.contains(e.target as Node)) {
+        consumeSceneDismiss(e);
+        close();
+      }
     };
     document.addEventListener('pointerdown', outside, true);
     window.addEventListener('resize', close);
@@ -172,13 +198,17 @@ export function ContextMenu({
       document.removeEventListener('pointerdown', outside, true);
       window.removeEventListener('resize', close);
     };
-  }, [close]);
+  }, [close, exiting]);
   return (
     <div
       ref={root}
       className="menubar-dropdown context-menu"
       role="menu"
       aria-label={label}
+      aria-hidden={exiting || undefined}
+      data-motion="context"
+      data-state={exiting ? 'closing' : 'open'}
+      inert={exiting || undefined}
       style={{ left: at.x, top: at.y }}
       onKeyDown={(e) => {
         const list = [

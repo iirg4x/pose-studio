@@ -1,3 +1,5 @@
+import { useCompactViewport } from './hooks/compactViewport';
+import { useSurfaceOcclusion } from './hooks/surfaceOcclusion';
 import { DesktopWorkspace, useDesktopLayout } from './components/DesktopWorkspace';
 import { MenuBar, ContextMenu } from './components/MenuBar';
 import type { Menu } from './components/MenuBar';
@@ -40,7 +42,11 @@ import {
 } from 'lucide-react';
 import { studio } from './core/store';
 import { useStudioChrome, usePresence } from './hooks';
-import { claimTransientPopover, useTransientPopover } from './hooks/transientPopover';
+import {
+  claimTransientPopover,
+  consumeSceneDismiss,
+  useTransientPopover,
+} from './hooks/transientPopover';
 import { SHORTCUTS, isTypingTarget } from './core/shortcuts';
 import { AssetLibrary } from './components/AssetLibrary';
 import { AnimationImport } from './components/AnimationImport';
@@ -53,8 +59,11 @@ import { AnimationBar } from './components/AnimationBar';
 import { ExportDialog } from './components/ExportDialog';
 import type { StudioScene } from './scene/StudioScene';
 export default function App() {
+  useSurfaceOcclusion();
+  const compactViewport = useCompactViewport();
   const [installOpen, setInstallOpen] = useState(false);
-  const panels = usePanelSizes(studio.state.tab === 'curves'),
+  const installPresence = usePresence(installOpen ? true : null);
+  const panels = usePanelSizes(),
     pointer = useRef({ x: innerWidth * 0.5, y: innerHeight * 0.35 });
   useEffect(() => {
     const move = (e: PointerEvent) => {
@@ -71,7 +80,8 @@ export default function App() {
     shownPanel = panelPresence.value;
 
   const [assets, setAssets] = useState(false),
-    [importing, setImporting] = useState(false);
+    [importing, setImporting] = useState(false),
+    [settingsOpen, setSettingsOpen] = useState(false);
   const [newAction, setNewAction] = useState<RigLayer | null>(null);
   useEffect(() => {
     const open = () => setExporting(true);
@@ -94,6 +104,7 @@ export default function App() {
     fileInput = useRef<HTMLInputElement>(null),
     projectMenu = useRef<HTMLDivElement>(null),
     projectTrigger = useRef<HTMLButtonElement>(null);
+  const poseMenuPresence = usePresence(poseMenu);
   const projectPopover = useTransientPopover({
     owner: 'project',
     open: menu,
@@ -106,6 +117,29 @@ export default function App() {
     setTabletPanel(null);
     runtime.current?.beginBoxSelection();
   };
+  useEffect(() => {
+    const box = () => openBoxSelection();
+    const properties = () => {
+      try {
+        localStorage.setItem('pose-properties-context', 'control');
+      } catch {}
+      // Opening Properties from the selected-control ribbon is an explicit
+      // preference change. Keep it enabled after the current selection goes
+      // away so the next selection can restore the inspector.
+      setDesktopLayout({ properties: true });
+      if (isAndroid && studio.state.selection.length) {
+        claimTransientPopover('workspace-panel');
+        if (compactViewport) setTimelineOpen(false);
+        setTabletPanel('properties');
+      }
+    };
+    window.addEventListener('pose-box-select', box);
+    window.addEventListener('pose-open-properties', properties);
+    return () => {
+      window.removeEventListener('pose-box-select', box);
+      window.removeEventListener('pose-open-properties', properties);
+    };
+  }, [compactViewport]);
   useEffect(() => {
     const dismiss = (event: Event) => {
       if (event.defaultPrevented) return;
@@ -124,19 +158,43 @@ export default function App() {
     return () => window.removeEventListener('pose-dismiss-overlay', dismiss);
   }, [menu, tabletPanel, timelineOpen]);
   useEffect(() => {
+    if (!isAndroid || !tabletPanel) return;
+    const dismissPanel = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      event.preventDefault();
+      setTabletPanel(null);
+    };
+    window.addEventListener('keydown', dismissPanel);
+    return () => window.removeEventListener('keydown', dismissPanel);
+  }, [tabletPanel]);
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const dismissSettings = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      event.preventDefault();
+      setSettingsOpen(false);
+    };
+    window.addEventListener('keydown', dismissSettings);
+    return () => window.removeEventListener('keydown', dismissSettings);
+  }, [settingsOpen]);
+  useEffect(() => {
     const outside = (e: PointerEvent) => {
       const t = e.target as HTMLElement;
-      if (t.matches('.scene-canvas')) setTabletPanel(null);
+      if (t.matches('.scene-canvas') && tabletPanel) {
+        consumeSceneDismiss(e);
+        setTabletPanel(null);
+      }
       if (t.matches('.modal-backdrop') && !recording && !exporting) {
         setAssets(false);
         setImporting(false);
+        setSettingsOpen(false);
         setHelp(false);
         setNewAction(null);
       }
     };
     document.addEventListener('pointerdown', outside, true);
     return () => document.removeEventListener('pointerdown', outside, true);
-  }, [recording, exporting]);
+  }, [recording, exporting, tabletPanel]);
   const characterPreview = !!s.workspace?.previewCharacterId,
     retarget = s.retargetMode,
     setRetarget = (value: boolean) => {
@@ -154,6 +212,33 @@ export default function App() {
       });
       runtime.current?.resetView();
     };
+  const previousSelectionCount = useRef<number | null>(null);
+  useEffect(() => {
+    const count = s.selection.length,
+      previous = previousSelectionCount.current;
+    previousSelectionCount.current = count;
+
+    if (isAndroid) {
+      // The contextual properties drawer follows a selection, but its
+      // enabled state is the persisted desktop-layout preference. A blank
+      // selection never leaves an empty inspector behind.
+      if (count === 0) {
+        if (!retarget && tabletPanel === 'properties') setTabletPanel(null);
+        return;
+      }
+      // Only a new selection session (including the initial selection) may
+      // restore Properties. Frame updates, timeline changes and one-control
+      // to another-control changes preserve the active editor.
+      if (
+        (previous === null || previous === 0) &&
+        desktopLayout.properties &&
+        !timelineOpen &&
+        !tabletPanel &&
+        !retarget
+      )
+        setTabletPanel('properties');
+    }
+  }, [s.selection.length, tabletPanel, timelineOpen, desktopLayout.properties, retarget]);
   useEffect(() => {
     if (isAndroid) return;
     let press: { x: number; y: number; cancels: boolean } | null = null;
@@ -521,6 +606,10 @@ export default function App() {
     <RetargetInspector runtime={runtime.current} />
   ) : (
     <Inspector
+      onClose={() => {
+        if (isAndroid) setTabletPanel(null);
+        setDesktopLayout({ properties: false });
+      }}
       runtime={runtime.current}
       attach={(target, position, rotation) =>
         runtime.current?.setAttachment(target, position, rotation)
@@ -580,11 +669,26 @@ export default function App() {
           ? { label: 'Install app and offline status…', run: () => setInstallOpen(true) }
           : { label: 'Open Axe studio example…', run: () => void openExample() },
       ],
-      footer: <RecentProjects open={(p) => receive(p, false)} />,
+      footer: (
+        <>
+          <label className="menu-field">
+            Project name
+            <input
+              aria-label="Project name"
+              disabled={!s.ready}
+              maxLength={100}
+              value={s.workspace?.name ?? ''}
+              onChange={(e) => studio.renameWorkspace(e.target.value)}
+            />
+          </label>
+          <RecentProjects open={(p) => receive(p, false)} />
+        </>
+      ),
     },
     {
       label: 'Edit',
       items: [
+        { label: 'Select controls', shortcut: 'Q', run: () => studio.patch({ mode: 'select' }) },
         { label: 'Undo', shortcut: 'Ctrl Z', run: () => studio.undo() },
         { label: 'Redo', shortcut: 'Ctrl Y', run: () => studio.redo() },
         'separator',
@@ -774,23 +878,7 @@ export default function App() {
       style={panels.style}
     >
       <header className="titlebar">
-        {!isAndroid && (
-          <>
-            <span className="brand-mark" aria-hidden="true">
-              <Waypoints size={16} />
-            </span>
-            <MenuBar menus={desktopMenus} disabled={recording || exporting} />
-            <div className="workspace-tabs" role="group" aria-label="Workspace">
-              <button aria-pressed={!retarget} onClick={() => setRetarget(false)}>
-                Animate
-              </button>
-              <button aria-pressed={retarget} onClick={() => setRetarget(true)}>
-                Setup
-              </button>
-            </div>
-          </>
-        )}
-        <div className="title-menu" hidden={!isAndroid} ref={projectMenu}>
+        <div className="title-menu" ref={projectMenu}>
           <button
             ref={projectTrigger}
             className="brand"
@@ -808,152 +896,147 @@ export default function App() {
             <ChevronDown size={12} />
           </button>
           <MotionPresence show={menu}>
-            <div className="file-menu" data-editor-overlay>
-              <label className="project-menu-field">
-                Project
-                <input
-                  aria-label="Library project name"
-                  disabled={!s.ready}
-                  maxLength={100}
-                  value={s.workspace?.name ?? ''}
-                  onChange={(e) => studio.renameWorkspace(e.target.value)}
+            {!isAndroid ? (
+              <div className="desktop-command-menu" data-editor-overlay>
+                <MenuBar menus={desktopMenus} disabled={recording || exporting} />
+              </div>
+            ) : (
+              <div className="file-menu" data-editor-overlay>
+                <label className="project-menu-field">
+                  Project
+                  <input
+                    aria-label="Library project name"
+                    disabled={!s.ready}
+                    maxLength={100}
+                    value={s.workspace?.name ?? ''}
+                    onChange={(e) => studio.renameWorkspace(e.target.value)}
+                  />
+                </label>
+                <button
+                  onClick={() => {
+                    const data = library(blankProject(runtime.current?.restControls ?? {}));
+                    data.name = 'Untitled project';
+                    file.requestOpen(data);
+                    setMenu(false);
+                  }}
+                >
+                  <FilePlus size={16} />
+                  New project
+                </button>
+                <button onClick={() => newClip(false)}>
+                  <FilePlus size={16} />
+                  New animation
+                </button>
+                <button disabled={!s.ready} onClick={() => open()}>
+                  <FolderOpen size={16} />
+                  Open project…
+                </button>
+                <button
+                  onClick={() => {
+                    setAssets(true);
+                    setMenu(false);
+                  }}
+                >
+                  <Box size={16} />
+                  Project assets…
+                </button>
+                <button
+                  onClick={() => {
+                    setImporting(true);
+                    setMenu(false);
+                  }}
+                >
+                  <FolderOpen size={16} />
+                  Import animation…
+                </button>
+                <button
+                  onClick={() => {
+                    save();
+                    setMenu(false);
+                  }}
+                >
+                  <Save size={16} />
+                  Save project… <kbd>Ctrl S</kbd>
+                </button>
+                {isAndroid && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setMenu(false);
+                        setRecording(true);
+                      }}
+                    >
+                      <Video size={16} />
+                      Record video…
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenu(false);
+                        setExporting(true);
+                      }}
+                    >
+                      <Upload size={16} />
+                      Export animation…
+                    </button>
+                  </>
+                )}
+                <RecentProjects
+                  open={(p) => {
+                    receive(p, false);
+                    setMenu(false);
+                  }}
                 />
-              </label>
-              <button
-                onClick={() => {
-                  const data = library(blankProject(runtime.current?.restControls ?? {}));
-                  data.name = 'Untitled project';
-                  file.requestOpen(data);
-                  setMenu(false);
-                }}
-              >
-                <FilePlus size={16} />
-                New project
-              </button>
-              <button onClick={() => newClip(false)}>
-                <FilePlus size={16} />
-                New animation
-              </button>
-              <button disabled={!s.ready} onClick={() => open()}>
-                <FolderOpen size={16} />
-                Open project…
-              </button>
-              <button
-                onClick={() => {
-                  setAssets(true);
-                  setMenu(false);
-                }}
-              >
-                <Box size={16} />
-                Project assets…
-              </button>
-              <button
-                onClick={() => {
-                  setImporting(true);
-                  setMenu(false);
-                }}
-              >
-                <FolderOpen size={16} />
-                Import animation…
-              </button>
-              <button
-                onClick={() => {
-                  save();
-                  setMenu(false);
-                }}
-              >
-                <Save size={16} />
-                Save project… <kbd>Ctrl S</kbd>
-              </button>
-              {isAndroid && (
-                <>
+                <hr />
+                {!isPwaBuild && (
+                  <button
+                    onClick={async () => {
+                      setMenu(false);
+                      try {
+                        const data = await window.studioDesktop?.openExample();
+                        if (data) file.requestOpen(data);
+                      } catch (e) {
+                        studio.patch({ message: (e as Error).message });
+                      }
+                    }}
+                  >
+                    Open Axe studio example…
+                  </button>
+                )}
+                {isPwaBuild && (
                   <button
                     onClick={() => {
                       setMenu(false);
-                      setRecording(true);
+                      setInstallOpen(true);
                     }}
                   >
-                    <Video size={16} />
-                    Record video…
+                    Install Studio / app status…
                   </button>
+                )}
+                <button
+                  onClick={() => {
+                    setHelp(true);
+                    setMenu(false);
+                  }}
+                >
+                  Keyboard shortcuts
+                </button>
+                {nativeAndroid && (
                   <button
                     onClick={() => {
                       setMenu(false);
-                      setExporting(true);
+                      window.dispatchEvent(new Event('pose-show-updates'));
                     }}
                   >
-                    <Upload size={16} />
-                    Export animation…
+                    App and project updates…
                   </button>
-                </>
-              )}
-              <RecentProjects
-                open={(p) => {
-                  receive(p, false);
-                  setMenu(false);
-                }}
-              />
-              <hr />
-              {!isPwaBuild && (
-                <button
-                  onClick={async () => {
-                    setMenu(false);
-                    try {
-                      const data = await window.studioDesktop?.openExample();
-                      if (data) file.requestOpen(data);
-                    } catch (e) {
-                      studio.patch({ message: (e as Error).message });
-                    }
-                  }}
-                >
-                  Open Axe studio example…
-                </button>
-              )}
-              {isPwaBuild && (
-                <button
-                  onClick={() => {
-                    setMenu(false);
-                    setInstallOpen(true);
-                  }}
-                >
-                  Install Studio / app status…
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  setHelp(true);
-                  setMenu(false);
-                }}
-              >
-                Keyboard shortcuts
-              </button>
-              {nativeAndroid && (
-                <button
-                  onClick={() => {
-                    setMenu(false);
-                    window.dispatchEvent(new Event('pose-show-updates'));
-                  }}
-                >
-                  App and project updates…
-                </button>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </MotionPresence>
         </div>
-        {isAndroid ? (
-          <span className="project-title" title={s.workspace?.name}>
-            {s.workspace?.name}
-          </span>
-        ) : (
-          <input
-            className="project-title-input"
-            aria-label="Project name"
-            disabled={!s.ready}
-            maxLength={100}
-            value={s.workspace?.name ?? ''}
-            onChange={(e) => studio.renameWorkspace(e.target.value)}
-          />
-        )}
+        <span className="project-title" title={s.workspace?.name}>
+          {s.workspace?.name}
+        </span>
         <PwaUpdateIndicator
           onOpen={() => {
             claimTransientPopover('app-update');
@@ -1015,7 +1098,9 @@ export default function App() {
         )}
         <WindowControls />
       </header>
-      {installOpen && <InstallStudio close={() => setInstallOpen(false)} />}
+      {installPresence.value && (
+        <InstallStudio exiting={installPresence.exiting} close={() => setInstallOpen(false)} />
+      )}
       {!isAndroid ? (
         <DesktopWorkspace
           scene={<Viewport onRuntime={setRuntime} onThumbs={setThumbs} />}
@@ -1032,8 +1117,14 @@ export default function App() {
           resize={panels.change}
           retarget={retarget}
           toolbarSlot={titleSlot}
-          layout={desktopLayout}
-          chooseAction={chooseAction}
+          layout={{
+            ...desktopLayout,
+          }}
+          openSettings={() => setSettingsOpen(true)}
+          toggleProperties={() => {
+            setDesktopLayout({ properties: !desktopLayout.properties });
+          }}
+          toggleEditors={() => setDesktopLayout({ editors: !desktopLayout.editors })}
         />
       ) : (
         <div className="workspace">
@@ -1043,27 +1134,41 @@ export default function App() {
       {isAndroid && (
         <>
           <TabletWorkspace
-            pasteMirrored={() => runtime.current?.pasteMirroredPose()}
             boxSelect={openBoxSelection}
-            mirror={() => runtime.current?.mirrorSelectedPose()}
             panel={tabletPanel}
             toggle={(p) => {
               claimTransientPopover('workspace-panel');
-              setTimelineOpen(false);
+              if (p === 'tools') {
+                setTabletPanel(null);
+                setSettingsOpen(true);
+                return;
+              }
+              if (p === 'properties') {
+                const opening = tabletPanel !== 'properties';
+                setDesktopLayout({ properties: opening });
+                // Keep the preference enabled without mounting an empty
+                // contextual inspector when no control is selected.
+                if (opening && !retarget && !s.selection.length) return;
+              }
+              if (compactViewport) setTimelineOpen(false);
               setTabletPanel((current) => (current === p ? null : p));
             }}
             timeline={timelineOpen}
             toggleTimeline={() => {
               claimTransientPopover('timeline');
-              setTabletPanel(null);
+              if (compactViewport) setTabletPanel(null);
               setTimelineOpen((v) => !v);
             }}
           />
           {shownPanel && (
             <TabletDrawer
               panel={shownPanel}
+              hideHeader={shownPanel === 'properties' && !retarget}
               exiting={panelPresence.exiting}
-              close={() => setTabletPanel(null)}
+              close={() => {
+                if (shownPanel === 'properties') setDesktopLayout({ properties: false });
+                setTabletPanel(null);
+              }}
             >
               {shownPanel === 'rig' ? (
                 controls
@@ -1099,13 +1204,14 @@ export default function App() {
         />
       )}
       <KeyframeMenu />
-      {poseMenu && (
+      {poseMenuPresence.value && (
         <ContextMenu
-          x={poseMenu.x}
-          y={poseMenu.y}
+          x={poseMenuPresence.value.x}
+          y={poseMenuPresence.value.y}
           label="Pose"
           items={[...desktopMenus[2].items, 'separator', ...desktopMenus[3].items.slice(0, 2)]}
           close={closePoseMenu}
+          exiting={poseMenuPresence.exiting}
         />
       )}
 
@@ -1167,6 +1273,38 @@ export default function App() {
           close={() => setImporting(false)}
           nativeImport={() => void open(true)}
         />
+      </MotionOverlay>
+      <MotionOverlay show={settingsOpen}>
+        <div className="modal-backdrop">
+          <section
+            className="modal standalone-settings-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Studio settings"
+          >
+            <header>
+              <h2>Studio settings</h2>
+              <button aria-label="Close settings" onClick={() => setSettingsOpen(false)}>
+                <X size={18} />
+              </button>
+            </header>
+            <TabletSettings
+              retarget={retarget}
+              setRetarget={setRetarget}
+              chooseAction={chooseAction}
+              openAssets={() => {
+                setSettingsOpen(false);
+                setAssets(true);
+              }}
+              runtime={runtime.current}
+              save={save}
+              help={() => {
+                setSettingsOpen(false);
+                setHelp(true);
+              }}
+            />
+          </section>
+        </div>
       </MotionOverlay>
       <MotionOverlay show={file.pending}>{file.dialog}</MotionOverlay>
       <MotionOverlay show={!!newAction}>

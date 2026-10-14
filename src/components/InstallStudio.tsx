@@ -8,7 +8,13 @@ import {
 } from '../platform/pwa';
 import './install-studio.css';
 
-export function InstallStudio({ close }: { close: () => void }) {
+export function InstallStudio({
+  close,
+  exiting = false,
+}: {
+  close: () => void;
+  exiting?: boolean;
+}) {
   const state = useSyncExternalStore(subscribeAppInstall, appInstallSnapshot),
     dialog = useRef<HTMLDialogElement>(null);
   const [diagnosticCopy, setDiagnosticCopy] = useState<'idle' | 'copied' | 'error'>('idle');
@@ -33,6 +39,10 @@ export function InstallStudio({ close }: { close: () => void }) {
       className="install-studio"
       role="dialog"
       data-editor-overlay
+      data-motion="popover"
+      data-state={exiting ? 'closing' : 'open'}
+      inert={exiting || undefined}
+      aria-hidden={exiting || undefined}
       aria-labelledby="install-title"
       onCancel={close}
       onKeyDown={(event) => {

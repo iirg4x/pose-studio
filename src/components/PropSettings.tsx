@@ -10,7 +10,7 @@ export function PropSettings() {
     p = projectProps(s.project)[s.selected];
   if (!p) return null;
   return (
-    <PropertySection id="prop-asset" title="Prop asset">
+    <PropertySection id="prop-asset" title="Prop asset" defaultOpen={false}>
       <label className="property-row">
         <span>Name</span>
         <input

@@ -13,6 +13,7 @@ import { CONTROLS, isOffsetControl } from '../core/controls';
 import { coordinatePose } from '../scene/coordinates';
 import type { CoordinateSpace } from '../scene/coordinates';
 import type { StudioScene } from '../scene/StudioScene';
+import { PropertySection } from './PropertySection';
 const subscribeEmpty = () => () => {},
   emptySnapshot = () => null;
 const SPACE_NOTE: Record<CoordinateSpace, string> = {
@@ -40,7 +41,13 @@ function keyState(
     return 'keyed';
   if (track.keys.length > 1 || curves.some((c) => (c?.keys.length ?? 0) > 1)) return 'animated';
 }
-export function TransformFields({ runtime }: { runtime: StudioScene | null }) {
+export function TransformFields({
+  runtime,
+  compact = false,
+}: {
+  runtime: StudioScene | null;
+  compact?: boolean;
+}) {
   const s = useStudioChrome({ edits: 'live' }),
     [space, setSpace] = useState<CoordinateSpace>(() => {
       try {
@@ -85,33 +92,79 @@ export function TransformFields({ runtime }: { runtime: StudioScene | null }) {
       keyState(s.project, track, s.frame, ['px', 'py', 'pz'], changed),
       keyState(s.project, track, s.frame, ['rx', 'ry', 'rz'], changed),
     ];
+  const selectSpace = (className: string) => (
+    <select
+      className={className}
+      aria-label="XYZ coordinate space"
+      title={SPACE_NOTE[space] + '. Changing space keeps the pose.'}
+      value={space}
+      onChange={(event) => {
+        studio.endGesture();
+        setSpace(event.target.value as CoordinateSpace);
+        try {
+          localStorage.setItem('pose-coordinate-space', event.target.value);
+        } catch {}
+      }}
+    >
+      <option value="world">World</option>
+      <option value="root">Root</option>
+      <option value="parent">Parent</option>
+      <option value="local">Local offsets</option>
+    </select>
+  );
   return (
-    <>
+    <PropertySection
+      id="transform"
+      title="Transform"
+      collapsible={!compact}
+      headerAction={
+        !compact ? (
+          <div className="transform-edit-space-header">{selectSpace('inline-space')}</div>
+        ) : undefined
+      }
+    >
+      {compact && (
+        <label className="property-row transform-edit-space">
+          <span>Edit space</span>
+          {selectSpace('inline-space')}
+        </label>
+      )}
       {(['Location', 'Rotation'] as const).map((kind, k) => (
         <div className="property-vector" key={kind} data-key-state={states[k]}>
           <div className="property-vector-label">
             <span>{kind}</span>
-            {!k && (
-              <select
-                className="inline-space"
-                aria-label="XYZ coordinate space"
-                title={SPACE_NOTE[space] + '. Changing space keeps the pose.'}
-                value={space}
-                onChange={(e) => {
-                  studio.endGesture();
-                  setSpace(e.target.value as CoordinateSpace);
-                  try {
-                    localStorage.setItem('pose-coordinate-space', e.target.value);
-                  } catch {}
-                }}
-              >
-                <option value="world">World</option>
-                <option value="root">Root</option>
-                <option value="parent">Parent</option>
-                <option value="local">Local offsets</option>
-              </select>
-            )}
             <small>{k ? 'degrees' : 'cm'}</small>
+          </div>
+          <div className="property-vector-editor">
+            <div className="vector-inputs">
+              {['X', 'Y', 'Z'].map((axis, i) => (
+                <label key={axis}>
+                  <span>{axis}</span>
+                  <ScrubNumber
+                    aria-label={(k ? 'Rotation ' : 'Position ') + axis}
+                    type="number"
+                    step={k ? 5 : 1}
+                    disabled={
+                      !transform ||
+                      !controlEnabled(s.project!, s.selected, s.frame) ||
+                      !editLayerAllowed(s.project!, s.selected) ||
+                      (!k && CONTROLS[s.selected].kind === 'pivot')
+                    }
+                    value={Number(
+                      (k
+                        ? ([e.x, e.y, e.z][i] * 180) / Math.PI
+                        : (transform?.p[i] ?? 0) * 100
+                      ).toFixed(k ? 1 : 2),
+                    )}
+                    onFocus={() => studio.beginGesture()}
+                    onBlur={() => studio.endGesture()}
+                    onChange={(event) => {
+                      if (event.target.value !== '') edit(i, Number(event.target.value), !!k);
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
             <button
               className="key-row"
               aria-label={'Key ' + kind.toLowerCase()}
@@ -132,37 +185,8 @@ export function TransformFields({ runtime }: { runtime: StudioScene | null }) {
               <Diamond size={12} fill={states[k] === 'keyed' ? 'currentColor' : 'none'} />
             </button>
           </div>
-          <div className="vector-inputs">
-            {['X', 'Y', 'Z'].map((axis, i) => (
-              <label key={axis}>
-                <span>{axis}</span>
-                <ScrubNumber
-                  aria-label={(k ? 'Rotation ' : 'Position ') + axis}
-                  type="number"
-                  step={k ? 5 : 1}
-                  disabled={
-                    !transform ||
-                    !controlEnabled(s.project!, s.selected, s.frame) ||
-                    !editLayerAllowed(s.project!, s.selected) ||
-                    (!k && CONTROLS[s.selected].kind === 'pivot')
-                  }
-                  value={Number(
-                    (k
-                      ? ([e.x, e.y, e.z][i] * 180) / Math.PI
-                      : (transform?.p[i] ?? 0) * 100
-                    ).toFixed(k ? 1 : 2),
-                  )}
-                  onFocus={() => studio.beginGesture()}
-                  onBlur={() => studio.endGesture()}
-                  onChange={(event) => {
-                    if (event.target.value !== '') edit(i, Number(event.target.value), !!k);
-                  }}
-                />
-              </label>
-            ))}
-          </div>
         </div>
       ))}
-    </>
+    </PropertySection>
   );
 }

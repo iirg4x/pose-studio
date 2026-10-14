@@ -1,6 +1,8 @@
 import { createPortal } from 'react-dom';
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Pencil, Copy, X, PanelTopClose, Trash2 } from 'lucide-react';
+import { usePopupPlacement } from '../hooks/usePopupPlacement';
+import { useTransientPopover } from '../hooks/transientPopover';
 
 export function AnimationMenu({
   tabs = true,
@@ -12,6 +14,7 @@ export function AnimationMenu({
   closeTab,
   closeOthers,
   dismiss,
+  exiting = false,
 }: {
   tabs?: boolean;
   x: number;
@@ -22,25 +25,48 @@ export function AnimationMenu({
   closeTab: () => void;
   closeOthers: () => void;
   dismiss: () => void;
+  exiting?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current!;
-    const r = el.getBoundingClientRect();
-    el.style.left = Math.max(8, Math.min(x, innerWidth - r.width - 8)) + 'px';
-    el.style.top = Math.max(8, Math.min(y, innerHeight - r.height - 8)) + 'px';
-    el.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+  const [ready, setReady] = useState(false);
+  const position = usePopupPlacement({
+    open: !exiting,
+    panel: ref,
+    point: { x, y },
+    fallbackWidth: 216,
+    fallbackHeight: tabs ? 156 : 92,
+  });
+  const popover = useTransientPopover({
+    owner: 'animation-menu',
+    open: !exiting,
+    onClose: dismiss,
+    rootRef: ref,
+  });
+  useLayoutEffect(() => {
+    setReady(false);
+    const frame = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(frame);
   }, [x, y]);
+  useLayoutEffect(() => {
+    if (!ready || exiting) return;
+    ref.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+  }, [ready, exiting]);
   return createPortal(
     <div
       ref={ref}
       className="animation-context-menu"
       role="menu"
       aria-label="Animation tab menu"
+      aria-hidden={exiting || undefined}
       data-editor-overlay
+      data-motion="context"
+      data-state={exiting ? 'closing' : 'open'}
+      inert={exiting || undefined}
       style={{
-        left: Math.max(4, Math.min(x, innerWidth - 216)),
-        top: Math.max(40, Math.min(y, innerHeight - 156)),
+        ...position,
+        maxWidth: position.maxWidth,
+        maxHeight: position.maxHeight,
+        visibility: ready ? 'visible' : 'hidden',
       }}
       onContextMenu={(e) => e.preventDefault()}
       onKeyDown={(e) => {
@@ -49,7 +75,7 @@ export function AnimationMenu({
           at = items.indexOf(document.activeElement as HTMLButtonElement);
         if (e.key === 'Escape') {
           e.preventDefault();
-          dismiss();
+          popover.close(true);
         } else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
           e.preventDefault();
           items[

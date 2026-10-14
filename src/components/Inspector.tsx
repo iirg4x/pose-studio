@@ -1,3 +1,4 @@
+import { useCompactViewport } from '../hooks/compactViewport';
 import { isTouch } from '../platform/storage';
 import { ControlLayerSettings } from './ControlLayerSettings';
 import { TransformFields } from './TransformFields';
@@ -16,27 +17,34 @@ import { MotionSettings } from './MotionSettings';
 import { BodyBasePanel } from './BodyBasePanel';
 import { controlTint } from '../core/controlStyle';
 import type { CSSProperties } from 'react';
-import { useState } from 'react';
-import { Hand, Bone, Layers, ChevronRight } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Hand, Bone, Layers, Move3D, SlidersHorizontal, X } from 'lucide-react';
 import { useStudioChrome } from '../hooks';
 import { studio } from '../core/store';
 import { controlLabels, clone, limbMode, controlEnabled, evaluate } from '../core/model';
 import { CONTROLS, isOffsetControl, isBoneControl } from '../core/controls';
 import type { LimbId, LimbMode } from '../core/controls';
 import type { Pose, Interpolation, Project } from '../core/model';
+
+type ControlPropertiesTab = 'transform' | 'rig' | 'layer';
+
 export function Inspector({
   runtime,
+  onClose,
   thumbs,
   switchLimb,
   attach,
   pick,
 }: {
   runtime: StudioScene | null;
+  onClose: () => void;
   attach: (target: AttachmentTarget, position: boolean, rotation: boolean) => void;
   pick: () => void;
   thumbs: string[];
   switchLimb: (limb: LimbId, mode: LimbMode) => void;
 }) {
+  const compactViewport = useCompactViewport(),
+    compact = isTouch && compactViewport;
   const s = useStudioChrome({ edits: 'live' }),
     [context, setContext] = useState<'control' | 'animation'>(() => {
       try {
@@ -47,12 +55,28 @@ export function Inspector({
         return 'control';
       }
     });
+  const [controlTab, setControlTab] = useState<ControlPropertiesTab>(() => {
+    try {
+      const value = localStorage.getItem('pose-control-properties-tab');
+      return value === 'rig' || value === 'layer' ? value : 'transform';
+    } catch {
+      return 'transform';
+    }
+  });
   const choose = (value: 'control' | 'animation') => {
     setContext(value);
     try {
       localStorage.setItem('pose-properties-context', value);
     } catch {}
   };
+  useEffect(() => {
+    // The scene ribbon always opens the selected control, even when the last
+    // inspector session was looking at animation-wide settings.
+    const openControl = () => choose('control');
+    window.addEventListener('pose-open-properties', openControl);
+    return () => window.removeEventListener('pose-open-properties', openControl);
+  }, []);
+  useEffect(() => setControlTab('transform'), [s.selected]);
   const p = studio.currentPose();
   if (!p || !s.project) return <aside className="inspector loading-panel">Preparing Manny…</aside>;
   const labels = controlLabels(s.project),
@@ -64,6 +88,13 @@ export function Inspector({
     limb = definition.limb,
     activeLayer = activeAnimationLayer(s.project);
   const edit = (value: Pose) => (body ? studio.editRaw(id, value) : studio.editWorld(id, value));
+  const showControlTab = (tab: ControlPropertiesTab) => !compact || controlTab === tab;
+  const chooseControlTab = (value: ControlPropertiesTab) => {
+    setControlTab(value);
+    try {
+      localStorage.setItem('pose-control-properties-tab', value);
+    } catch {}
+  };
   const grip = (index: number, value: number) => {
     const next = clone(p);
     if (index === -1) for (let i = 1; i < 5; i++) next.grip[i] = value;
@@ -81,61 +112,102 @@ export function Inspector({
     edit(next);
   };
   return (
-    <aside className="inspector properties-editor">
-      <div className="property-context-tabs" role="tablist" aria-label="Properties context">
-        {(
-          [
-            ['control', Bone, 'Control'],
-            ['animation', Layers, 'Animation'],
-          ] as const
-        ).map(([key, Icon, label]) => (
-          <button
-            key={key}
-            role="tab"
-            id={'properties-tab-' + key}
-            aria-controls={'properties-' + key}
-            aria-selected={context === key}
-            tabIndex={context === key ? 0 : -1}
-            onKeyDown={(e) => {
-              if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-                e.preventDefault();
-                const next = context === 'control' ? 'animation' : 'control';
-                choose(next);
-                document.getElementById('properties-tab-' + next)?.focus();
-              }
-            }}
-            onClick={() => choose(key)}
+    <aside
+      className="inspector properties-editor"
+      data-context={context}
+      data-layout={compact ? 'compact' : 'full'}
+    >
+      <header className="properties-heading">
+        <div className="properties-heading-title">
+          <h2>{context === 'control' ? 'Control properties' : 'Animation properties'}</h2>
+          <div
+            className="property-context-heading"
+            style={
+              {
+                '--control-tint': context === 'control' ? controlTint(id) : 'var(--cyan)',
+              } as CSSProperties
+            }
           >
-            <Icon size={14} />
-            {label}
-          </button>
-        ))}
-      </div>
-      <div
-        className="property-context-heading context-flair"
-        style={
-          {
-            '--control-tint': context === 'control' ? controlTint(id) : 'var(--green)',
-          } as CSSProperties
-        }
-      >
-        <i />
-        <strong aria-label={context === 'control' ? 'Active control' : 'Active animation'}>
-          {context === 'control'
-            ? s.selection.length
-              ? labels[id]
-              : 'No control selected'
-            : s.project.name}
-        </strong>
-        {context === 'control' && s.selection.length > 1 && (
-          <small>{s.selection.length} selected</small>
-        )}
-      </div>
+            <i />
+            <strong aria-label={context === 'control' ? 'Active control' : 'Active animation'}>
+              {context === 'control'
+                ? s.selection.length
+                  ? labels[id]
+                  : 'No control selected'
+                : s.project.name}
+            </strong>
+            {context === 'control' && s.selection.length > 1 && (
+              <small>{s.selection.length} selected</small>
+            )}
+          </div>
+        </div>
+        <button
+          className="property-context-switch"
+          type="button"
+          title={context === 'control' ? 'Animation properties' : 'Control properties'}
+          aria-label={
+            context === 'control' ? 'Show animation properties' : 'Show control properties'
+          }
+          onClick={() => choose(context === 'control' ? 'animation' : 'control')}
+        >
+          {context === 'control' ? <Layers size={18} /> : <Bone size={18} />}
+        </button>
+        <button
+          className="properties-close"
+          aria-label="Close properties"
+          title="Close properties"
+          onClick={onClose}
+        >
+          <X size={20} />
+        </button>
+      </header>
+      {compact && context === 'control' && s.selection.length > 0 && (
+        <div className="property-control-tabs" role="tablist" aria-label="Control properties">
+          {(
+            [
+              ['transform', Move3D, 'Transform'],
+              ['rig', SlidersHorizontal, 'Rig'],
+              ['layer', Layers, 'Layer'],
+            ] as const
+          ).map(([key, Icon, label]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              id={'control-properties-tab-' + key}
+              aria-controls="control-properties-content"
+              aria-selected={controlTab === key}
+              tabIndex={controlTab === key ? 0 : -1}
+              onClick={() => chooseControlTab(key)}
+              onKeyDown={(e) => {
+                if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+                e.preventDefault();
+                const index = ['transform', 'rig', 'layer'].indexOf(key),
+                  next = (index + (e.key === 'ArrowRight' ? 1 : 2)) % 3,
+                  value = ['transform', 'rig', 'layer'][next] as ControlPropertiesTab;
+                chooseControlTab(value);
+                e.currentTarget.parentElement
+                  ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+                  .item(next)
+                  ?.focus();
+              }}
+            >
+              <Icon size={14} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div
         className="inspector-scroll properties-content"
-        role="tabpanel"
-        id={'properties-' + context}
-        aria-labelledby={'properties-tab-' + context}
+        id="control-properties-content"
+        role={compact && context === 'control' && s.selection.length > 0 ? 'tabpanel' : 'region'}
+        aria-labelledby={
+          compact && context === 'control' && s.selection.length > 0
+            ? 'control-properties-tab-' + controlTab
+            : undefined
+        }
+        aria-label={context === 'control' ? 'Control properties' : 'Animation properties'}
       >
         {context === 'animation' ? (
           <>
@@ -174,171 +246,181 @@ export function Inspector({
           </p>
         ) : (
           <>
-            {activeLayer && (
-              <button
-                className="property-edit-target"
-                title="Choose the layer that receives edits"
-                onClick={() => choose('animation')}
-              >
-                <Layers size={12} />
-                <span>{activeLayer.name}</span>
-                <small>Editing</small>
-                <ChevronRight size={12} />
-              </button>
-            )}
-            <PropertySection id="transform" title="Transform">
-              {activeLayer?.nativeSpace && isBoneControl(id) && (
-                <div className="property-row">
-                  <span>Motion space</span>
-                  <output>
-                    {activeLayer.nativeSpace === 'mesh' ? 'Mesh additive' : 'Local additive'}
-                  </output>
-                </div>
-              )}
-              {activeLayer &&
-                activeLayer.kind !== 'base' &&
-                !(activeLayer.nativeSpace && isBoneControl(id)) && (
-                  <label className="property-row">
-                    <span>Offset space</span>
-                    <select
-                      aria-label="Layer space for this control"
-                      value={activeLayer.spaces?.[id] ?? 'layer'}
-                      onChange={(event) => {
-                        const spaces = { ...activeLayer.spaces };
-                        if (event.target.value === 'layer') delete spaces[id];
-                        else spaces[id] = event.target.value as LayerSpace;
-                        studio.configureLayer(activeLayer.id, { spaces });
-                      }}
-                    >
-                      <option value="layer">Layer default ({activeLayer.space ?? 'local'})</option>
-                      <option value="local">Local</option>
-                      <option value="parent">Parent</option>
-                      <option value="world">World</option>
-                    </select>
-                  </label>
-                )}
-              <TransformFields runtime={runtime} />
-            </PropertySection>
-            <ControlLayerSettings />
-            {limb && (
-              <PropertySection
-                id="limb-posing"
-                title={limb.startsWith('arm') ? 'Arm posing' : 'Leg posing'}
-              >
-                <div className="property-row">
-                  <span>Mode</span>
-                  <div
-                    className="segmented rig-mode-switch"
-                    title="Matches the current pose and keys the IK/FK mode"
-                  >
-                    {(['ik', 'fk'] as const).map((mode) => (
+            {showControlTab('transform') && (
+              <>
+                <TransformFields runtime={runtime} compact={compact} />
+                {id === 'camera' && (
+                  <PropertySection id="camera" title="Player camera">
+                    <CameraMotion project={s.project} />
+                    <Slider
+                      label="Field of view"
+                      value={p.fov}
+                      min={20}
+                      max={120}
+                      step={1}
+                      change={(v) => studio.editCameraFov(v)}
+                    />
+                    <div className="property-mask-actions">
+                      <button onClick={() => edit({ ...p, q: [0, 1, 0, 0] })}>Look forward</button>
                       <button
-                        key={mode}
-                        aria-pressed={limbMode(s.project!, limb, s.frame) === mode}
-                        onClick={() => switchLimb(limb, mode)}
+                        onClick={() =>
+                          edit({
+                            ...p,
+                            q: [0, Math.cos((Math.PI * 2) / 9), Math.sin((Math.PI * 2) / 9), 0],
+                          })
+                        }
                       >
-                        {mode.toUpperCase()}
+                        Look down
                       </button>
-                    ))}
-                  </div>
-                </div>
-                {!enabled && (
-                  <p className="property-note">
-                    Switch to {definition.only?.toUpperCase()} to pose this control.
-                  </p>
+                    </div>
+                  </PropertySection>
                 )}
-              </PropertySection>
+              </>
             )}
-            <ControllerLimits
-              project={s.project}
-              id={id}
-              ground={() => runtime?.groundSelected([id])}
-            />
-            <PropSettings />
-            <AttachmentPanel attach={attach} pick={pick} />
-            {hand && (
-              <PropertySection id="grip" title="Grip">
-                <Slider
-                  label="Curl"
-                  value={p.grip.slice(1).reduce((a, b) => a + b, 0) / 4}
-                  change={(v) => grip(-1, v)}
-                />
-                {['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'].map((label, i) => (
-                  <Slider key={label} label={label} value={p.grip[i]} change={(v) => grip(i, v)} />
-                ))}
-                <p className="property-note">−1 outward · 0 rest · 1 closed</p>
-                <div className="pose-presets">
-                  {['Relaxed', 'Rifle', 'Pinch'].map((label, i) => (
-                    <button
-                      key={label}
-                      className="pose-preset"
-                      onClick={() => setPose(i)}
-                      title={'Apply ' + label.toLowerCase() + ' grip'}
-                    >
-                      {thumbs[i] ? <img src={thumbs[i]} alt="" /> : <Hand size={30} />}
-                      <span>{label}</span>
-                    </button>
-                  ))}
-                </div>
-              </PropertySection>
+            {showControlTab('layer') && (
+              <>
+                <PropertySection id="layer-space" title="Layer space" defaultOpen={false}>
+                  {activeLayer?.nativeSpace && isBoneControl(id) && (
+                    <div className="property-row">
+                      <span>Motion space</span>
+                      <output>
+                        {activeLayer.nativeSpace === 'mesh' ? 'Mesh additive' : 'Local additive'}
+                      </output>
+                    </div>
+                  )}
+                  {activeLayer && activeLayer.kind !== 'base' && (
+                    <label className="property-row">
+                      <span>Offset space</span>
+                      <select
+                        aria-label="Layer space for this control"
+                        value={activeLayer.spaces?.[id] ?? 'layer'}
+                        onChange={(event) => {
+                          const spaces = { ...activeLayer.spaces };
+                          if (event.target.value === 'layer') delete spaces[id];
+                          else spaces[id] = event.target.value as LayerSpace;
+                          studio.configureLayer(activeLayer.id, { spaces });
+                        }}
+                      >
+                        <option value="layer">
+                          Layer default ({activeLayer.space ?? 'local'})
+                        </option>
+                        <option value="local">Local</option>
+                        <option value="parent">Parent</option>
+                        <option value="world">World</option>
+                      </select>
+                    </label>
+                  )}
+                  {(!activeLayer || activeLayer.kind === 'base') && (
+                    <p className="property-note">Base animation uses the control’s stored space.</p>
+                  )}
+                </PropertySection>
+                <ControlLayerSettings />
+              </>
             )}
-            {id === 'camera' && (
-              <PropertySection id="camera" title="Player camera">
-                <CameraMotion project={s.project} />
-                <Slider
-                  label="Field of view"
-                  value={p.fov}
-                  min={20}
-                  max={120}
-                  step={1}
-                  change={(v) => studio.editCameraFov(v)}
-                />
-                <div className="property-mask-actions">
-                  <button onClick={() => edit({ ...p, q: [0, 1, 0, 0] })}>Look forward</button>
-                  <button
-                    onClick={() =>
-                      edit({
-                        ...p,
-                        q: [0, Math.cos((Math.PI * 2) / 9), Math.sin((Math.PI * 2) / 9), 0],
-                      })
+            {showControlTab('rig') && (
+              <>
+                {limb && (
+                  <PropertySection
+                    id="limb-posing"
+                    title={limb.startsWith('arm') ? 'Arm posing' : 'Leg posing'}
+                    defaultOpen={false}
+                    headerAction={
+                      <div
+                        className="segmented rig-mode-switch"
+                        title="Matches the current pose and keys the IK/FK mode"
+                      >
+                        {(['ik', 'fk'] as const).map((mode) => (
+                          <button
+                            key={mode}
+                            aria-pressed={limbMode(s.project!, limb, s.frame) === mode}
+                            onClick={() => switchLimb(limb, mode)}
+                          >
+                            {mode.toUpperCase()}
+                          </button>
+                        ))}
+                      </div>
                     }
                   >
-                    Look down
-                  </button>
-                </div>
+                    {!enabled && (
+                      <p className="property-note">
+                        Switch to {definition.only?.toUpperCase()} to pose this control.
+                      </p>
+                    )}
+                  </PropertySection>
+                )}
+                <ControllerLimits
+                  project={s.project}
+                  id={id}
+                  ground={() => runtime?.groundSelected([id])}
+                />
+                <PropSettings />
+                <AttachmentPanel attach={attach} pick={pick} />
+                {hand && (
+                  <PropertySection id="grip" title="Grip" defaultOpen={false}>
+                    <Slider
+                      label="Curl"
+                      value={p.grip.slice(1).reduce((a, b) => a + b, 0) / 4}
+                      change={(v) => grip(-1, v)}
+                    />
+                    {['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'].map((label, i) => (
+                      <Slider
+                        key={label}
+                        label={label}
+                        value={p.grip[i]}
+                        change={(v) => grip(i, v)}
+                      />
+                    ))}
+                    <p className="property-note">−1 outward · 0 rest · 1 closed</p>
+                    <div className="pose-presets">
+                      {['Relaxed', 'Rifle', 'Pinch'].map((label, i) => (
+                        <button
+                          key={label}
+                          className="pose-preset"
+                          onClick={() => setPose(i)}
+                          title={'Apply ' + label.toLowerCase() + ' grip'}
+                        >
+                          {thumbs[i] ? <img src={thumbs[i]} alt="" /> : <Hand size={30} />}
+                          <span>{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </PropertySection>
+                )}
+              </>
+            )}
+            {showControlTab('transform') && (
+              <PropertySection id="interpolation" title="Interpolation" defaultOpen={false}>
+                <label className="property-row">
+                  <span>Between keys</span>
+                  <select
+                    aria-label="Between keys"
+                    value={
+                      Object.values(s.project.tracks[id].curves ?? {}).some((c) => c?.loop)
+                        ? 'loop'
+                        : s.project.tracks[id].interpolation
+                    }
+                    onChange={(e) =>
+                      studio.setInterpolation(e.target.value as Interpolation | 'loop')
+                    }
+                  >
+                    <option value="smooth">Smooth</option>
+                    <option value="loop">Loop</option>
+                    <option value="linear">Linear</option>
+                    <option value="step">Stepped</option>
+                    <option value="spring">Spring</option>
+                    <option value="bounce">Bounce</option>
+                  </select>
+                </label>
+                {(s.project.tracks[id].interpolation === 'spring' ||
+                  s.project.tracks[id].interpolation === 'bounce') && (
+                  <MotionSettings
+                    mode={s.project.tracks[id].interpolation as 'spring' | 'bounce'}
+                    options={s.project.tracks[id]}
+                    change={(value) => studio.setMotionOptions(value)}
+                  />
+                )}
               </PropertySection>
             )}
-            <PropertySection id="interpolation" title="Interpolation">
-              <label className="property-row">
-                <span>Between keys</span>
-                <select
-                  aria-label="Between keys"
-                  value={
-                    Object.values(s.project.tracks[id].curves ?? {}).some((c) => c?.loop)
-                      ? 'loop'
-                      : s.project.tracks[id].interpolation
-                  }
-                  onChange={(e) =>
-                    studio.setInterpolation(e.target.value as Interpolation | 'loop')
-                  }
-                >
-                  <option value="smooth">Smooth</option>
-                  <option value="loop">Loop</option>
-                  <option value="linear">Linear</option>
-                  <option value="step">Stepped</option>
-                  <option value="spring">Spring</option>
-                  <option value="bounce">Bounce</option>
-                </select>
-              </label>
-              {(s.project.tracks[id].interpolation === 'spring' ||
-                s.project.tracks[id].interpolation === 'bounce') && (
-                <MotionSettings
-                  mode={s.project.tracks[id].interpolation as 'spring' | 'bounce'}
-                  options={s.project.tracks[id]}
-                  change={(value) => studio.setMotionOptions(value)}
-                />
-              )}
-            </PropertySection>
           </>
         )}
       </div>

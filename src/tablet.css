@@ -1,6 +1,9 @@
 /* Touch stage: permanent chrome hugs the edges; every editor is a sheet. */
 .touch-pose-rail,
 .touch-panel-rail,
+.touch-utility-rail,
+.touch-clip-context,
+.touch-workspace-menu-root,
 .touch-transport,
 .touch-view-toggle {
   display: none;
@@ -28,9 +31,9 @@ html.android {
   height: var(--screen-h, 100dvh);
   overflow: hidden;
   --touch-edge: 16px;
-  --touch-sheet: 348px;
+  --touch-sheet: 400px;
   --touch-dock: 88px;
-  --touch-timeline: 42dvh;
+  --touch-timeline: 26dvh;
   --touch-surface: var(--panel);
   --touch-divider: color-mix(in srgb, var(--border) 50%, transparent);
 }
@@ -40,6 +43,17 @@ html.android {
   display: block;
   width: 100%;
   height: 100%;
+}
+.android .app.timeline-open > .workspace {
+  height: 100%;
+}
+.android .app.timeline-open .touch-transport {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.android .app #touch-timeline .touch-timeline-play {
+  display: none;
 }
 .android .workspace > .viewport {
   position: absolute;
@@ -65,10 +79,119 @@ html.android {
   display: none;
 }
 .android .titlebar .project-title {
-  max-width: 32vw;
+  display: none;
+}
+.android .touch-clip-context,
+.android .touch-workspace-menu-trigger {
+  position: absolute;
+  z-index: 61;
+  top: calc(var(--touch-edge) + env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  height: 48px;
+  min-height: 48px;
+  padding: 0 12px;
+  gap: 8px;
+  border: 1px solid var(--touch-divider);
+  border-radius: var(--radius-group, 8px);
+  background: var(--surface-quick);
+  box-shadow: var(--shadow-tools, 0 2px 5px #060a1030, 0 6px 18px #060a1040);
+  color: var(--text);
+}
+.android .touch-clip-context {
+  left: calc(176px + env(safe-area-inset-left));
+  width: min(260px, max(160px, calc(100vw - 520px)));
+}
+.android .touch-clip-context span,
+.android .touch-workspace-menu-trigger span {
+  min-width: 0;
   overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
+  font-size: 14px;
+  font-weight: 600;
+}
+.android .touch-clip-context span {
+  flex: 1;
+  text-align: left;
+}
+.android .touch-workspace-menu-root {
+  position: absolute;
+  z-index: 72;
+  top: calc(var(--touch-edge) + env(safe-area-inset-top));
+  right: calc(var(--touch-edge) + env(safe-area-inset-right));
+  display: block;
+}
+.android .touch-workspace-menu-trigger {
+  position: relative;
+  inset: auto;
+  width: 48px;
+  padding: 0;
+  justify-content: center;
+}
+.android .touch-workspace-menu-trigger span {
+  display: none;
+}
+.android .touch-workspace-menu-trigger > svg:last-child {
+  display: none;
+}
+.android .touch-workspace-menu {
+  position: absolute;
+  z-index: 90;
+  top: 56px;
+  right: 0;
+  width: 284px;
+  max-height: calc(var(--screen-h, 100dvh) - 88px);
+  padding: 8px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel, 12px);
+  background: var(--surface-menu);
+  box-shadow: var(--shadow-menu, 0 4px 12px #05090f55, 0 16px 36px -6px #05090f80);
+}
+.android .touch-workspace-menu section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 8px 0;
+}
+.android .touch-workspace-menu section + section {
+  border-top: 1px solid var(--touch-divider);
+}
+.android .touch-workspace-menu section > strong {
+  grid-column: 1 / -1;
+  padding: 0 8px 4px;
+  color: var(--muted);
   font-size: 12px;
+  font-weight: 600;
+}
+.android .touch-workspace-menu button {
+  justify-content: flex-start;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 10px;
+  gap: 8px;
+  border-radius: var(--radius-control, 6px);
+}
+.android .touch-workspace-menu button[aria-pressed='true'] {
+  color: var(--cyan);
+  background: var(--selection);
+}
+.android .touch-workspace-menu button span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.android .app > .active-layer-control:not(.timeline *) {
+  top: calc(var(--touch-edge) + env(safe-area-inset-top));
+  right: calc(80px + env(safe-area-inset-right));
+  left: auto;
+  z-index: 61;
+}
+.android .app > .active-layer-control:not(.timeline *) .active-layer-trigger {
+  max-width: 184px;
+  min-height: 48px;
+  background: var(--surface-quick);
 }
 .android .titlebar .brand {
   height: 44px;
@@ -118,6 +241,43 @@ html.android {
   gap: 4px;
   border-radius: 14px;
 }
+.android .touch-utility-rail {
+  position: absolute;
+  z-index: 58;
+  top: calc(var(--touch-edge) + env(safe-area-inset-top));
+  right: calc(var(--touch-edge) + env(safe-area-inset-right));
+  display: inline-flex;
+  height: 48px;
+  padding: 2px;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--touch-divider);
+  border-radius: var(--radius-group, 8px);
+  background: rgb(23 29 38 / 0.94);
+  box-shadow: var(--shadow-tools, 0 2px 5px #060a1030, 0 6px 18px #060a1040);
+}
+.android .touch-utility-rail button {
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  gap: 6px;
+  border: 0;
+  border-radius: 0;
+}
+.android .touch-utility-rail button + button {
+  border-inline-start: 1px solid var(--touch-divider);
+}
+.android .touch-utility-rail button:first-child {
+  border-radius: 6px 0 0 6px;
+}
+.android .touch-utility-rail button:last-child {
+  border-radius: 0 6px 6px 0;
+}
+.android .touch-utility-rail span {
+  font-size: 13px;
+  font-weight: 600;
+}
 .android .touch-pose-rail {
   left: calc(var(--touch-edge) + env(safe-area-inset-left));
 }
@@ -152,65 +312,115 @@ html.android {
 .android .touch-transport {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;
   position: absolute;
   z-index: 55;
-  bottom: calc(var(--touch-edge) + env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 4px 8px;
-  border-radius: 16px;
-  border: 1px solid var(--touch-divider);
-  background: var(--touch-surface);
-  max-width: calc(100vw - 32px);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 80px;
+  transform: none;
+  padding: 4px 10px 28px;
+  border-radius: 0;
+  border: 0;
+  border-top: 1px solid var(--touch-divider);
+  background: rgb(17 25 35 / 0.88);
+  max-width: none;
 }
 .android .touch-transport > button {
-  width: 60px;
-  height: 56px;
-  flex-direction: column;
-  gap: 3px;
+  position: relative;
+  z-index: 2;
+  min-width: 48px;
+  height: 48px;
+  min-height: 48px;
+  flex-direction: row;
+  gap: 6px;
   flex: none;
-  border-radius: 10px;
+  border-radius: 0;
 }
-.android .touch-transport > button:first-child {
-  width: 52px;
+.android .touch-history,
+.android .touch-playback {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  flex: none;
+  height: 48px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-group, 8px);
+  overflow: hidden;
+}
+.android .touch-history {
+  margin-right: 8px;
+}
+.android .touch-playback {
+  margin-right: 12px;
+}
+.android .touch-history button,
+.android .touch-playback button {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+.android .touch-history button + button,
+.android .touch-playback button + button {
+  border-inline-start: 1px solid var(--border);
+}
+.android .touch-frame {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 48px;
+  flex: none;
+  color: var(--text);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.android .touch-frame small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.android .touch-key,
+.android .touch-auto,
+.android .touch-timeline-toggle {
+  border-inline-start: 1px solid var(--border);
+}
+.android .touch-timeline-toggle {
+  min-width: 92px !important;
+}
+.android .touch-transport > button[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--selection);
 }
 .android .touch-key {
   color: var(--amber);
 }
 .android .touch-scrubber {
-  width: clamp(124px, 22vw, 300px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  flex: none;
-  height: 64px;
-}
-.android .touch-scrubber > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 30px;
-}
-.android .touch-scrubber button {
-  min-height: 32px !important;
-  min-width: 36px !important;
-  height: 32px;
-  padding: 0;
-}
-.android .touch-scrubber output {
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-.android .touch-scrubber small {
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 400;
+  position: absolute;
+  z-index: 1;
+  right: 12px;
+  bottom: 0;
+  left: 12px;
+  width: auto;
+  max-width: none;
+  display: block;
+  height: 44px;
 }
 .android .touch-scrubber input {
-  width: 100%;
-  height: 28px;
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  height: 44px;
+  min-height: 44px;
   margin: 0;
   padding: 0;
   -webkit-appearance: none;
@@ -218,6 +428,29 @@ html.android {
   touch-action: none;
   background: none;
   border: 0;
+}
+
+/* Tablet tools share the upper scene edge with View. Keep every direct action at
+ * the 44px touch minimum and reserve a separate slot for View so it never
+ * intercepts the Timeline button. */
+@media (min-width: 701px) and (min-height: 541px) {
+  :root.android .app.app .touch-pose-rail.touch-pose-rail > button,
+  :root.android .app.app .touch-panel-rail.touch-panel-rail > button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  :root.android .app .touch-view-toggle {
+    top: calc(80px + env(safe-area-inset-top));
+    right: calc(206px + env(safe-area-inset-right));
+  }
+
+  :root.android .app .viewport-bottom.view-options-open {
+    top: calc(132px + env(safe-area-inset-top));
+    right: calc(206px + env(safe-area-inset-right));
+  }
 }
 .android .touch-scrubber input::-webkit-slider-thumb {
   min-width: 20px;
@@ -465,10 +698,10 @@ html.android {
   pointer-events: none;
 }
 .android .touch-view-toggle {
-  display: flex;
+  display: none;
   position: absolute;
   right: calc(var(--touch-edge) + env(safe-area-inset-right));
-  top: calc(var(--touch-edge) + env(safe-area-inset-top));
+  top: calc(var(--touch-edge) + env(safe-area-inset-top) + 56px);
   z-index: 52;
   background: var(--touch-surface);
   border: 1px solid var(--touch-divider);
@@ -725,7 +958,7 @@ html.android {
 .android .timeline .timeline-grid {
   overflow: auto;
   overscroll-behavior: contain;
-  align-content: start;
+  align-content: stretch;
   grid-template-columns: 180px calc((100% - 204px) * var(--timeline-zoom, 1));
   touch-action: pan-x pan-y;
 }
@@ -924,6 +1157,7 @@ html.android {
 }
 .android .touch-pose-rail button,
 .android .touch-panel-rail button,
+.android .touch-utility-rail button,
 .android .touch-transport > button,
 .android .touch-view-toggle,
 .android .tablet-sheet button {
@@ -931,14 +1165,15 @@ html.android {
     background-color 140ms ease,
     color 140ms ease,
     border-color 140ms ease,
-    scale var(--touch-press) ease;
+    opacity var(--touch-press) ease;
 }
 .android .touch-pose-rail button:active:not(:disabled),
 .android .touch-panel-rail button:active:not(:disabled),
+.android .touch-utility-rail button:active:not(:disabled),
 .android .touch-transport > button:active:not(:disabled),
 .android .touch-view-toggle:active,
 .android .tablet-sheet button:active:not(:disabled) {
-  scale: 0.96;
+  background: var(--pressed);
 }
 .android .tablet-sheet {
   animation: touch-sheet-in var(--touch-enter) var(--touch-ease) both;
@@ -1061,11 +1296,11 @@ html.android {
   }
   .android .touch-pose-rail button,
   .android .touch-panel-rail button,
+  .android .touch-utility-rail button,
   .android .touch-transport > button,
   .android .touch-view-toggle,
   .android .tablet-sheet button {
     transition: none;
-    scale: 1 !important;
   }
 }
 

@@ -8,7 +8,7 @@ import {
   Route,
   Clapperboard,
   Gamepad2,
-  Settings2,
+  Eye,
   PictureInPicture2,
   X,
 } from 'lucide-react';
@@ -55,16 +55,14 @@ export function Viewport({
       }
       ref={ref}
     >
-      {!isAndroid && (
-        <div className="desktop-pose-context">
-          <ActiveLayer />
-          <PoseActions
-            pasteMirrored={() => runtime.current?.pasteMirroredPose()}
-            timeline
-            mirror={() => runtime.current?.mirrorSelectedPose()}
-          />
-        </div>
-      )}
+      <div className="desktop-pose-context controller-overlay-layer">
+        {!isAndroid && <ActiveLayer />}
+        <PoseActions
+          pasteMirrored={() => runtime.current?.pasteMirroredPose()}
+          timeline
+          mirror={() => runtime.current?.mirrorSelectedPose()}
+        />
+      </div>
       {isAndroid && (
         <button
           ref={viewTrigger}
@@ -80,7 +78,7 @@ export function Viewport({
             }
           }}
         >
-          <Settings2 size={22} />
+          <Eye size={22} />
           <span>View</span>
         </button>
       )}

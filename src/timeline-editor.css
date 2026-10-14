@@ -15,6 +15,17 @@
   color: var(--track-text);
   border-top: 1px solid #3b4654;
 }
+.timeline > .timeline-tabs {
+  flex: 0 0 40px;
+  max-height: 40px;
+}
+.timeline > :is(.dope-sheet, .curve-editor) {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  max-height: 100%;
+}
 .timeline button {
   transition:
     background-color 160ms ease,
@@ -34,11 +45,11 @@
   padding: 4px 12px;
   gap: 16px;
   border-bottom: 1px solid #ffffff18;
-  background: #303b49;
+  background: var(--tl-band);
 }
 .timeline .timeline-tab-group {
   gap: 2px;
-  background: #10151b;
+  background: var(--inset);
   padding: 3px;
   border: 1px solid #ffffff08;
   border-radius: 7px;
@@ -733,6 +744,8 @@
   border-top: 0;
   background: var(--track-ink);
   overflow: hidden;
+  min-width: 0;
+  min-height: 0;
 }
 .timeline .curve-editor.inspecting {
   grid-template-columns: var(--track-label-width) minmax(160px, 1fr) 226px;
@@ -753,14 +766,24 @@
   scrollbar-color: #3d4653 transparent;
 }
 .timeline .curve-center {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   background: var(--track-ink);
 }
 .timeline .curve-tools {
-  height: auto;
-  min-height: 38px;
-  flex-wrap: wrap;
+  --curve-tools-height: 38px;
+  flex: 0 0 var(--curve-tools-height);
+  height: var(--curve-tools-height);
+  min-height: var(--curve-tools-height);
+  max-height: var(--curve-tools-height);
+  flex-wrap: nowrap;
   padding: 4px 8px;
   gap: 3px;
+  align-content: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
   background: var(--track-surface);
   border-color: var(--track-rule);
 }
@@ -877,11 +900,15 @@
   pointer-events: none;
 }
 .timeline .curve-help {
+  flex: 0 0 24px;
+  height: 24px;
   font-size: 10px;
   color: var(--track-muted);
   padding: 5px 12px;
   border: 0;
   min-height: 24px;
+  max-height: 24px;
+  overflow: hidden;
   background: var(--track-surface);
 }
 .timeline .curve-help span {
@@ -889,11 +916,12 @@
 }
 .timeline .curve-selection-tools {
   display: flex;
-  flex: none;
+  flex: 0 0 42px;
   align-items: center;
   flex-wrap: nowrap;
   height: 42px;
   min-height: 42px;
+  max-height: 42px;
   overflow-x: auto;
   scrollbar-width: none;
   gap: 6px;
@@ -1052,8 +1080,10 @@
   --track-label-width: 204px;
 }
 .android .timeline .timeline-tabs {
+  flex-basis: 48px;
   height: 48px;
   min-height: 48px;
+  max-height: 48px;
   gap: 8px;
   padding: 4px 8px;
 }
@@ -1419,31 +1449,9 @@
     height: 40px;
   }
 }
-/* Short landscape screens give timing its own workspace until Close is tapped. */
+/* Short landscape screens keep curve-only details compact while the shell owns
+ * the scene and timeline overlay geometry. */
 @media (max-height: 540px) {
-  .android .app.timeline-open > .timeline {
-    top: 8px;
-    bottom: 8px;
-    left: 8px;
-    right: 8px;
-    height: auto;
-    z-index: 70;
-    border-radius: 10px;
-  }
-  .android .app.timeline-open > .titlebar,
-  .android .app.timeline-open > .active-layer-control,
-  .android .app.timeline-open .touch-view-toggle,
-  .android .app.timeline-open .touch-pose-rail,
-  .android .app.timeline-open .touch-panel-rail,
-  .android .app.timeline-open .touch-transport,
-  .android .app.timeline-open .selection-pose-tools {
-    visibility: hidden;
-    pointer-events: none;
-  }
-  .android .timeline .timeline-window-tools button[aria-label='Expand timeline'],
-  .android .timeline .timeline-window-tools button[aria-label='Collapse timeline'] {
-    display: none;
-  }
   .android .timeline .curve-help {
     display: none;
   }
@@ -1479,8 +1487,10 @@
   flex: 1;
 }
 .android .timeline .curve-selection-tools {
+  flex-basis: 48px;
   height: 48px;
   min-height: 48px;
+  max-height: 48px;
 }
 
 /* Curve reduction stays contextual, with analysis separate from application. */

@@ -16,6 +16,7 @@ import {
   Waypoints,
 } from 'lucide-react';
 import { useStudioChrome } from '../hooks';
+import { useTransientPopover } from '../hooks/transientPopover';
 import { studio } from '../core/store';
 import { boneFollowing } from '../core/boneFollowing';
 import { controlLabel, visibleControls } from '../core/model';
@@ -38,25 +39,26 @@ export function AttachmentPanel({
     popup = useRef<HTMLDivElement>(null),
     trigger = useRef<HTMLButtonElement>(null),
     listId = useId();
+  const popover = useTransientPopover({
+    owner: 'attachment-parent',
+    open,
+    onClose: () => setOpen(false),
+    rootRef: popup,
+    triggerRef: trigger,
+  });
   useEffect(() => {
     setOpen(false);
     setSearch('');
   }, [s.selected]);
   useEffect(() => {
     if (!open) return;
-    const outside = (e: PointerEvent) => {
-      if (!host.current?.contains(e.target as Node) && !popup.current?.contains(e.target as Node))
-        setOpen(false);
-    };
     const close = () => setOpen(false);
     const scroll = (e: Event) => {
       if (!popup.current?.contains(e.target as Node)) close();
     };
-    document.addEventListener('pointerdown', outside, true);
     window.addEventListener('resize', close);
     window.addEventListener('scroll', scroll, true);
     return () => {
-      document.removeEventListener('pointerdown', outside, true);
       window.removeEventListener('resize', close);
       window.removeEventListener('scroll', scroll, true);
     };
@@ -114,10 +116,11 @@ export function AttachmentPanel({
         options.findIndex((o) => o.value === target),
       ),
     );
+    popover.announce();
     setOpen(true);
   };
   return (
-    <PropertySection id="attachment" title="Attachment">
+    <PropertySection id="attachment" title="Attachment" defaultOpen={false}>
       <div className="attachment-editor">
         <div className="attachment-target" ref={host}>
           <button

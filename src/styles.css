@@ -1,23 +1,9 @@
 :root {
   font-family: 'Segoe UI', system-ui, sans-serif;
-  font-size: 12px;
+  font-size: 13px;
   font-synthesis: none;
   color-scheme: dark;
-  --canvas: #24272a;
-  --panel: #2b2e32;
-  --raised: #34383d;
-  --inset: #202326;
-  --hover: #3e444b;
-  --border: #454c53;
-  --text: #e3e7eb;
-  --secondary: #bac2ca;
-  --muted: #929da7;
-  --accent: #629fdd;
-  --selection: #354c63;
-  --cyan: #63c5e9;
-  --amber: #e6bf77;
-  --red: #e98383;
-  --green: #95ccb4;
+  /* Semantic colors and geometry are owned by design-system.css. */
   color: var(--text);
   background: var(--canvas);
   --surface: var(--panel);
@@ -53,17 +39,17 @@ button {
   align-items: center;
   justify-content: center;
   white-space: nowrap;
-  min-height: 28px;
+  min-height: 32px;
   padding: 4px 8px;
-  gap: 6px;
-  font-size: 12px;
-  border-radius: 3px;
+  gap: 8px;
+  font-size: 13px;
+  border-radius: var(--radius-control);
 }
 button:hover {
   background: var(--hover);
 }
 button:disabled {
-  opacity: 0.4;
+  color: var(--muted);
   cursor: default;
 }
 button:focus-visible,
@@ -89,7 +75,7 @@ select {
   color: var(--text);
   background: var(--inset);
   border-color: var(--border);
-  border-radius: 3px;
+  border-radius: var(--radius-control);
 }
 input[type='number'] {
   appearance: textfield;
@@ -213,7 +199,8 @@ hr {
 }
 .viewport {
   position: relative;
-  overflow: hidden;
+  /* The scene must never scroll when a contextual control receives focus. */
+  overflow: clip;
   background: var(--raised);
   min-width: 0;
 }

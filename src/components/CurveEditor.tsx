@@ -50,6 +50,7 @@ import {
 import { studio } from '../core/store';
 import { controlLabel } from '../core/model';
 import { useStudioChrome } from '../hooks';
+import { consumeSceneDismiss } from '../hooks/transientPopover';
 import {
   CHANNEL_LABELS,
   channelColor,
@@ -138,6 +139,9 @@ export const CurveEditor = memo(function CurveEditor({
   useEffect(() => {
     if (!viewMenuOpen) return;
     const close = (e: PointerEvent) => {
+      // A menu dismissal click on the scene must not leak through to the
+      // canvas and select or drag a controller on the same pointerdown.
+      consumeSceneDismiss(e);
       const target = e.target;
       if (
         !(target instanceof Node) ||
@@ -173,15 +177,22 @@ export const CurveEditor = memo(function CurveEditor({
   const [size, setSize] = useState({ w: 1000, h: 260 }),
     W = Math.max(80, size.w),
     H = Math.max(60, size.h);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = svg.current;
     if (!node) return;
     const preventScroll = (event: WheelEvent) => event.preventDefault();
-    node.addEventListener('wheel', preventScroll, { passive: false });
-    const observer = new ResizeObserver(() => {
+    const measure = () => {
       const r = node.getBoundingClientRect();
-      if (r.width && r.height) setSize({ w: r.width, h: r.height });
-    });
+      if (!r.width || !r.height) return;
+      setSize((current) =>
+        current.w === r.width && current.h === r.height ? current : { w: r.width, h: r.height },
+      );
+    };
+    node.addEventListener('wheel', preventScroll, { passive: false });
+    // Measure the committed layout before the first paint so the initial viewBox
+    // matches the panel rather than visibly correcting the fallback dimensions.
+    measure();
+    const observer = new ResizeObserver(measure);
     observer.observe(node);
     return () => {
       observer.disconnect();

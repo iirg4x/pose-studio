@@ -1,0 +1,492 @@
+/* A projected selection ribbon. The scene owns its anchor; this component
+ * owns density and joined geometry across pointer types. */
+.controller-overlay-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+.app .desktop-pose-context.controller-overlay-layer:has(.controller-ribbon[data-more-open='true']) {
+  z-index: var(--z-editor-popover, 80);
+}
+.app .controller-overlay-layer > .controller-ribbon {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  width: 376px;
+  max-width: calc(100% - 24px);
+  padding: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-panel);
+  background: var(--surface-quick);
+  box-shadow: var(--shadow-tools);
+  color: var(--text);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity var(--motion-quick) var(--motion-ease),
+    left var(--motion-quick) var(--motion-ease),
+    top var(--motion-quick) var(--motion-ease);
+}
+.app .controller-ribbon[data-anchor-visible='true'] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.app .controller-ribbon[data-anchor-hidden='true'],
+.app .controller-ribbon[data-state='closing'] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.controller-ribbon-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 8px;
+}
+.controller-ribbon-compact-row {
+  display: none;
+}
+.controller-ribbon-more-panel {
+  min-width: 0;
+}
+.app .controller-ribbon .pose-action-context {
+  position: static;
+  inset: auto;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-flair);
+  background: transparent;
+  color: var(--secondary);
+}
+.controller-ribbon .pose-action-context strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+}
+.controller-ribbon .pose-action-context i {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-right: 8px;
+  border-radius: 50%;
+}
+.app .controller-ribbon-properties {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  gap: 4px;
+  padding: 0 8px;
+  border: 0;
+  color: var(--accent-ink);
+  background: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+.app .controller-ribbon-properties:hover {
+  color: var(--accent-ink);
+  background: var(--accent-hover);
+}
+.controller-ribbon-body {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+.app
+  .controller-ribbon
+  :is(.controller-ribbon-modes, .controller-ribbon-transform, .controller-ribbon-command-group) {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-group);
+  background: transparent;
+  overflow: hidden;
+  isolation: isolate;
+}
+.app .controller-ribbon .transform-options {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 0;
+}
+.app
+  .controller-ribbon
+  :is(.controller-ribbon-modes, .transform-options, .controller-ribbon-command-group)
+  > button {
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 32px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--secondary);
+  background: transparent;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.app
+  .controller-ribbon
+  :is(.controller-ribbon-modes, .transform-options, .controller-ribbon-command-group)
+  > button
+  + button {
+  border-inline-start: 1px solid var(--border-subtle);
+}
+.app
+  .controller-ribbon
+  :is(.controller-ribbon-modes, .transform-options, .controller-ribbon-command-group)
+  > button:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--hover);
+}
+.app
+  .controller-ribbon
+  :is(.controller-ribbon-modes, .transform-options)
+  > button:is([aria-pressed='true'], [aria-expanded='true']) {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+.app .controller-ribbon .controller-ribbon-command-group > button:active:not(:disabled) {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+.app .controller-ribbon button:disabled {
+  color: var(--muted);
+  opacity: 1;
+}
+.app .controller-ribbon button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.app .controller-ribbon button[aria-pressed='true']:focus-visible {
+  outline-color: var(--accent-ink);
+}
+.app .controller-ribbon .transform-options > button > svg:first-child {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+.app .controller-ribbon .transform-options > button > span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+.app .controller-ribbon .transform-options > button > svg:last-child {
+  flex: none;
+}
+
+/* Constrained viewports keep the selected controller actionable with a
+ * single compact row. The full two-row command set moves into More so the
+ * ribbon never disappears just because a foot panel or inspector is open. */
+.app .controller-ribbon[data-ribbon-density='compact'] .controller-ribbon-header {
+  display: none;
+}
+.app .controller-ribbon[data-ribbon-density='compact'] .controller-ribbon-compact-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-group);
+  background: transparent;
+  overflow: visible;
+}
+.app .controller-ribbon[data-ribbon-density='compact'] .controller-ribbon-compact-row > button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 0;
+  color: var(--secondary);
+  background: transparent;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.app
+  .controller-ribbon[data-ribbon-density='compact']
+  .controller-ribbon-compact-row
+  > button:hover:not(:disabled),
+.app
+  .controller-ribbon[data-ribbon-density='compact']
+  .controller-ribbon-compact-row
+  > button[aria-expanded='true'],
+.app
+  .controller-ribbon[data-ribbon-density='compact']
+  .controller-ribbon-compact-row
+  > button[aria-pressed='true'] {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+.app
+  .controller-ribbon[data-ribbon-density='compact']
+  .controller-ribbon-compact-row
+  > button
+  + button {
+  border-inline-start: 1px solid var(--border-subtle);
+}
+.app
+  .controller-ribbon[data-ribbon-density='compact']
+  .controller-ribbon-compact-row
+  .pose-action-context {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  bottom: calc(100% + 4px);
+  min-width: 0;
+  max-width: min(160px, calc(100vw - 24px));
+  padding: 4px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-flair);
+  background: var(--surface-quick);
+  box-shadow: var(--shadow-popover);
+  pointer-events: none;
+}
+.app
+  .controller-ribbon[data-ribbon-density='compact']
+  .controller-ribbon-compact-row
+  .pose-action-context
+  strong {
+  font-size: 11px;
+}
+.app .controller-ribbon[data-ribbon-density='compact'] .controller-ribbon-more-panel {
+  display: none;
+}
+.app
+  .controller-ribbon[data-ribbon-density='compact'][data-more-open='true']
+  .controller-ribbon-more-panel {
+  position: absolute;
+  z-index: 4;
+  top: calc(100% + 4px);
+  left: 0;
+  display: block;
+  width: min(360px, calc(100vw - 16px));
+  max-width: calc(100vw - 16px);
+  max-height: min(62vh, 420px);
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-panel);
+  background: var(--surface-menu);
+  box-shadow: var(--shadow-popover);
+}
+.app
+  .controller-ribbon[data-ribbon-density='compact'][data-more-open='true'][data-anchor-side='above']
+  .controller-ribbon-more-panel {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+/* Commands use one quiet shared outline. Clipboard actions appear only when useful. */
+.app .controller-ribbon .controller-ribbon-commands {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: 0;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-group);
+  overflow: hidden;
+  background: transparent;
+}
+.app .controller-ribbon .controller-ribbon-command-group {
+  display: contents;
+}
+.app .controller-ribbon .controller-ribbon-command-group > button {
+  flex-direction: column;
+  gap: 2px;
+  height: 44px;
+  min-width: 44px;
+  padding: 2px 4px;
+  white-space: normal;
+}
+.app .controller-ribbon .controller-ribbon-command-group > button > span {
+  display: block;
+  max-width: 64px;
+  font-size: 12px;
+  line-height: 14px;
+  white-space: normal;
+}
+.app .controller-ribbon .controller-ribbon-command-group > button > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.app .controller-ribbon .foot-pose-tools {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+.app .controller-ribbon .foot-pivot-options {
+  display: grid;
+  gap: 8px;
+  color: var(--secondary);
+  font-size: 12px;
+}
+.app .controller-ribbon .foot-pivot-options > div {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-group);
+  overflow: hidden;
+}
+.app .controller-ribbon .foot-pivot-options button {
+  flex: 1;
+  min-width: 44px;
+  padding-inline: 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.app .controller-ribbon .foot-pivot-options button + button {
+  border-inline-start: 1px solid var(--border-subtle);
+}
+.app .controller-ribbon .foot-pivot-options button[aria-pressed='true'] {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+.app .controller-ribbon-foot-disclosure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 8px;
+  min-height: 32px;
+  color: var(--secondary);
+  background: transparent;
+}
+@media (pointer: coarse) {
+  .app .controller-overlay-layer > .controller-ribbon {
+    width: 360px;
+  }
+  .app .controller-ribbon-properties,
+  .app .controller-ribbon-foot-disclosure,
+  .app .controller-ribbon .foot-pose-tools button,
+  .app .controller-ribbon .controller-ribbon-compact-row > button,
+  .app
+    .controller-ribbon
+    :is(.controller-ribbon-modes, .transform-options, .controller-ribbon-command-group)
+    > button {
+    min-width: 44px;
+    min-height: 44px;
+    height: 44px;
+  }
+}
+
+@media (max-width: 360px) {
+  /* The compact More sheet keeps both transform selectors readable at the
+   * smallest phone width. The mode cells remain large enough for touch while
+   * World/Pivot get a little more horizontal breathing room. */
+  .app
+    .controller-ribbon[data-ribbon-density='compact'][data-more-open='true']
+    .controller-ribbon-body {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+  .app
+    .controller-ribbon[data-ribbon-density='compact'][data-more-open='true']
+    .controller-ribbon-transform
+    .transform-options
+    > button
+    > svg:first-child {
+    display: none;
+  }
+}
+@media (max-width: 360px) {
+  .controller-ribbon-body {
+    grid-template-columns: 112px minmax(0, 1fr);
+  }
+  .app .controller-ribbon .controller-ribbon-modes > button {
+    flex-direction: column;
+    gap: 2px;
+    font-size: 11px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app .controller-overlay-layer > .controller-ribbon {
+    transition: opacity 80ms linear;
+  }
+}
+
+.app .controller-ribbon .controller-ribbon-modes > button {
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+.app
+  .controller-ribbon
+  .controller-ribbon-command-group
+  + .controller-ribbon-command-group
+  > button:first-child {
+  border-inline-start: 1px solid var(--border-subtle);
+}
+.app .controller-ribbon .controller-ribbon-transform .transform-options > button {
+  background: transparent;
+  font-size: 13px;
+}
+.app .controller-ribbon .controller-ribbon-transform .transform-options > button > span {
+  font-size: 13px;
+}
+.app
+  .controller-ribbon
+  .controller-ribbon-transform
+  .transform-options
+  > button[aria-expanded='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+/* The pointer connects the ribbon to the selection without a line across the scene. */
+.app .controller-ribbon::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  width: 11px;
+  height: 11px;
+  left: clamp(8px, var(--ribbon-anchor-x, 50%), calc(100% - 8px));
+  top: clamp(8px, var(--ribbon-anchor-y, 50%), calc(100% - 8px));
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-quick);
+  transform: translate(-50%, -50%) rotate(45deg);
+  pointer-events: none;
+}
+@media (pointer: coarse) {
+  .app .controller-ribbon .controller-ribbon-modes > button,
+  .app .controller-ribbon .controller-ribbon-transform .transform-options > button > span {
+    font-size: 14px;
+  }
+}

@@ -5,11 +5,13 @@ export function DeleteAnimationDialog({
   last,
   remove,
   cancel,
+  exiting = false,
 }: {
   name: string;
   last: boolean;
   remove: () => void;
   cancel: () => void;
+  exiting?: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -22,7 +24,11 @@ export function DeleteAnimationDialog({
       ref={dialog}
       className="delete-animation-dialog"
       aria-labelledby="delete-animation-title"
+      aria-hidden={exiting || undefined}
       data-editor-overlay
+      data-motion="popover"
+      data-state={exiting ? 'closing' : 'open'}
+      inert={exiting || undefined}
       onCancel={cancel}
       onClick={(e) => {
         const r = e.currentTarget.getBoundingClientRect();

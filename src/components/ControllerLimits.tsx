@@ -25,7 +25,7 @@ export function ControllerLimits({
     ground = definition.kind !== 'pivot' && id !== 'camera';
   if (!ground && !tip) return null;
   return (
-    <PropertySection id="controller-limits" title="Grounding and reach">
+    <PropertySection id="controller-limits" title="Grounding and reach" defaultOpen={false}>
       {ground && (
         <>
           <button

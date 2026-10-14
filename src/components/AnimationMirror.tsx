@@ -9,6 +9,7 @@ import { mirrorDestination } from '../core/mirrorPose';
 import { MotionPresence } from './Motion';
 import type { ControlId, Project } from '../core/model';
 import { usePopupPlacement } from '../hooks/usePopupPlacement';
+import { useTransientPopover } from '../hooks/transientPopover';
 
 export function MirrorDriverNotice({ project, id }: { project: Project; id: ControlId }) {
   const link = mirrorDriver(project, id);
@@ -52,27 +53,13 @@ export function AnimationMirror() {
       fallbackHeight: 420,
       margin: 12,
     });
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: PointerEvent) => {
-      if (!panel.current?.contains(e.target as Node) && !button.current?.contains(e.target as Node))
-        setOpen(false);
-    };
-    const key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !e.defaultPrevented) {
-        e.preventDefault();
-        e.stopPropagation();
-        setOpen(false);
-        button.current?.focus();
-      }
-    };
-    document.addEventListener('pointerdown', close, true);
-    document.addEventListener('keydown', key);
-    return () => {
-      document.removeEventListener('pointerdown', close, true);
-      document.removeEventListener('keydown', key);
-    };
-  }, [open]);
+  const popover = useTransientPopover({
+    owner: 'animation-mirror',
+    open,
+    onClose: () => setOpen(false),
+    rootRef: panel,
+    triggerRef: button,
+  });
   useEffect(() => setOpen(false), [s.workspace?.activeId, p.editing]);
   const candidates =
     scope === 'selected'
@@ -97,7 +84,13 @@ export function AnimationMirror() {
         title="Live mirror: animate one side, drive the other"
         aria-expanded={open}
         data-linked={links.length > 0}
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (open) setOpen(false);
+          else {
+            popover.announce();
+            setOpen(true);
+          }
+        }}
       >
         <FlipHorizontal2 size={17} />
         <span>Mirror</span>

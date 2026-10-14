@@ -26,15 +26,13 @@ export interface TimelineTracksState {
 }
 /** Keep virtual row positions aligned with the responsive phone/tablet density. */
 export function useTimelineRowHeight() {
-  const compact = () => isTouch && matchMedia('(max-width: 700px), (max-height: 540px)').matches;
-  const [height, setHeight] = useState(() => (compact() ? 34 : isTouch ? 44 : 32));
+  const [height, setHeight] = useState(() => (isTouch ? 44 : 32));
   useEffect(() => {
     if (!isTouch) return;
-    const media = matchMedia('(max-width: 700px), (max-height: 540px)');
-    const update = () => setHeight(media.matches ? 34 : 44);
-    media.addEventListener('change', update);
-    update();
-    return () => media.removeEventListener('change', update);
+    // Touch rows keep the full 44px hit target in portrait and landscape. The
+    // data area scrolls when space is short; shrinking a row makes key lanes
+    // and bone labels difficult to select accurately.
+    setHeight(44);
   }, []);
   return height;
 }

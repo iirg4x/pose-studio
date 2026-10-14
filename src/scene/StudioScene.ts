@@ -276,6 +276,7 @@ export class StudioScene extends ExportScene {
     window.addEventListener('pose-paste-mirrored-keys', this.pasteMirroredKeys);
     window.addEventListener('pose-link-animation-mirror', this.linkAnimationMirror);
     window.addEventListener('pose-ground-selection', this.groundSelection);
+    window.addEventListener('pose-request-selection-anchor', this.requestSelectionAnchor);
     window.addEventListener('keydown', this.selectionKeys);
     window.addEventListener('keyup', this.selectionKeys);
     window.addEventListener('blur', this.clearSelectionModifier);
@@ -597,7 +598,10 @@ export class StudioScene extends ExportScene {
   }
   protected override updateControls(frame: number) {
     const project = this.store.state.project;
-    if (!project || !this.rig || !this.bodyRig || this.store.state.retargetMode) return;
+    if (!project || !this.rig || !this.bodyRig || this.store.state.retargetMode) {
+      this.publishSelectionAnchor();
+      return;
+    }
     const view = this.viewCamera(),
       rect = this.viewRect();
     this.gizmo.camera = view;
@@ -674,6 +678,148 @@ export class StudioScene extends ExportScene {
       }
     }
     this.publishCoordinates();
+    this.publishSelectionAnchor();
+  }
+  /** Publishes a cheap screen-space anchor for the contextual controller ribbon.
+   * The event keeps React out of the render loop while still following orbit,
+   * playback, multi-selection and committed controller drags. */
+  private requestSelectionAnchor = () => {
+    this.selectionAnchor = undefined;
+    this.publishSelectionAnchor();
+  };
+  private selectionAnchor?: {
+    x: number;
+    y: number;
+    visible: boolean;
+    dragging: boolean;
+    playing: boolean;
+    scrubbing: boolean;
+    gizmoBounds?: { left: number; top: number; right: number; bottom: number };
+  };
+  /** Protect selected controller outlines as well as the visible gizmo.
+   * Picking planes and extended drag guides are not UI obstacles. */
+  private selectionGizmoBounds() {
+    this.gizmoHelper.updateMatrixWorld(true);
+    const camera = this.viewCamera();
+    const point = new T.Vector3();
+    let left = Infinity;
+    let top = Infinity;
+    let right = -Infinity;
+    let bottom = -Infinity;
+    const include = () => {
+      if (!Number.isFinite(point.x) || !Number.isFinite(point.y) || Math.abs(point.z) > 1) return;
+      const x = ((point.x + 1) / 2) * this.width;
+      const y = ((1 - point.y) / 2) * this.height;
+      left = Math.min(left, x);
+      right = Math.max(right, x);
+      top = Math.min(top, y);
+      bottom = Math.max(bottom, y);
+    };
+    for (const id of this.store.state.selection) {
+      const marker = this.markers.get(id);
+      if (!marker?.visible) continue;
+      marker.updateMatrixWorld(true);
+      for (const vertex of marker.points) {
+        point.copy(vertex).applyMatrix4(marker.matrixWorld).project(camera);
+        include();
+      }
+    }
+    if (this.gizmo.object && this.gizmoHelper.visible)
+      this.gizmoHelper.traverseVisible((node) => {
+        if ('tag' in node && node.tag === 'helper') return;
+        const mesh = node as T.Mesh;
+        if (!mesh.geometry || !mesh.material) return;
+        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        if (!materials.some((material) => material.visible && material.opacity > 0.05)) return;
+        if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+        const box = mesh.geometry.boundingBox;
+        if (!box || box.isEmpty()) return;
+        for (let corner = 0; corner < 8; corner++) {
+          point
+            .set(
+              corner & 1 ? box.max.x : box.min.x,
+              corner & 2 ? box.max.y : box.min.y,
+              corner & 4 ? box.max.z : box.min.z,
+            )
+            .applyMatrix4(mesh.matrixWorld)
+            .project(camera);
+          include();
+        }
+      });
+    return Number.isFinite(left) ? { left, top, right, bottom } : undefined;
+  }
+  private publishSelectionAnchor() {
+    const state = this.store.state;
+    let visible = false;
+    let x = 0;
+    let y = 0;
+    if (
+      !state.gameView &&
+      !state.retargetMode &&
+      !this.dragging &&
+      !state.playing &&
+      !state.interacting &&
+      state.selection.length
+    ) {
+      const points = state.selection
+        .map((id) => this.markers.get(id))
+        .filter((marker): marker is ControlVisual => !!marker && marker.visible)
+        .map((marker) => marker.position);
+      if (points.length) {
+        const center = points
+          .reduce((sum, point) => sum.add(point), new T.Vector3())
+          .multiplyScalar(1 / points.length);
+        const projected = center.project(this.viewCamera());
+        visible =
+          projected.z >= -1 &&
+          projected.z <= 1 &&
+          projected.x >= -1 &&
+          projected.x <= 1 &&
+          projected.y >= -1 &&
+          projected.y <= 1 &&
+          Number.isFinite(projected.x) &&
+          Number.isFinite(projected.y);
+        if (visible) {
+          x = (projected.x + 1) * 0.5 * this.width;
+          y = (1 - projected.y) * 0.5 * this.height;
+        }
+      }
+    }
+    const detail = {
+      x,
+      y,
+      visible,
+      dragging: this.dragging,
+      playing: state.playing,
+      scrubbing: state.interacting,
+      gizmoBounds: visible ? this.selectionGizmoBounds() : undefined,
+    };
+    const previous = this.selectionAnchor;
+    // Idle scenes and playback need no repeated DOM anchor work. Panel layout
+    // changes are handled by the ribbon's own surface observers.
+    if (
+      previous &&
+      previous.visible === visible &&
+      previous.dragging === detail.dragging &&
+      previous.playing === detail.playing &&
+      previous.scrubbing === detail.scrubbing &&
+      ((!previous.gizmoBounds && !detail.gizmoBounds) ||
+        (previous.gizmoBounds &&
+          detail.gizmoBounds &&
+          Math.abs(previous.gizmoBounds.left - detail.gizmoBounds.left) < 0.25 &&
+          Math.abs(previous.gizmoBounds.top - detail.gizmoBounds.top) < 0.25 &&
+          Math.abs(previous.gizmoBounds.right - detail.gizmoBounds.right) < 0.25 &&
+          Math.abs(previous.gizmoBounds.bottom - detail.gizmoBounds.bottom) < 0.25)) &&
+      Math.abs(previous.x - x) < 0.25 &&
+      Math.abs(previous.y - y) < 0.25
+    )
+      return;
+    this.selectionAnchor = detail;
+    window.dispatchEvent(
+      new CustomEvent('pose-selection-anchor', {
+        detail,
+      }),
+    );
   }
   protected loop = () => {
     if (this.disposed) return;
@@ -796,6 +942,7 @@ export class StudioScene extends ExportScene {
     window.removeEventListener('pose-paste-mirrored-keys', this.pasteMirroredKeys);
     window.removeEventListener('pose-link-animation-mirror', this.linkAnimationMirror);
     window.removeEventListener('pose-ground-selection', this.groundSelection);
+    window.removeEventListener('pose-request-selection-anchor', this.requestSelectionAnchor);
     setLayerBasisProvider(undefined);
     setBodySourceResolver(undefined);
     this.projectObjects.dispose();

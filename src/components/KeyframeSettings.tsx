@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { Diamond, X, Copy, ClipboardPaste, FlipHorizontal2, Trash2 } from 'lucide-react';
 import { studio } from '../core/store';
 import { useStudioChrome } from '../hooks';
+import { useTransientPopover } from '../hooks/transientPopover';
 import { selectedCurveKeys } from '../core/timelineSettings';
 import { loopRange } from '../core/loops';
 import { MotionSettings } from './MotionSettings';
@@ -33,6 +34,12 @@ export function KeyframeSettings({
       Object.values(s.project!.tracks[k.id].curves ?? {}).some((c) => c?.loop),
     );
   const [position, setPosition] = useState({ left: 8, top: 8, maxHeight: innerHeight - 16 });
+  const popover = useTransientPopover({
+    owner: 'keyframe-settings',
+    open,
+    onClose: close,
+    rootRef: root,
+  });
   useLayoutEffect(() => {
     if (!open) return;
     const place = () => {
@@ -67,12 +74,7 @@ export function KeyframeSettings({
   }, [open, x, y]);
   useEffect(() => {
     if (!open) return;
-    const outside = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) close();
-    };
-    document.addEventListener('pointerdown', outside, true);
     root.current?.focus();
-    return () => document.removeEventListener('pointerdown', outside, true);
   }, [close, open]);
   return createPortal(
     <MotionPresence show={open}>
@@ -89,7 +91,7 @@ export function KeyframeSettings({
           e.stopPropagation();
           if (e.key === 'Escape') {
             e.preventDefault();
-            close();
+            popover.close();
           }
         }}
       >

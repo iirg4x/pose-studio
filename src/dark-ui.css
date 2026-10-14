@@ -1,27 +1,4 @@
-/* Animation desk: dark surfaces, rig identity colors, compact icon tools. */
-:root {
-  --canvas: #101318;
-  --panel: #171c23;
-  --raised: #202833;
-  --inset: #10151c;
-  --hover: #2a3543;
-  --border: #2d3745;
-  --text: #e2e9f2;
-  --secondary: #aebed0;
-  --muted: #7f91a7;
-  --accent: #6aa9fa;
-  --selection: #243e5c;
-  --cyan: #65c9ee;
-  --amber: #e5ba72;
-  --red: #ec8997;
-  --green: #79c8a1;
-  --violet: #ac9aeb;
-  --scroll-thumb: #3a495c;
-  --scroll-hover: #58718e;
-  --timeline-grid-line: #93acc312;
-  --surface: var(--panel);
-  --line: #28323f;
-}
+/* Component structure; shared color tokens live in design-system.css. */
 /* Chromium otherwise mixes overlay/native scrollbars across the panels. */
 *,
 .inspector,
@@ -68,12 +45,12 @@
   right: 12px;
 }
 .primary.export-button {
-  background: #315d8c;
-  border-color: #3c71aa;
-  color: var(--text);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
 .primary.export-button:hover {
-  background: #3d70a3;
+  background: var(--accent-hover);
 }
 .animation-tab.active {
   background: var(--raised);

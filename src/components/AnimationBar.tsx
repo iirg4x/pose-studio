@@ -38,7 +38,9 @@ export function AnimationBar({
     [renaming, setRenaming] = useState<string | null>(null),
     [context, setContext] = useState<{ id: string; x: number; y: number } | null>(null),
     root = useRef<HTMLDivElement>(null);
-  const libraryPresence = usePresence(panel === 'animations' ? true : null);
+  const libraryPresence = usePresence(panel === 'animations' ? true : null),
+    contextPresence = usePresence(context),
+    deletingPresence = usePresence(deleting);
   const w = s.workspace;
   const cancelRename = useCallback(() => setRenaming(null), []);
   const focusTab = (id: string) =>
@@ -273,38 +275,40 @@ export function AnimationBar({
           context={showContext}
         />
       )}
-      {context && (
+      {contextPresence.value && (
         <AnimationMenu
           tabs={!embedded}
-          x={context.x}
-          y={context.y}
-          rename={() => beginRename(context.id)}
-          duplicate={() => duplicate(context.id)}
+          x={contextPresence.value.x}
+          y={contextPresence.value.y}
+          exiting={contextPresence.exiting}
+          rename={() => beginRename(contextPresence.value!.id)}
+          duplicate={() => duplicate(contextPresence.value!.id)}
           remove={() => {
-            setDeleting(context.id);
+            setDeleting(contextPresence.value!.id);
             setContext(null);
           }}
           closeTab={() => {
-            studio.closeAnimation(context.id);
+            studio.closeAnimation(contextPresence.value!.id);
             setContext(null);
           }}
           closeOthers={() => {
-            studio.closeOtherAnimations(context.id);
+            studio.closeOtherAnimations(contextPresence.value!.id);
             setContext(null);
           }}
           dismiss={() => {
             setContext(null);
-            focusTab(context.id);
+            focusTab(contextPresence.value!.id);
           }}
         />
       )}
-      {deleting && (
+      {deletingPresence.value && (
         <DeleteAnimationDialog
-          name={clips.find((c) => c.id === deleting)?.project.name ?? 'Animation'}
+          name={clips.find((c) => c.id === deletingPresence.value)?.project.name ?? 'Animation'}
           last={clips.length === 1}
+          exiting={deletingPresence.exiting}
           cancel={() => setDeleting(null)}
           remove={() => {
-            studio.deleteAnimation(deleting);
+            studio.deleteAnimation(deletingPresence.value!);
             setDeleting(null);
           }}
         />

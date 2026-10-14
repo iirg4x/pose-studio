@@ -1,12 +1,12 @@
+import { createPortal } from 'react-dom';
 import { AnimationMirror } from './AnimationMirror';
 import { mirrorDriver } from '../core/liveMirror';
 import { MirrorCurve } from './MirrorCurve';
 import { LockKeyhole, UnlockKeyhole } from 'lucide-react';
-import { memo, useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import type { CSSProperties } from 'react';
+import { memo, useCallback, useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { loadTimelineCollapsed, revealTimelineControl } from '../core/timelineHierarchy';
 import type { Channel } from '../core/curves';
-import { CHANNEL_LABELS, channelColor, channelsFor } from '../core/curves';
+import { channelsFor } from '../core/curves';
 import type { ControlId } from '../core/model';
 import { CurveTrackTree } from './TimelineTracks';
 import type { TimelineTracksState } from './TimelineTracks';
@@ -15,14 +15,10 @@ import { TimelineGrid } from './TimelineGrid';
 import { CurveEditor } from './CurveEditor';
 import { CurveReducer } from './CurveReducer';
 import { LoopControls } from './LoopControls';
+import { MotionPresence } from './Motion';
 import {
-  Play,
-  Pause,
   SkipBack,
   SkipForward,
-  Diamond,
-  ChevronDown,
-  ChevronLeft,
   ListVideo,
   Spline,
   ChevronsUpDown,
@@ -33,6 +29,21 @@ import {
 import { useStudioChrome } from '../hooks';
 import { studio } from '../core/store';
 import { timelineVisibleControls } from '../core/timelineChannels';
+import { measureTouchViewport } from '../platform/touchViewport';
+
+type TimelineMorePosition = {
+  left: number;
+  top: number;
+  maxWidth: number;
+  maxHeight: number;
+};
+
+const initialTimelineMorePosition: TimelineMorePosition = {
+  left: 8,
+  top: 8,
+  maxWidth: 320,
+  maxHeight: 480,
+};
 export const Timeline = memo(function Timeline({
   expanded = false,
   expand,
@@ -44,7 +55,7 @@ export const Timeline = memo(function Timeline({
   expand?: () => void;
   close?: () => void;
   exiting?: boolean;
-  /** Desktop: dope sheet and graph editor side by side; transport lives elsewhere. */
+  /** Desktop dock: shares the editor header; transport lives in the shell. */
   split?: boolean;
 }) {
   const s = useStudioChrome({ frame: 'none' }),
@@ -66,8 +77,100 @@ export const Timeline = memo(function Timeline({
   const [curveFocus, setCurveFocus] = useState<{ frame: number; serial: number } | undefined>();
   const [reducer, setReducer] = useState<{ channel?: Channel; frames: number[] } | null>(null);
   const [more, setMore] = useState(false);
+  const moreTrigger = useRef<HTMLButtonElement>(null),
+    morePanel = useRef<HTMLDivElement>(null);
+  const [morePosition, setMorePosition] = useState<TimelineMorePosition>(
+    initialTimelineMorePosition,
+  );
   const touchBar = useRef<HTMLDivElement>(null);
+  const [headerTools, setHeaderTools] = useState<HTMLDivElement | null>(null);
   const [inlineSettings, setInlineSettings] = useState(false);
+  const placeMore = useCallback(() => {
+    const viewport = measureTouchViewport({
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight,
+        visualViewport: window.visualViewport,
+      }),
+      trigger = moreTrigger.current?.getBoundingClientRect();
+    if (!viewport.width || !viewport.height) return;
+    const inset = Math.max(4, split ? 12 : 8),
+      gap = split ? 8 : 6,
+      leftEdge = viewport.offsetLeft + inset,
+      topEdge = viewport.offsetTop + inset,
+      rightEdge = viewport.offsetLeft + viewport.width - inset,
+      bottomEdge = viewport.offsetTop + viewport.height - inset,
+      maxWidth = Math.max(1, rightEdge - leftEdge),
+      maxHeight = Math.max(1, bottomEdge - topEdge),
+      panel = morePanel.current,
+      panelRect = panel?.getBoundingClientRect(),
+      fallbackWidth = split ? 240 : 340,
+      fallbackHeight = split ? 280 : 320,
+      width = Math.min(
+        panelRect?.width && panelRect.width > 0 ? panelRect.width : fallbackWidth,
+        maxWidth,
+      ),
+      measuredHeight = Math.max(
+        panelRect?.height && panelRect.height > 0 ? panelRect.height : 0,
+        panel?.scrollHeight ?? 0,
+      ),
+      naturalHeight = Math.min(measuredHeight || fallbackHeight, maxHeight);
+    let left = rightEdge - width,
+      top = topEdge,
+      availableHeight = maxHeight;
+    if (trigger) {
+      left = trigger.right - width;
+      const belowTop = trigger.bottom + gap,
+        belowRoom = Math.max(0, bottomEdge - belowTop),
+        aboveRoom = Math.max(0, trigger.top - gap - topEdge),
+        below = belowRoom >= naturalHeight || belowRoom >= aboveRoom;
+      availableHeight = Math.max(1, below ? belowRoom : aboveRoom);
+      const height = Math.min(naturalHeight, availableHeight);
+      top = below ? belowTop : trigger.top - gap - height;
+    }
+    const next: TimelineMorePosition = {
+      left: Math.min(Math.max(left, leftEdge), rightEdge - width),
+      top: Math.min(Math.max(top, topEdge), bottomEdge - Math.min(naturalHeight, availableHeight)),
+      maxWidth,
+      maxHeight: availableHeight,
+    };
+    setMorePosition((current) =>
+      current.left === next.left &&
+      current.top === next.top &&
+      current.maxWidth === next.maxWidth &&
+      current.maxHeight === next.maxHeight
+        ? current
+        : next,
+    );
+  }, [split]);
+  useLayoutEffect(() => {
+    if (!more) return;
+    let frame = 0;
+    const schedule = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        placeMore();
+      });
+    };
+    placeMore();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(schedule) : null;
+    if (morePanel.current) observer?.observe(morePanel.current);
+    if (moreTrigger.current) observer?.observe(moreTrigger.current);
+    window.addEventListener('resize', schedule, { passive: true });
+    window.addEventListener('orientationchange', schedule, { passive: true });
+    window.addEventListener('scroll', schedule, { passive: true, capture: true });
+    window.visualViewport?.addEventListener('resize', schedule, { passive: true });
+    window.visualViewport?.addEventListener('scroll', schedule, { passive: true });
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener('resize', schedule);
+      window.removeEventListener('orientationchange', schedule);
+      window.removeEventListener('scroll', schedule, true);
+      window.visualViewport?.removeEventListener('resize', schedule);
+      window.visualViewport?.removeEventListener('scroll', schedule);
+    };
+  }, [more, placeMore]);
   useLayoutEffect(() => {
     const bar = touchBar.current;
     if (!bar) return;
@@ -80,7 +183,11 @@ export const Timeline = memo(function Timeline({
         0,
         observedWidth ?? Math.max(0, bar.clientWidth - horizontalPadding),
       );
-      const next = available >= 780;
+      // The touch transport is owned by the workspace shell. Keep the
+      // timeline header focused on Keys/Curves and the compact options menu;
+      // the full settings row belongs in More on touch at every practical
+      // tablet width.
+      const next = available >= 1440;
       setInlineSettings((current) => (current === next ? current : next));
       if (next) setMore(false);
     };
@@ -101,7 +208,7 @@ export const Timeline = memo(function Timeline({
       if (
         !t ||
         !t.closest(
-          '.timeline-more-anchor, .active-layer-menu, .keyframe-menu, .loop-panel, .animation-mirror-panel',
+          '.timeline-more-anchor, .timeline-more-portal, .active-layer-menu, .keyframe-menu, .loop-panel, .animation-mirror-panel',
         )
       )
         setMore(false);
@@ -180,48 +287,11 @@ export const Timeline = memo(function Timeline({
     },
   };
   if (!p) return <div className="timeline" />;
-  // Desktop: the panel is either the timeline or the curves of one bone, never both.
-  const toCurves = split ? (
-    <button
-      className="editor-go"
-      title="Curves of the selected bone (double-click a bone name)"
-      disabled={!p.tracks[s.selected]}
-      onClick={() => studio.patch({ tab: 'curves' })}
-    >
-      <Spline size={15} />
-      <span>Curves</span>
-    </button>
-  ) : undefined;
-  const toTimeline = split ? (
-    <>
-      <button
-        className="editor-go"
-        title="Back to the timeline"
-        onClick={() => studio.patch({ tab: 'timeline' })}
-      >
-        <ChevronLeft size={15} />
-        <span>Timeline</span>
-      </button>
-      <div className="curve-channel-chips" role="group" aria-label="Curve channel">
-        {channelsFor(s.selected, p.tracks[s.selected]).map((c) => (
-          <button
-            key={c}
-            aria-pressed={c === channel}
-            title={CHANNEL_LABELS[c]}
-            style={{ '--chip': channelColor(c) } as CSSProperties}
-            onClick={() => setChannel(c)}
-          >
-            {CHANNEL_LABELS[c].replace('Position ', 'Loc ').replace('Rotation ', 'Rot ')}
-          </button>
-        ))}
-      </div>
-    </>
-  ) : undefined;
   const grid = (
     <TimelineGrid
       key={(s.workspace?.activeId ?? '') + p.editing}
       tracks={tracks}
-      viewSwitch={toCurves}
+      headerTools={headerTools}
     />
   );
   const curves = mirrorDriver(p, s.selected) ? (
@@ -229,59 +299,78 @@ export const Timeline = memo(function Timeline({
       project={p}
       id={s.selected}
       channel={channel}
-      sidebar={split ? undefined : <CurveTrackTree state={tracks} ids={ids} />}
+      sidebar={<CurveTrackTree state={tracks} ids={ids} />}
     />
   ) : (
     <CurveEditor
-      viewSwitch={toTimeline}
       key={(s.workspace?.activeId ?? '') + s.selected + p.editing + (p.activeLayerId ?? '')}
       channel={channel}
       focusKey={curveFocus}
       onReduce={(frames) => setReducer({ channel, frames })}
-      sidebar={split ? undefined : <CurveTrackTree state={tracks} ids={ids} />}
+      sidebar={<CurveTrackTree state={tracks} ids={ids} />}
     />
   );
-  const renderTimelineSettings = (mode: 'inline' | 'popup') => (
+  const renderTimelineSettings = (mode: 'inline' | 'popup', portal = false) => (
     <div
-      className={'touch-timeline-settings ' + (mode === 'inline' ? 'inline' : 'timeline-more')}
+      ref={portal ? morePanel : undefined}
+      className={
+        'touch-timeline-settings ' +
+        (mode === 'inline' ? 'inline' : 'timeline-more') +
+        (portal
+          ? ' timeline-more-portal ' +
+            (split ? 'timeline-more-portal-desktop' : 'timeline-more-portal-touch')
+          : '')
+      }
       data-inline={mode === 'inline' ? 'true' : 'false'}
       role="group"
       aria-label="Timeline options"
+      style={
+        portal
+          ? {
+              left: morePosition.left,
+              top: morePosition.top,
+              maxWidth: morePosition.maxWidth,
+              maxHeight: morePosition.maxHeight,
+            }
+          : undefined
+      }
     >
-      <div className="timeline-more-row timeline-frame-settings">
-        <label className="timeline-more-length">
-          <span>End</span>
-          <ScrubNumber
-            aria-label="Animation end frame"
-            type="number"
-            min={1}
-            max={2400}
-            value={p.end}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              if (v >= 1 && v <= 2400) studio.updateProject({ end: Math.round(v) });
-            }}
-          />
-        </label>
-        <button aria-label="First frame" onClick={() => studio.setFrame(0)}>
-          <SkipBack size={17} />
-        </button>
-        <button aria-label="Last frame" onClick={() => studio.setFrame(p.end)}>
-          <SkipForward size={17} />
-        </button>
-        <select
-          aria-label="Frame rate"
-          value={p.fps}
-          onChange={(e) => studio.updateProject({ fps: Number(e.target.value) })}
-        >
-          {[24, 25, 30, 48, 60].map((v) => (
-            <option key={v} value={v}>
-              {v} fps
-            </option>
-          ))}
-        </select>
-        <LoopControls />
-      </div>
+      {!split && (
+        <div className="timeline-more-row timeline-frame-settings">
+          <label className="timeline-more-length">
+            <span>End</span>
+            <ScrubNumber
+              aria-label="Animation end frame"
+              type="number"
+              min={1}
+              max={2400}
+              value={p.end}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (v >= 1 && v <= 2400) studio.updateProject({ end: Math.round(v) });
+              }}
+            />
+          </label>
+          <button aria-label="First frame" onClick={() => studio.setFrame(0)}>
+            <SkipBack size={17} />
+          </button>
+          <button aria-label="Last frame" onClick={() => studio.setFrame(p.end)}>
+            <SkipForward size={17} />
+          </button>
+          <select
+            aria-label="Frame rate"
+            value={p.fps}
+            onChange={(e) => studio.updateProject({ fps: Number(e.target.value) })}
+          >
+            {[24, 25, 30, 48, 60].map((v) => (
+              <option key={v} value={v}>
+                {v} fps
+              </option>
+            ))}
+          </select>
+          <LoopControls />
+        </div>
+      )}
       <div className="timeline-more-row timeline-edit-settings">
         <AnimationMirror />
         <KeyLockButton />
@@ -309,9 +398,71 @@ export const Timeline = memo(function Timeline({
       </div>
     </div>
   );
-  if (split)
-    return (
-      <section className="timeline split" aria-label="Animation editor">
+  return (
+    <>
+      <section
+        id={split ? undefined : 'touch-timeline'}
+        className={split ? 'timeline split' : 'timeline'}
+        aria-label="Animation timeline"
+        aria-hidden={exiting || undefined}
+        inert={exiting || undefined}
+        data-state={exiting ? 'closing' : 'open'}
+      >
+        {/* Touch: keep the editor header quiet; playback and keying stay in the shell transport. */}
+        <div
+          ref={touchBar}
+          className="timeline-tabs touch-timeline-bar"
+          data-inline={inlineSettings ? 'true' : 'false'}
+        >
+          <div className="timeline-tab-group" role="group" aria-label="Editor">
+            <button
+              className={s.tab === 'timeline' ? 'active' : ''}
+              aria-label="Keys"
+              aria-pressed={s.tab === 'timeline'}
+              onClick={() => studio.patch({ tab: 'timeline' })}
+            >
+              <ListVideo size={17} />
+              <span>Keys</span>
+            </button>
+            <button
+              className={s.tab === 'curves' ? 'active' : ''}
+              aria-label="Curves"
+              aria-pressed={s.tab === 'curves'}
+              onClick={() => studio.patch({ tab: 'curves' })}
+            >
+              <Spline size={17} />
+              <span>Curves</span>
+            </button>
+          </div>
+          <div className="touch-timeline-end">
+            <div className="timeline-header-tools" ref={setHeaderTools} />
+            {inlineSettings ? (
+              renderTimelineSettings('inline')
+            ) : (
+              <div className="timeline-more-anchor">
+                <button
+                  ref={moreTrigger}
+                  aria-label="More timeline options"
+                  aria-expanded={more && !exiting}
+                  onClick={() => {
+                    if (more) setMore(false);
+                    else {
+                      placeMore();
+                      setMore(true);
+                    }
+                  }}
+                >
+                  <MoreHorizontal size={18} />
+                </button>
+              </div>
+            )}
+            {close && (
+              <button aria-label="Close timeline" onClick={close}>
+                <X size={20} />
+              </button>
+            )}
+          </div>
+        </div>
         {s.tab === 'curves' ? curves : grid}
         {reducer && (
           <CurveReducer
@@ -321,108 +472,14 @@ export const Timeline = memo(function Timeline({
           />
         )}
       </section>
-    );
-  return (
-    <section
-      id="touch-timeline"
-      className="timeline"
-      aria-label="Animation timeline"
-      aria-hidden={exiting || undefined}
-      inert={exiting || undefined}
-      data-state={exiting ? 'closing' : 'open'}
-    >
-      {/* Touch: keep tools in the bar when they fit; use overflow only on narrow screens. */}
-      <div
-        ref={touchBar}
-        className="timeline-tabs touch-timeline-bar"
-        data-inline={inlineSettings ? 'true' : 'false'}
-      >
-        <div className="timeline-tab-group" role="group" aria-label="Editor">
-          <button
-            className={s.tab === 'timeline' ? 'active' : ''}
-            aria-label="Keys"
-            aria-pressed={s.tab === 'timeline'}
-            onClick={() => studio.patch({ tab: 'timeline' })}
-          >
-            <ListVideo size={17} />
-            <span>Keys</span>
-          </button>
-          <button
-            className={s.tab === 'curves' ? 'active' : ''}
-            aria-label="Curves"
-            aria-pressed={s.tab === 'curves'}
-            onClick={() => studio.patch({ tab: 'curves' })}
-          >
-            <Spline size={17} />
-            <span>Curves</span>
-          </button>
-        </div>
-        <div className="touch-timeline-transport">
-          <div className="insert-key-group">
-            <button
-              className="insert-key"
-              aria-label="Add keyframe"
-              disabled={!s.selection.length}
-              onClick={() => studio.keySelected()}
-            >
-              <Diamond size={17} />
-              <span>Key</span>
-            </button>
-            <button
-              aria-label="Keyframe options"
-              onClick={(e) => studio.showKeyframeMenu(e.clientX, e.clientY)}
-            >
-              <ChevronDown size={15} />
-            </button>
-          </div>
-          <button
-            className={'touch-timeline-play' + (s.playing ? ' playing' : '')}
-            aria-label={s.playing ? 'Pause' : 'Play'}
-            onClick={() => studio.patch({ playing: !s.playing, drafts: {} })}
-          >
-            {s.playing ? <Pause size={18} /> : <Play size={18} fill="currentColor" />}
-          </button>
-          <button
-            className={'auto-key ' + (s.autoKey ? 'enabled' : '')}
-            aria-label="Auto key"
-            aria-pressed={s.autoKey}
-            onClick={() => studio.patch({ autoKey: !s.autoKey })}
-          >
-            <i />
-            <span>Auto</span>
-          </button>
-        </div>
-        <div className="touch-timeline-end">
-          {inlineSettings ? (
-            renderTimelineSettings('inline')
-          ) : (
-            <div className="timeline-more-anchor">
-              <button
-                aria-label="More timeline options"
-                aria-expanded={more}
-                onClick={() => setMore(!more)}
-              >
-                <MoreHorizontal size={18} />
-              </button>
-              {more && renderTimelineSettings('popup')}
-            </div>
-          )}
-          {close && (
-            <button aria-label="Close timeline" onClick={close}>
-              <X size={20} />
-            </button>
-          )}
-        </div>
-      </div>
-      {s.tab === 'curves' ? curves : grid}
-      {reducer && (
-        <CurveReducer
-          channel={reducer.channel}
-          selectedFrames={reducer.frames}
-          close={() => setReducer(null)}
-        />
-      )}
-    </section>
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <MotionPresence show={more && !exiting}>
+            {renderTimelineSettings('popup', true)}
+          </MotionPresence>,
+          document.body,
+        )}
+    </>
   );
 });
 

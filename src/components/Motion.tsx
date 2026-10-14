@@ -1,4 +1,4 @@
-import { cloneElement, useLayoutEffect, useRef } from 'react';
+import { cloneElement, useRef } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { usePresence } from '../hooks';
 
@@ -52,73 +52,5 @@ export function InlineCollapse({ open, children }: { open: boolean; children: Re
         <div className="motion-inline-inner">{children}</div>
       </div>
     </MotionPresence>
-  );
-}
-
-/** Observe only the intrinsic content of a small drawer, never the scene or
- * timeline. Rapid changes start from the current rendered size, not an old end. */
-export function MotionSize({
-  children,
-  className = '',
-  contentKey,
-}: {
-  children: ReactNode;
-  className?: string;
-  contentKey?: string;
-}) {
-  const outer = useRef<HTMLDivElement>(null),
-    inner = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const shell = outer.current!,
-      content = inner.current!;
-    let height: number | undefined, resize: Animation | undefined;
-    const observer = new ResizeObserver(() => {
-      const next = content.getBoundingClientRect().height;
-      if (height === next) return;
-      const previous = shell.getBoundingClientRect().height;
-      resize?.cancel();
-      shell.style.height = next + 'px';
-      const unfolding = content
-        .getAnimations({ subtree: true })
-        .some(
-          (a) =>
-            a instanceof CSSTransition &&
-            a.transitionProperty === 'grid-template-rows' &&
-            a.playState === 'running',
-        );
-      if (
-        height !== undefined &&
-        !unfolding &&
-        !matchMedia('(prefers-reduced-motion: reduce)').matches
-      ) {
-        const target = shell.getBoundingClientRect().height;
-        if (Math.abs(previous - target) > 0.5)
-          resize = shell.animate([{ height: previous + 'px' }, { height: target + 'px' }], {
-            duration: 200,
-            easing: 'cubic-bezier(.2,.8,.2,1)',
-          });
-      }
-      height = next;
-    });
-    observer.observe(content);
-    return () => {
-      observer.disconnect();
-      resize?.cancel();
-    };
-  }, []);
-  useLayoutEffect(() => {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const animation = inner.current!.animate([{ opacity: 0.25 }, { opacity: 1 }], {
-      duration: 150,
-      easing: 'ease-out',
-    });
-    return () => animation.cancel();
-  }, [contentKey]);
-  return (
-    <div ref={outer} className={className + ' motion-size'}>
-      <div ref={inner} className="motion-size-content">
-        {children}
-      </div>
-    </div>
   );
 }

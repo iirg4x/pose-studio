@@ -1,14 +1,11 @@
-import { MotionSize } from './Motion';
 import type { StudioScene } from '../scene/StudioScene';
-import { ActiveLayer, PoseActions } from './PoseActions';
-import { TransformOptions } from './TransformOptions';
+import { ActiveLayer } from './PoseActions';
 import { PreviewModel } from './PreviewModel';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   ListChecks,
   BoxSelect,
-  Move,
-  RotateCw,
   Undo2,
   Redo2,
   SlidersHorizontal,
@@ -29,6 +26,9 @@ import {
   Clapperboard,
   Save,
   HelpCircle,
+  ChevronDown,
+  Eye,
+  CircleDot,
 } from 'lucide-react';
 import { useStudioSelector, useStudioChrome } from '../hooks';
 import { studio } from '../core/store';
@@ -38,106 +38,148 @@ const panels = [
   ['rig', Waypoints, 'Rig'],
   ['properties', SlidersHorizontal, 'Pose'],
   ['animations', Library, 'Clips'],
-  ['tools', Settings2, 'Tools'],
 ] as const;
 export function TabletWorkspace({
   panel,
   toggle,
   timeline,
   toggleTimeline,
-  mirror,
-  pasteMirrored,
   boxSelect,
 }: {
-  pasteMirrored: () => void;
   boxSelect: () => void;
-  mirror: () => void;
   panel: TabletPanel | null;
   toggle: (p: TabletPanel) => void;
   timeline: boolean;
   toggleTimeline: () => void;
 }) {
   const s = useStudioChrome();
+  const [workspaceMenu, setWorkspaceMenu] = useState(false);
+  const menuRoot = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!workspaceMenu) return;
+    const dismiss = (event: PointerEvent) => {
+      if (!(event.target instanceof Node) || menuRoot.current?.contains(event.target)) return;
+      setWorkspaceMenu(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setWorkspaceMenu(false);
+    };
+    document.addEventListener('pointerdown', dismiss, true);
+    window.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', dismiss, true);
+      window.removeEventListener('keydown', escape);
+    };
+  }, [workspaceMenu]);
+  const run = (action: () => void) => {
+    setWorkspaceMenu(false);
+    action();
+  };
   return (
     <>
-      <nav
-        className={'touch-pose-rail' + (s.selection.length ? '' : ' no-selection')}
-        aria-label="Pose tools"
+      <button
+        className="touch-clip-context"
+        aria-label="Current clip"
+        aria-expanded={panel === 'animations'}
+        onClick={() => toggle('animations')}
       >
+        <Clapperboard size={20} />
+        <span>{s.project?.name ?? 'Animation'}</span>
+        <ChevronDown size={16} />
+      </button>
+      <div className="touch-workspace-menu-root" ref={menuRoot}>
         <button
-          aria-label="Move controls"
-          aria-pressed={s.mode === 'translate'}
-          onClick={() => studio.patch({ mode: 'translate' })}
+          className="touch-workspace-menu-trigger"
+          aria-label="Panels and tools"
+          aria-expanded={workspaceMenu}
+          aria-controls="touch-workspace-menu"
+          onClick={() => setWorkspaceMenu((open) => !open)}
         >
-          <Move size={23} />
-          <span>Move</span>
+          <SlidersHorizontal size={20} />
+          <span>Panels / tools</span>
+          <ChevronDown size={16} />
         </button>
-        <button
-          aria-label="Rotate controls"
-          aria-pressed={s.mode === 'rotate'}
-          onClick={() => studio.patch({ mode: 'rotate' })}
-        >
-          <RotateCw size={23} />
-          <span>Rotate</span>
-        </button>
-        <button
-          aria-label="Box select controls"
-          aria-pressed={!!s.boxSelection}
-          disabled={s.gameView || s.retargetMode}
-          onClick={boxSelect}
-        >
-          <BoxSelect size={23} />
-          <span>Box</span>
-        </button>
-        <button
-          aria-label="Multi select controls"
-          aria-pressed={s.multiSelect}
-          disabled={s.gameView || s.retargetMode}
-          onClick={() => studio.patch({ multiSelect: !s.multiSelect })}
-        >
-          <ListChecks size={23} />
-          <span>Multi</span>
-        </button>
-        <TransformOptions compact />
-        <i />
-        <button aria-label="Undo" onClick={() => studio.undo()}>
-          <Undo2 size={22} />
-        </button>
-        <button aria-label="Redo" onClick={() => studio.redo()}>
-          <Redo2 size={22} />
-        </button>
-      </nav>
-      <nav className="touch-panel-rail" aria-label="Workspace panels">
-        {panels.map(([id, Icon, label]) => (
-          <button
-            key={id}
-            aria-label={label + ' panel'}
-            aria-expanded={panel === id}
-            aria-controls={'touch-panel-' + id}
-            onClick={() => toggle(id)}
-          >
-            <Icon size={22} />
-            <span>{label}</span>
-          </button>
-        ))}
-        {/* The timeline is a panel too; it has its own play and key controls. */}
-        <button
-          aria-label={timeline ? 'Hide timeline' : 'Show timeline'}
-          aria-expanded={timeline}
-          aria-controls="touch-timeline"
-          onClick={toggleTimeline}
-        >
-          <ListVideo size={22} />
-          <span>Timeline</span>
-        </button>
-      </nav>
+        {workspaceMenu && (
+          <div className="touch-workspace-menu" id="touch-workspace-menu" role="menu">
+            <section>
+              <strong>Panels</strong>
+              {panels.map(([id, Icon, label]) => (
+                <button
+                  key={id}
+                  role="menuitem"
+                  aria-pressed={panel === id}
+                  onClick={() => run(() => toggle(id))}
+                >
+                  <Icon size={20} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </section>
+            <section>
+              <strong>Selection</strong>
+              <button
+                role="menuitem"
+                aria-pressed={!!s.boxSelection}
+                disabled={s.gameView || s.retargetMode}
+                onClick={() => run(boxSelect)}
+              >
+                <BoxSelect size={20} />
+                <span>Box select</span>
+              </button>
+              <button
+                role="menuitem"
+                aria-pressed={s.multiSelect}
+                disabled={s.gameView || s.retargetMode}
+                onClick={() => run(() => studio.patch({ multiSelect: !s.multiSelect }))}
+              >
+                <ListChecks size={20} />
+                <span>Multi select</span>
+              </button>
+            </section>
+            <section>
+              <strong>Workspace</strong>
+              <button
+                role="menuitem"
+                onClick={() =>
+                  run(() => {
+                    (document.querySelector('.touch-view-toggle') as HTMLButtonElement)?.click();
+                  })
+                }
+              >
+                <Eye size={20} />
+                <span>View</span>
+              </button>
+              <button role="menuitem" onClick={() => run(() => toggle('tools'))}>
+                <Settings2 size={20} />
+                <span>Settings</span>
+              </button>
+            </section>
+            <section className="touch-menu-history">
+              <strong>History</strong>
+              <button role="menuitem" onClick={() => run(() => studio.undo())}>
+                <Undo2 size={20} />
+                <span>Undo</span>
+              </button>
+              <button role="menuitem" onClick={() => run(() => studio.redo())}>
+                <Redo2 size={20} />
+                <span>Redo</span>
+              </button>
+            </section>
+          </div>
+        )}
+      </div>
       <ActiveLayer />
-      <PoseActions pasteMirrored={pasteMirrored} mirror={mirror} timeline={timeline} />
-      <TabletTransport />
+      <TabletTransport timeline={timeline} toggleTimeline={toggleTimeline} />
     </>
   );
 }
-function TabletTransport() {
+function TabletTransport({
+  timeline,
+  toggleTimeline,
+}: {
+  timeline: boolean;
+  toggleTimeline: () => void;
+}) {
   const s = useStudioSelector(
       (s) => ({
         frame: s.frame,
@@ -145,42 +187,52 @@ function TabletTransport() {
         ready: s.ready,
         count: s.selection.length,
         end: s.project?.end ?? 1,
+        autoKey: s.autoKey,
       }),
       (a, b) =>
         a.frame === b.frame &&
         a.playing === b.playing &&
         a.ready === b.ready &&
         a.count === b.count &&
-        a.end === b.end,
+        a.end === b.end &&
+        a.autoKey === b.autoKey,
     ),
     end = s.end;
   return (
     <div className="touch-transport" role="group" aria-label="Playback and keyframes">
-      <button
-        aria-label={s.playing ? 'Pause animation' : 'Play animation'}
-        aria-pressed={s.playing}
-        disabled={!s.ready}
-        onClick={() => studio.patch({ playing: !s.playing, drafts: {} })}
-      >
-        {s.playing ? (
-          <Pause size={24} fill="currentColor" />
-        ) : (
-          <Play size={24} fill="currentColor" />
-        )}
-      </button>
+      <div className="touch-history" role="group" aria-label="History">
+        <button aria-label="Undo" onClick={() => studio.undo()}>
+          <Undo2 size={20} />
+        </button>
+        <button aria-label="Redo" onClick={() => studio.redo()}>
+          <Redo2 size={20} />
+        </button>
+      </div>
+      <div className="touch-playback" role="group" aria-label="Playback">
+        <button aria-label="Previous frame" onClick={() => studio.setFrame(s.frame - 1)}>
+          <ChevronsLeft size={18} />
+        </button>
+        <button
+          aria-label={s.playing ? 'Pause animation' : 'Play animation'}
+          aria-pressed={s.playing}
+          disabled={!s.ready}
+          onClick={() => studio.patch({ playing: !s.playing, drafts: {} })}
+        >
+          {s.playing ? (
+            <Pause size={24} fill="currentColor" />
+          ) : (
+            <Play size={24} fill="currentColor" />
+          )}
+        </button>
+        <button aria-label="Next frame" onClick={() => studio.setFrame(s.frame + 1)}>
+          <ChevronsRight size={18} />
+        </button>
+      </div>
+      <output className="touch-frame" aria-label="Frame">
+        {s.frame}
+        <small> / {end}</small>
+      </output>
       <div className="touch-scrubber">
-        <div>
-          <button aria-label="Previous frame" onClick={() => studio.setFrame(s.frame - 1)}>
-            <ChevronsLeft size={17} />
-          </button>
-          <output aria-label="Frame">
-            {s.frame}
-            <small> / {end}</small>
-          </output>
-          <button aria-label="Next frame" onClick={() => studio.setFrame(s.frame + 1)}>
-            <ChevronsRight size={17} />
-          </button>
-        </div>
         <input
           type="range"
           aria-label="Scrub animation"
@@ -202,6 +254,25 @@ function TabletTransport() {
         <Diamond size={23} />
         <span>Key</span>
       </button>
+      <button
+        className="touch-auto"
+        aria-label="Auto key"
+        aria-pressed={s.autoKey}
+        onClick={() => studio.patch({ autoKey: !s.autoKey })}
+      >
+        <CircleDot size={21} />
+        <span>Auto</span>
+      </button>
+      <button
+        className="touch-timeline-toggle"
+        aria-label={timeline ? 'Hide timeline' : 'Show timeline'}
+        aria-pressed={timeline}
+        aria-controls="touch-timeline"
+        onClick={toggleTimeline}
+      >
+        <ListVideo size={21} />
+        <span>Timeline</span>
+      </button>
     </div>
   );
 }
@@ -210,15 +281,17 @@ export function TabletDrawer({
   close,
   children,
   exiting = false,
+  hideHeader = false,
 }: {
   panel: TabletPanel;
   close: () => void;
   children: ReactNode;
   exiting?: boolean;
+  hideHeader?: boolean;
 }) {
   const titles = {
     rig: 'Rig controls',
-    properties: 'Pose properties',
+    properties: 'Control properties',
     animations: 'Animations & poses',
     tools: 'Workspace tools',
   };
@@ -232,15 +305,15 @@ export function TabletDrawer({
       data-state={exiting ? 'closing' : 'open'}
       data-editor-overlay
     >
-      <header>
-        <h2 className="context-flair attached-flair">{titles[panel]}</h2>
-        <button aria-label={'Close ' + titles[panel]} onClick={close}>
-          <X size={20} />
-        </button>
-      </header>
-      <MotionSize className="tablet-sheet-content" contentKey={panel}>
-        {children}
-      </MotionSize>
+      {!hideHeader && (
+        <header>
+          <h2 className="context-flair attached-flair">{titles[panel]}</h2>
+          <button aria-label={'Close ' + titles[panel]} onClick={close}>
+            <X size={20} />
+          </button>
+        </header>
+      )}
+      <div className="tablet-sheet-content">{children}</div>
     </section>
   );
 }
@@ -267,7 +340,7 @@ export function TabletSettings({
     <div className="touch-settings">
       <section>
         <h3>Workspace</h3>
-        <div className="touch-setting-pair">
+        <div className="touch-setting-pair joined">
           <button aria-pressed={!retarget} onClick={() => setRetarget(false)}>
             <Clapperboard size={20} />
             Animate
@@ -280,7 +353,7 @@ export function TabletSettings({
       </section>
       <section>
         <h3>Action</h3>
-        <div className="touch-setting-pair">
+        <div className="touch-setting-pair joined">
           <button
             aria-pressed={s.project?.editing === 'firstPerson'}
             onClick={() => chooseAction('firstPerson')}

@@ -1,45 +1,34 @@
 import { MotionPresence } from './Motion';
 import { ScrubNumber } from './ScrubNumber';
 import { createPortal } from 'react-dom';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Repeat2, ChevronDown, X } from 'lucide-react';
 import { studio } from '../core/store';
 import { useStudioChrome } from '../hooks';
 import { loopRange, seamReport } from '../core/loops';
 import { usePopupPlacement } from '../hooks/usePopupPlacement';
+import { useTransientPopover } from '../hooks/transientPopover';
 export function LoopControls() {
   const s = useStudioChrome({ frame: 'none' }),
     [open, setOpen] = useState(false),
     root = useRef<HTMLDivElement>(null),
     panel = useRef<HTMLElement>(null),
+    trigger = useRef<HTMLButtonElement>(null),
+    popover = useTransientPopover({
+      owner: 'loop-controls',
+      open,
+      onClose: () => setOpen(false),
+      rootRef: panel,
+      triggerRef: trigger,
+    }),
     position = usePopupPlacement({
       open,
       panel,
-      anchor: root,
+      anchor: trigger,
       placement: 'above-end',
       fallbackWidth: 400,
       fallbackHeight: 420,
     });
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node) && !panel.current?.contains(e.target as Node))
-        setOpen(false);
-    };
-    const escape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !e.defaultPrevented) {
-        e.preventDefault();
-        e.stopPropagation();
-        setOpen(false);
-      }
-    };
-    document.addEventListener('pointerdown', close, true);
-    document.addEventListener('keydown', escape);
-    return () => {
-      document.removeEventListener('pointerdown', close, true);
-      document.removeEventListener('keydown', escape);
-    };
-  }, [open]);
   const seams = useMemo(() => (open && s.project ? seamReport(s.project) : []), [open, s.project]);
   if (!s.project) return null;
   const p = s.project,
@@ -57,10 +46,17 @@ export function LoopControls() {
         <span>Loop</span>
       </button>
       <button
+        ref={trigger}
         className="loop-settings-toggle"
         aria-label="Loop settings"
         aria-expanded={open}
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (open) setOpen(false);
+          else {
+            popover.announce();
+            setOpen(true);
+          }
+        }}
       >
         <ChevronDown size={13} />
       </button>

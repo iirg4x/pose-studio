@@ -3,6 +3,30 @@ import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
 const claimEvent = 'pose-transient-popover-claim';
 let activeOwner: string | undefined;
 
+/** A click used to dismiss chrome must not also select or drag a scene control. */
+export function consumeSceneDismiss(event: PointerEvent) {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target?.matches('.scene-canvas')) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const cleanup = () => {
+    document.removeEventListener('pointerup', finish, true);
+    document.removeEventListener('pointercancel', finish, true);
+    document.removeEventListener('pointerdown', cleanup, true);
+    window.removeEventListener('blur', cleanup);
+  };
+  const finish = (next: PointerEvent) => {
+    if (next.pointerId !== event.pointerId) return;
+    next.preventDefault();
+    next.stopImmediatePropagation();
+    cleanup();
+  };
+  document.addEventListener('pointerup', finish, true);
+  document.addEventListener('pointercancel', finish, true);
+  document.addEventListener('pointerdown', cleanup, true);
+  window.addEventListener('blur', cleanup, { once: true });
+}
+
 /**
  * Claims the single top-level transient-menu slot.
  *
@@ -50,8 +74,10 @@ export function useTransientPopover({
     };
     const outside = (event: PointerEvent) => {
       const target = event.target as Node | null;
-      if (target && !rootRef.current?.contains(target) && !triggerRef?.current?.contains(target))
+      if (target && !rootRef.current?.contains(target) && !triggerRef?.current?.contains(target)) {
+        consumeSceneDismiss(event);
         close();
+      }
     };
     const escape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented || activeOwner !== owner) return;

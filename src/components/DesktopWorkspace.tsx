@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { CSSProperties, ReactNode } from 'react';
 import {
-  MousePointer2,
-  Move,
-  RotateCw,
   Undo2,
   Redo2,
   Library,
+  Settings2,
+  PanelRightOpen,
+  X,
+  ListVideo,
   Play,
   Pause,
   Diamond,
@@ -16,14 +17,12 @@ import {
   SkipForward,
 } from 'lucide-react';
 import { studio } from '../core/store';
-import type { RigLayer } from '../core/model';
-import { useStudioChrome, useStudioSelector } from '../hooks';
-import { TransformOptions } from './TransformOptions';
+import { usePresence, useStudioChrome, useStudioSelector } from '../hooks';
 import { Timeline, KeyLockButton } from './Timeline';
 import { ActiveLayer } from './PoseActions';
-import { AnimationMirror } from './AnimationMirror';
 import { LoopControls } from './LoopControls';
 import { ScrubNumber } from './ScrubNumber';
+import { consumeSceneDismiss } from '../hooks/transientPopover';
 import './desktop-workspace.css';
 import './desktop-system.css';
 
@@ -32,9 +31,14 @@ const LAYOUT_KEY = 'pose-desktop-layout-v3';
 function loadLayout(): DesktopLayout {
   try {
     const p = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? '{}');
-    return { editors: p.editors === true, properties: p.properties === true };
+    // Properties are enabled for a new install. Keep an explicitly stored
+    // value, including `false`, so closing the inspector remains a preference.
+    return {
+      editors: p.editors === true,
+      properties: typeof p.properties === 'boolean' ? p.properties : true,
+    };
   } catch {
-    return { editors: false, properties: false };
+    return { editors: false, properties: true };
   }
 }
 /** Which desktop areas are shown; persisted per browser. */
@@ -66,7 +70,9 @@ export function DesktopWorkspace({
   retarget,
   toolbarSlot,
   layout,
-  chooseAction,
+  openSettings,
+  toggleProperties,
+  toggleEditors,
 }: {
   scene: ReactNode;
   /** Setup: character list. */
@@ -80,11 +86,14 @@ export function DesktopWorkspace({
   /** Title bar element that hosts the tool toolbars. */
   toolbarSlot?: HTMLElement | null;
   layout: DesktopLayout;
-  chooseAction: (layer: RigLayer) => void;
+  openSettings: () => void;
+  toggleProperties: () => void;
+  toggleEditors: () => void;
 }) {
   const s = useStudioChrome({ frame: 'none' });
   // The library opens as a dropdown under its trigger, kept inside the window.
   const [library, setLibraryOpen] = useState<CSSProperties | null>(null);
+  const libraryPresence = usePresence(library);
   const setLibrary = (open: boolean, trigger?: HTMLElement) => {
     if (!open || !trigger) return setLibraryOpen(null);
     const r = trigger.getBoundingClientRect(),
@@ -103,8 +112,10 @@ export function DesktopWorkspace({
         !t ||
         (!libraryRoot.current?.contains(t) &&
           !t.closest('.desktop-clip-trigger, .animation-context-menu, [role=dialog], dialog'))
-      )
+      ) {
+        consumeSceneDismiss(e);
         setLibrary(false);
+      }
     };
     const escape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !document.querySelector('dialog[open]')) setLibrary(false);
@@ -117,70 +128,36 @@ export function DesktopWorkspace({
     };
   }, [library]);
   useEffect(() => setLibrary(false), [s.workspace?.activeId]);
-  const editing = s.project?.editing;
   const toolbars = (
     <>
-      {!retarget && (
-        <nav className="desktop-tools" aria-label="Transform tools">
-          {(
-            [
-              ['select', MousePointer2, 'Select (Q)'],
-              ['translate', Move, 'Move (W)'],
-              ['rotate', RotateCw, 'Rotate (E)'],
-            ] as const
-          ).map(([mode, Icon, label]) => (
-            <button
-              key={mode}
-              title={label}
-              aria-label={label}
-              aria-pressed={s.mode === mode}
-              onClick={() => studio.patch({ mode })}
-            >
-              <Icon size={16} />
-            </button>
-          ))}
-          <i />
-          <TransformOptions />
-          <i />
-          <button aria-label="Undo" title="Undo (Ctrl Z)" onClick={() => studio.undo()}>
-            <Undo2 size={15} />
-          </button>
-          <button aria-label="Redo" title="Redo (Ctrl Y)" onClick={() => studio.redo()}>
-            <Redo2 size={15} />
+      <div className="desktop-context-cluster">
+        <nav className="desktop-panel-nav" aria-label="Animation">
+          <button
+            className="desktop-clip-trigger"
+            title="Animation library"
+            aria-label="Animation library"
+            aria-expanded={!!library}
+            onClick={(e) => setLibrary(!library, e.currentTarget)}
+          >
+            <Library size={14} />
+            <strong>{s.project?.name ?? 'Animations'}</strong>
+            <ChevronDown size={12} />
           </button>
         </nav>
-      )}
-      <nav className="desktop-panel-nav" aria-label="Animation">
-        {s.project && !retarget && (
-          <div className="action-switch" role="group" aria-label="Rig being animated">
-            <button
-              aria-pressed={editing === 'firstPerson'}
-              onClick={() => chooseAction('firstPerson')}
-            >
-              First person
-            </button>
-            <button aria-pressed={editing === 'body'} onClick={() => chooseAction('body')}>
-              Full body
-            </button>
-          </div>
-        )}
+      </div>
+      <nav className="desktop-utilities" aria-label="Workspace utilities">
+        {s.project && !retarget && <ActiveLayer />}
         <button
-          className="desktop-clip-trigger"
-          title="Animation library"
-          aria-label="Animation library"
-          aria-expanded={!!library}
-          onClick={(e) => setLibrary(!library, e.currentTarget)}
+          onClick={toggleProperties}
+          aria-label="Properties"
+          aria-pressed={layout.properties}
+          title="Properties"
         >
-          <Library size={14} />
-          <strong>{s.project?.name ?? 'Animations'}</strong>
-          <ChevronDown size={12} />
+          <PanelRightOpen size={15} />
         </button>
-        {s.project && !retarget && (
-          <>
-            <ActiveLayer />
-            <AnimationMirror />
-          </>
-        )}
+        <button onClick={openSettings} title="Settings" aria-label="Settings">
+          <Settings2 size={15} />
+        </button>
       </nav>
     </>
   );
@@ -190,7 +167,13 @@ export function DesktopWorkspace({
     '--editors-height': sizes.timeline + 'px',
   } as CSSProperties;
   const showEditors = !retarget && layout.editors,
-    showProperties = retarget || layout.properties;
+    // A contextual inspector has no useful empty state. Retarget keeps its
+    // setup inspector available independently of pose-control selection.
+    showProperties = retarget || (layout.properties && s.selection.length > 0);
+  const editorsPresence = usePresence(showEditors ? true : null),
+    // Retain the last useful inspector while selection-clear closes it. This
+    // avoids flashing the empty selection state during the exit transition.
+    propertiesPresence = usePresence(showProperties ? { inspector, retarget } : null);
   return (
     <div
       className={'animate-layout' + (retarget ? ' setup-layout' : '')}
@@ -204,12 +187,15 @@ export function DesktopWorkspace({
           after the new clip becomes active and this popover is hidden. */}
       <div
         className="library-popover"
-        style={library ?? { display: 'none' }}
+        style={libraryPresence.value ?? { display: 'none' }}
         ref={libraryRoot}
-        role={library ? 'dialog' : undefined}
+        role={libraryPresence.value ? 'dialog' : undefined}
         aria-label="Animation library"
-        aria-hidden={!library || undefined}
-        hidden={!library}
+        aria-hidden={libraryPresence.exiting || !libraryPresence.value || undefined}
+        data-motion="popover"
+        data-state={libraryPresence.exiting ? 'closing' : 'open'}
+        inert={libraryPresence.exiting || !libraryPresence.value || undefined}
+        hidden={!libraryPresence.value}
       >
         {animations}
       </div>
@@ -229,7 +215,7 @@ export function DesktopWorkspace({
         </>
       )}
       <div className="area area-viewport">{scene}</div>
-      {showEditors && (
+      {editorsPresence.value && (
         <>
           <Splitter
             className="split-editors"
@@ -237,13 +223,20 @@ export function DesktopWorkspace({
             axis="y"
             size={sizes.timeline}
             resize={(size) => resize('timeline', size)}
+            exiting={editorsPresence.exiting}
           />
-          <div className="area area-editors">
+          <div
+            className="area area-editors"
+            data-motion="desktop-editors"
+            data-state={editorsPresence.exiting ? 'closing' : 'open'}
+            inert={editorsPresence.exiting || undefined}
+            aria-hidden={editorsPresence.exiting || undefined}
+          >
             <Timeline split />
           </div>
         </>
       )}
-      {showProperties && (
+      {propertiesPresence.value && (
         <>
           <Splitter
             className="split-side"
@@ -251,13 +244,31 @@ export function DesktopWorkspace({
             axis="x"
             size={sizes.inspector}
             resize={(size) => resize('inspector', size)}
+            exiting={propertiesPresence.exiting}
           />
-          <aside className="area area-side" aria-label={retarget ? 'Bone mapping' : 'Properties'}>
-            <div className="side-content">{inspector}</div>
+          <aside
+            className="area area-side"
+            aria-label={propertiesPresence.value.retarget ? 'Bone mapping' : 'Properties'}
+            aria-hidden={propertiesPresence.exiting || undefined}
+            data-motion="desktop-side"
+            data-state={propertiesPresence.exiting ? 'closing' : 'open'}
+            inert={propertiesPresence.exiting || undefined}
+          >
+            {propertiesPresence.value.retarget && (
+              <header className="desktop-inspector-header">
+                <h2>Bone mapping</h2>
+                {!propertiesPresence.value.retarget && (
+                  <button aria-label="Close properties" onClick={toggleProperties}>
+                    <X size={16} />
+                  </button>
+                )}
+              </header>
+            )}
+            <div className="side-content">{propertiesPresence.value.inspector}</div>
           </aside>
         </>
       )}
-      <TimeSlider />
+      <TimeSlider editors={showEditors} toggleEditors={toggleEditors} />
     </div>
   );
 }
@@ -270,6 +281,7 @@ function Splitter({
   size,
   resize,
   invert = false,
+  exiting = false,
 }: {
   className: string;
   label: string;
@@ -277,6 +289,7 @@ function Splitter({
   size: number;
   resize: (size: number) => void;
   invert?: boolean;
+  exiting?: boolean;
 }) {
   const drag = useRef<{ at: number; size: number } | null>(null);
   const sign = invert ? -1 : 1;
@@ -284,10 +297,13 @@ function Splitter({
     <div
       className={'area-splitter ' + className}
       role="separator"
-      tabIndex={0}
+      tabIndex={exiting ? -1 : 0}
       aria-label={label}
+      aria-hidden={exiting || undefined}
       aria-orientation={axis === 'x' ? 'vertical' : 'horizontal'}
       aria-valuenow={Math.round(size)}
+      data-state={exiting ? 'closing' : 'open'}
+      inert={exiting || undefined}
       onPointerDown={(e) => {
         e.preventDefault();
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -315,7 +331,7 @@ function Splitter({
   );
 }
 
-function TimeSlider() {
+function TimeSlider({ editors, toggleEditors }: { editors: boolean; toggleEditors: () => void }) {
   const s = useStudioSelector(
     (s) => ({
       frame: s.frame,
@@ -339,6 +355,14 @@ function TimeSlider() {
   );
   return (
     <div className="time-slider" aria-label="Playback">
+      <div className="transport-history joined" role="group" aria-label="History">
+        <button aria-label="Undo" title="Undo (Ctrl Z)" onClick={() => studio.undo()}>
+          <Undo2 size={16} />
+        </button>
+        <button aria-label="Redo" title="Redo (Ctrl Y)" onClick={() => studio.redo()}>
+          <Redo2 size={16} />
+        </button>
+      </div>
       <button
         aria-label="First frame"
         title="First frame (Home)"
@@ -427,6 +451,15 @@ function TimeSlider() {
           </select>
           <LoopControls />
           <KeyLockButton />
+          <button
+            className="timeline-toggle"
+            aria-label={editors ? 'Hide timeline' : 'Show timeline'}
+            aria-pressed={editors}
+            onClick={toggleEditors}
+          >
+            <ListVideo size={15} />
+            <span>Timeline</span>
+          </button>
         </>
       )}
     </div>

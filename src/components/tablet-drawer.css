@@ -7,17 +7,33 @@
  * normal, self-contained header and one scroll owner.
  */
 @media (min-width: 701px) and (min-height: 541px) {
+  :root.android .app {
+    --drawer-timeline-space: 0px;
+  }
+  :root.android .app.timeline-open {
+    --drawer-timeline-space: var(--touch-timeline);
+  }
   :root.android .app .tablet-sheet {
     display: flex;
     flex-direction: column;
-    /* Tablet pose and panel rails occupy the top 80–128px band. Start the
-     * contextual drawer below that band so the rail remains tappable. */
-    top: calc(140px + env(safe-area-inset-top));
+    /* Tablet pose and panel rails occupy the upper 80px band. Keep the sheet
+     * bounded so its own editor can own scrolling without intrinsic sizing. */
+    top: calc(80px + env(safe-area-inset-top));
     right: var(--touch-edge);
-    bottom: calc(var(--touch-dock) + 28px + env(safe-area-inset-bottom));
+    bottom: calc(
+      var(--touch-dock) + var(--drawer-timeline-space) + 28px + env(safe-area-inset-bottom)
+    );
     width: var(--touch-sheet);
     z-index: 50;
     overflow: hidden;
+    height: auto;
+    max-height: min(
+      560px,
+      calc(
+        var(--screen-h, 100dvh) - 80px - var(--touch-dock) - var(--drawer-timeline-space) - 28px -
+          env(safe-area-inset-top) - env(safe-area-inset-bottom)
+      )
+    );
     max-width: calc(100% - (var(--touch-edge) * 2));
   }
 
@@ -93,13 +109,45 @@
     max-height: none;
     overflow: hidden;
   }
+  :root.android
+    .app
+    .tablet-sheet:not(.tablet-sheet-properties):not(.tablet-sheet-animations)
+    .tablet-sheet-content {
+    overflow-y: auto;
+  }
 
-  :root.android .app .tablet-sheet-content > .motion-size-content {
+  :root.android .app .tablet-sheet:not(.tablet-sheet-properties) .tablet-sheet-content {
+    padding-top: 10px;
+  }
+  :root.android
+    .app
+    .tablet-sheet-content
+    > :is(.control-list, .character-panel, .inspector, .retarget-inspector) {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  :root.android .app .tablet-sheet-properties .properties-editor {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
     min-height: 0;
     height: 100%;
+    overflow: hidden;
+  }
+  :root.android .app .tablet-sheet-properties .properties-heading,
+  :root.android .app .tablet-sheet-properties .property-control-tabs {
+    flex: 0 0 auto;
+  }
+  :root.android .app .tablet-sheet-properties .tablet-sheet-content {
+    overflow: hidden;
+    padding-top: 0;
+  }
+  :root.android .app .tablet-sheet-properties .inspector-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   /* Embedded clips use the same structure as the side workspace: tabs and
@@ -107,8 +155,8 @@
   :root.android .app .tablet-sheet-animations:has(.animation-folders) {
     height: auto;
     max-height: calc(
-      var(--screen-h, 100dvh) - 140px - var(--touch-dock) - 28px - env(safe-area-inset-top) -
-        env(safe-area-inset-bottom)
+      var(--screen-h, 100dvh) - 80px - var(--touch-dock) - var(--drawer-timeline-space) - 28px -
+        env(safe-area-inset-top) - env(safe-area-inset-bottom)
     );
   }
 
