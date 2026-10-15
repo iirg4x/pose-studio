@@ -1,0 +1,263 @@
+/* The library uses its host's single surface; names lead and controls stay
+ * compact. Tabs navigate content, so their selection is quieter than a mode. */
+:root .app .animation-library-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 12px;
+}
+:root .app .animation-library-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  align-items: stretch;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-group);
+  overflow: hidden;
+  isolation: isolate;
+}
+:root .app .animation-library-tabs > button {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-flush);
+  background: transparent;
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+:root .app .animation-library-tabs > button + button {
+  border-inline-start: 1px solid var(--border-subtle);
+}
+:root .app .animation-library-tabs > button[aria-selected='true'] {
+  background: var(--selection);
+  color: var(--text);
+  box-shadow: inset 0 -2px var(--accent);
+}
+:root .app .animation-library-tabs > button:hover {
+  background: var(--hover);
+}
+:root .app .animation-library-tabs > button:active {
+  background: var(--pressed);
+}
+:root .app .animation-library-toolbar > .library-create-action {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  margin-left: auto;
+  padding: 0 8px;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 18px;
+}
+:root .app .library-panel > .animation-library-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 0;
+  padding: 12px;
+}
+:root .app .animation-library-actions > h3 {
+  margin: 0 auto 0 0;
+  font-size: 15px;
+  line-height: 20px;
+}
+:root .app .animation-library-actions > button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: auto;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: 13px;
+  line-height: 18px;
+}
+:root .app .animation-library-actions > .library-create-action {
+  padding-inline: 12px;
+}
+.library-search {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 32px;
+  margin: 0 12px 8px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--inset);
+  color: var(--muted);
+}
+.library-search > svg {
+  flex: none;
+}
+:root .app .library-search > .library-search-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  min-height: 30px;
+  padding: 4px 0;
+  border: 0;
+  border-radius: var(--radius-flush);
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 18px;
+  outline: none;
+  box-shadow: none;
+}
+.library-search:focus-within {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+:root .app .library-search > button {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  margin-right: -8px;
+}
+.library-preview-pairing {
+  flex: 0 0 auto;
+  min-width: 0;
+  border-top: 1px solid var(--border-subtle);
+}
+:root .app .library-preview-toggle {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 32px;
+  gap: 8px;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: var(--radius-flush);
+  background: transparent;
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 18px;
+  text-align: left;
+}
+.library-preview-toggle > span {
+  flex: 1;
+}
+.library-preview-toggle > svg {
+  flex: none;
+}
+.library-preview-toggle > small {
+  font-size: 12px;
+}
+:root .app .library-preview-toggle:hover {
+  background: var(--hover);
+}
+.library-preview-settings {
+  max-height: min(240px, 35dvh);
+  overflow-y: auto;
+  padding: 0 12px 12px;
+  overscroll-behavior: contain;
+}
+.library-preview-context {
+  margin: 0 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+.library-preview-settings > .preview-link {
+  display: grid;
+  gap: 12px;
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  border: 0;
+}
+.library-preview-settings .preview-link small {
+  margin: 0;
+  font-size: 12px;
+}
+:root .app .pose-library .save-pose-form {
+  padding: 0 12px 12px;
+}
+:root .app .pose-library .save-pose-form :is(input, select, button) {
+  min-height: 32px;
+  font-size: 13px;
+}
+:root .app .pose-library .save-pose-form button {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  padding-inline: 8px;
+}
+.pose-library .save-pose-form > .library-hint {
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  line-height: 16px;
+}
+:root .app .pose-library .library-list {
+  padding: 0 12px 12px;
+}
+:root .app .pose-library .library-item strong {
+  font-size: 13px;
+  line-height: 18px;
+}
+:root .app .pose-library .library-item small {
+  font-size: 12px;
+  line-height: 16px;
+}
+@media (pointer: coarse) {
+  :root .app .animation-library-tabs > button,
+  :root .app .animation-library-toolbar > .library-create-action,
+  :root .app .animation-library-actions > button,
+  :root .app .library-preview-toggle,
+  :root .app .pose-library .save-pose-form :is(input, select, button) {
+    min-height: 44px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .library-search {
+    min-height: 44px;
+  }
+  :root .app .library-search > .library-search-input {
+    min-height: 42px;
+    font-size: 16px;
+  }
+  :root .app .library-search > button {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+  :root .app .pose-library .save-pose-form :is(input, select) {
+    font-size: 16px;
+  }
+}
+@media (max-height: 540px) {
+  :root .app .animation-library-toolbar {
+    padding-block: 4px;
+  }
+  :root.android .app .tablet-sheet-animations .animation-folder-results {
+    padding-bottom: 4px;
+  }
+}

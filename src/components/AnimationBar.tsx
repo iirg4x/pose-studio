@@ -1,8 +1,8 @@
 import { DeleteAnimationDialog } from './DeleteAnimationDialog';
-import { MotionPresence, MotionOverlay } from './Motion';
+import { Collapse, MotionPresence, MotionOverlay } from './Motion';
 import { isTouch as isAndroid } from '../platform/storage';
 import { RenameAnimationDialog } from './RenameAnimationDialog';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import {
   Plus,
   X,
@@ -20,24 +20,29 @@ import { useStudioChrome, usePresence } from '../hooks';
 import { AnimationBrowser } from './AnimationBrowser';
 import { AnimationMenu } from './AnimationMenu';
 import { InlineName } from './InlineName';
+import { useLibraryDisclosure } from './useLibraryDisclosure';
+import './animation-library.css';
 export function AnimationBar({
   create,
-  importClips,
   embedded = false,
 }: {
   create: () => void;
-  importClips: () => void;
+  importClips?: () => void;
   embedded?: boolean;
 }) {
   const s = useStudioChrome({ frame: 'none', edits: 'live' }),
     [panel, setPanel] = useState<'animations' | 'poses' | null>(embedded ? 'animations' : null),
     [poseName, setPoseName] = useState(''),
+    [poseFormOpen, setPoseFormOpen] = useState(false),
     [scope, setScope] = useState<'rig' | 'control'>('rig'),
     [deleting, setDeleting] = useState<string | null>(null),
     [removing, setRemoving] = useState<string | null>(null),
     [renaming, setRenaming] = useState<string | null>(null),
     [context, setContext] = useState<{ id: string; x: number; y: number } | null>(null),
-    root = useRef<HTMLDivElement>(null);
+    root = useRef<HTMLDivElement>(null),
+    poseForm = useRef<HTMLFormElement>(null);
+  useLibraryDisclosure(poseFormOpen && panel === 'poses', poseForm);
+  const panelId = useId();
   const libraryPresence = usePresence(panel === 'animations' ? true : null),
     contextPresence = usePresence(context),
     deletingPresence = usePresence(deleting);
@@ -81,7 +86,7 @@ export function AnimationBar({
       document.removeEventListener('pointerdown', close, true);
       document.removeEventListener('keydown', escape);
     };
-  }, [panel, context]);
+  }, [panel, context, embedded]);
   useEffect(() => {
     root.current
       ?.querySelector('.animation-tab.active')
@@ -116,16 +121,67 @@ export function AnimationBar({
   };
   const showContext = (id: string, x: number, y: number) => setContext({ id, x, y });
   return (
-    <div className="animation-bar" ref={root}>
+    <div className="animation-bar" data-embedded-library={embedded || undefined} ref={root}>
       {embedded && (
-        <nav className="embedded-library-tabs" aria-label="Animation library sections">
-          <button aria-pressed={panel === 'animations'} onClick={() => setPanel('animations')}>
-            Animations
+        <div className="animation-library-toolbar">
+          <nav
+            className="animation-library-tabs"
+            role="tablist"
+            aria-label="Animation library sections"
+            onKeyDown={(e) => {
+              if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+              e.preventDefault();
+              e.stopPropagation();
+              const next =
+                e.key === 'Home'
+                  ? 'animations'
+                  : e.key === 'End'
+                    ? 'poses'
+                    : panel === 'animations'
+                      ? 'poses'
+                      : 'animations';
+              setPanel(next);
+              setContext(null);
+              root.current
+                ?.querySelector<HTMLButtonElement>('[data-library-section="' + next + '"]')
+                ?.focus();
+            }}
+          >
+            {(['animations', 'poses'] as const).map((section) => (
+              <button
+                key={section}
+                id={panelId + '-' + section + '-tab'}
+                role="tab"
+                data-library-section={section}
+                aria-selected={panel === section}
+                aria-controls={panelId + '-' + section}
+                tabIndex={panel === section ? 0 : -1}
+                onClick={() => {
+                  setPanel(section);
+                  setContext(null);
+                }}
+              >
+                {section === 'animations' ? 'Animations' : 'Saved poses'}
+              </button>
+            ))}
+          </nav>
+          <button
+            className="library-create-action"
+            data-command="true"
+            aria-label={panel === 'poses' ? 'Save pose' : 'Create animation'}
+            title={panel === 'poses' ? 'Save current pose' : 'New animation (Ctrl N)'}
+            aria-expanded={panel === 'poses' ? poseFormOpen : undefined}
+            aria-controls={panel === 'poses' ? panelId + '-save-pose' : undefined}
+            onClick={() => {
+              setContext(null);
+              if (panel === 'poses') setPoseFormOpen(!poseFormOpen);
+              else create();
+            }}
+          >
+            <Plus size={16} />
+            <span>{panel === 'poses' ? 'Save' : 'New'}</span>
           </button>
-          <button aria-pressed={panel === 'poses'} onClick={() => setPanel('poses')}>
-            Saved poses
-          </button>
-        </nav>
+        </div>
       )}
       <button
         className={'library-toggle ' + (panel === 'animations' ? 'active' : '')}
@@ -271,8 +327,9 @@ export function AnimationBar({
           open={panel === 'animations'}
           close={closePanel}
           create={create}
-          importClips={importClips}
           context={showContext}
+          embedded={embedded}
+          id={panelId + '-animations'}
         />
       )}
       {contextPresence.value && (
@@ -327,52 +384,74 @@ export function AnimationBar({
         <section
           className="library-panel pose-library"
           aria-label="Pose library"
+          id={panelId + '-poses'}
+          role={embedded ? 'tabpanel' : undefined}
+          aria-labelledby={embedded ? panelId + '-poses-tab' : undefined}
           data-editor-overlay
         >
-          <header>
-            <h3>Reusable poses</h3>
-            <button aria-label="Close pose library" onClick={() => setPanel(null)}>
-              <X size={16} />
-            </button>
-          </header>
-          <p className="library-hint">
-            Save a pose here, then apply it in any animation. Applying a pose inserts keys at the
-            playhead.
-          </p>
-          <form
-            className="save-pose-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              studio.savePose(poseName, scope);
-              setPoseName('');
-            }}
-          >
-            <input
-              aria-label="Saved pose name"
-              placeholder="Name this pose…"
-              maxLength={100}
-              value={poseName}
-              onChange={(e) => setPoseName(e.target.value)}
-            />
-            <div>
-              <select
-                aria-label="Save pose scope"
-                value={scope}
-                onChange={(e) => setScope(e.target.value as 'rig' | 'control')}
-              >
-                <option value="rig">Whole rig + props</option>
-                <option value="control">Selected control</option>
-              </select>
+          {!embedded && (
+            <header className="animation-library-actions">
+              <h3>Saved poses</h3>
               <button
-                className="primary"
-                aria-label="Save pose"
-                title="Save pose"
-                disabled={!poseName.trim()}
+                className="library-create-action"
+                data-command="true"
+                aria-expanded={poseFormOpen}
+                aria-controls={panelId + '-save-pose'}
+                onClick={() => setPoseFormOpen(!poseFormOpen)}
               >
-                <Save size={15} />
+                <BookmarkPlus size={16} />
+                <span>Save pose…</span>
               </button>
-            </div>
-          </form>
+              <button aria-label="Close pose library" onClick={closePanel}>
+                <X size={16} />
+              </button>
+            </header>
+          )}
+          <Collapse open={poseFormOpen}>
+            <form
+              className="save-pose-form"
+              id={panelId + '-save-pose'}
+              ref={poseForm}
+              onSubmit={(e) => {
+                e.preventDefault();
+                studio.savePose(poseName, scope);
+                setPoseName('');
+                setPoseFormOpen(false);
+                root.current?.querySelector<HTMLButtonElement>('.library-create-action')?.focus();
+              }}
+            >
+              <input
+                aria-label="Saved pose name"
+                placeholder="Name this pose…"
+                maxLength={100}
+                value={poseName}
+                onChange={(e) => setPoseName(e.target.value)}
+              />
+              <div>
+                <select
+                  aria-label="Save pose scope"
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value as 'rig' | 'control')}
+                >
+                  <option value="rig">Whole rig + props</option>
+                  <option value="control">Selected control</option>
+                </select>
+                <button
+                  className="primary"
+                  aria-label="Save pose"
+                  title="Save pose"
+                  disabled={!poseName.trim()}
+                >
+                  <Save size={15} />
+                  <span>Save pose</span>
+                </button>
+              </div>
+              <p className="library-hint">
+                Applying a saved pose inserts keys at the playhead. Rig poses retain destination
+                contacts and camera motion.
+              </p>
+            </form>
+          </Collapse>
           <div className="library-list">
             {w.poses.length === 0 ? (
               <p className="empty-library">
@@ -429,10 +508,6 @@ export function AnimationBar({
               ))
             )}
           </div>
-          <p className="library-hint">
-            Rig poses keep destination contacts and camera motion. Copy a camera separately with
-            Copy control.
-          </p>
         </section>
       </MotionPresence>
     </div>

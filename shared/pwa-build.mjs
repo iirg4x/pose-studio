@@ -11,6 +11,7 @@ const APP_ASSETS = [
   'builtin-axe.glb',
   'builtin-rifle.glb',
   'builtin-magazine.glb',
+  'builtin-unreal-fp-gun.glb',
   'example-fantasy-male.glb',
   'example-fantasy-female.glb',
 ];

@@ -68,6 +68,29 @@ export function AssetLibrary({
       setBusy('');
     }
   }
+  async function addTemplateGun() {
+    if (!runtime || busy) return;
+    setBusy('Unreal first-person gun');
+    setError('');
+    try {
+      const asset = 'builtin-unreal-fp-gun';
+      const data = await window.studioDesktop!.readCharacter(asset);
+      await runtime.validateProp(data);
+      studio.addProp({
+        name: 'Unreal first-person gun',
+        asset,
+        scale: 1,
+        rotation: [0, 0, 0],
+        offset: [0, 0, 0],
+        visible: true,
+      });
+      close();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy('');
+    }
+  }
   const props = Object.entries(projectProps(s.project));
   return (
     <section
@@ -127,6 +150,20 @@ export function AssetLibrary({
         </p>
       )}
       <div className="asset-scroll">
+        <h4>Built-in props</h4>
+        <button
+          className="asset-builtin"
+          disabled={!!busy || !runtime}
+          onClick={() => void addTemplateGun()}
+          aria-label="Add Unreal first-person gun"
+        >
+          <Box size={20} aria-hidden="true" />
+          <span>
+            Unreal first-person gun<small>Epic Games · First Person template</small>
+          </span>
+          <Plus size={16} aria-hidden="true" />
+          Add
+        </button>
         <h4>
           Characters <small>{s.workspace?.characters?.length ?? 0}</small>
         </h4>

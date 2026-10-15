@@ -64,7 +64,7 @@ async function blenderJob(blender, script, args, logPath) {
 }
 function createCharacters(directory, assets, backend) {
   const filename = (id) => {
-    if (/^(example-fantasy-(male|female)|builtin-(axe|rifle|magazine))$/.test(id))
+    if (/^(example-fantasy-(male|female)|builtin-(axe|rifle|magazine|unreal-fp-gun))$/.test(id))
       return path.join(assets, id + '.glb');
     if (!/^[a-f0-9]{64}$/.test(id)) throw Error('Invalid character asset.');
     return path.join(directory, id + '.glb');

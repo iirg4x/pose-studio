@@ -4,7 +4,6 @@ import {
   Camera,
   ChevronRight,
   Folder,
-  Home,
   MoreHorizontal,
   PersonStanding,
   Search,
@@ -32,7 +31,7 @@ export function AnimationFolderList({
     list = useRef<HTMLDivElement>(null),
     breadcrumbs = useRef<HTMLDivElement>(null);
   const rows = useMemo(() => animationFolderRows(clips, path, query), [clips, path, query]),
-    rowHeight = isTouch ? 60 : 44,
+    rowHeight = isTouch ? 48 : 44,
     start = Math.max(0, Math.floor(scroll / rowHeight) - 3),
     end = Math.min(rows.length, start + Math.ceil(height / rowHeight) + 7);
   useEffect(() => {
@@ -70,6 +69,7 @@ export function AnimationFolderList({
       <div className="library-search">
         <Search size={16} />
         <input
+          className="library-search-input"
           autoFocus={!isTouch}
           aria-label="Find animation"
           placeholder="Search all folders…"
@@ -88,32 +88,33 @@ export function AnimationFolderList({
           </button>
         )}
       </div>
-      <nav className="animation-folder-path" aria-label="Animation folder">
-        <button
-          aria-label="Back to parent folder"
-          disabled={!path.length && !query}
-          onClick={() => (query ? setQuery('') : navigate(path.slice(0, -1)))}
-        >
-          <ArrowLeft size={16} />
-        </button>
-        <div ref={breadcrumbs}>
-          <button aria-label="All animation folders" onClick={() => navigate([])}>
-            <Home size={14} />
-            <span>Animations</span>
+      {!!path.length && !query && (
+        <nav className="animation-folder-path" aria-label="Animation folder">
+          <button
+            aria-label="Back to parent folder"
+            title="Back to parent folder"
+            onClick={() => navigate(path.slice(0, -1))}
+          >
+            <ArrowLeft size={16} />
           </button>
-          {path.map((name, i) => (
-            <span key={i}>
-              <ChevronRight size={12} />
-              <button
-                aria-current={i === path.length - 1 ? 'location' : undefined}
-                onClick={() => navigate(path.slice(0, i + 1))}
-              >
-                {name}
-              </button>
-            </span>
-          ))}
-        </div>
-      </nav>
+          <div ref={breadcrumbs}>
+            <button aria-label="All animation folders" onClick={() => navigate([])}>
+              <span>Animations</span>
+            </button>
+            {path.map((name, i) => (
+              <span key={i}>
+                <ChevronRight size={12} />
+                <button
+                  aria-current={i === path.length - 1 ? 'location' : undefined}
+                  onClick={() => navigate(path.slice(0, i + 1))}
+                >
+                  {name}
+                </button>
+              </span>
+            ))}
+          </div>
+        </nav>
+      )}
       {query && (
         <div className="animation-search-summary">{rows.length} results in all folders</div>
       )}
@@ -138,6 +139,7 @@ export function AnimationFolderList({
           return (
             <div
               className={'animation-folder-row ' + (clip ? 'clip-row' : 'folder-row')}
+              data-active={clip && activeId === clip.id ? true : undefined}
               role="listitem"
               key={clip?.id ?? JSON.stringify(row.kind === 'folder' && row.path)}
               style={{ height: rowHeight }}
@@ -146,6 +148,7 @@ export function AnimationFolderList({
                 data-folder-row={start + offset}
                 className="animation-folder-item"
                 aria-label={(clip ? 'Open ' : 'Open folder ') + (clip?.name ?? name)}
+                title={clip?.name ?? name}
                 aria-current={clip && activeId === clip.id ? 'true' : undefined}
                 onClick={() =>
                   clip ? onOpen(clip.id) : row.kind === 'folder' && navigate(row.path)
@@ -188,6 +191,7 @@ export function AnimationFolderList({
                 <button
                   className="animation-actions"
                   aria-label={'Actions for ' + clip.name}
+                  title={'Actions for ' + clip.name}
                   onClick={(e) => {
                     const box = e.currentTarget.getBoundingClientRect();
                     context(clip.id, box.left, box.bottom);

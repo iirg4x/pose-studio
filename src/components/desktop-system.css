@@ -38,7 +38,7 @@
 }
 
 /* ---- Control scale ----------------------------------------------------------------- */
-.app.desktop-workspace :is(.workspace-tabs, .segmented, .embedded-library-tabs) {
+.app.desktop-workspace :is(.workspace-tabs, .segmented) {
   display: inline-flex;
   align-items: stretch;
   gap: 2px;
@@ -46,7 +46,7 @@
   min-height: var(--ds-control);
   padding: 1px;
 }
-.app.desktop-workspace :is(.workspace-tabs, .segmented, .embedded-library-tabs) > button {
+.app.desktop-workspace :is(.workspace-tabs, .segmented) > button {
   flex: 1;
   height: auto;
   min-height: 0;

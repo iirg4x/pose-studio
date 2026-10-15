@@ -352,7 +352,11 @@ export function validateLibrary(
       (stamp.scope === 'control' && keys.length !== 1) ||
       (stamp.scope === 'rig' &&
         keys.some(
-          (id) => id === 'camera' || !visibleControls(stamp.layer).includes(id as ControlId),
+          (id) =>
+            id === 'camera' ||
+            (!visibleControls(stamp.layer).includes(id as ControlId) &&
+              // Saved poses retain prop transforms even after an asset binding is removed.
+              !(id.startsWith('prop:') && IDS.includes(id as ControlId))),
         ))
     )
       throw Error('Invalid pose controls.');

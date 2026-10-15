@@ -21,6 +21,7 @@ const baseSelector = [
 ].join(',');
 
 const floatingSelector = [
+  '.tablet-sheet',
   '[data-motion="popover"]',
   '[data-motion="context"]',
   '[role="menu"]',

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs/promises';
-import { blankProject, projectProps } from '../src/core/assets';
+import { blankProject, projectProps, validateProps } from '../src/core/assets';
 import { StudioStore } from '../src/core/store';
 import { library, validateLibrary } from '../src/core/library';
 import { evaluate, visibleControls, validateProject } from '../src/core/model';
@@ -36,7 +36,7 @@ describe('standalone project assets', () => {
     expect(() => validateProject(p)).not.toThrow();
   });
   it('keeps weapon meshes as independent loadable assets', async () => {
-    for (const name of ['axe', 'rifle', 'magazine']) {
+    for (const name of ['axe', 'rifle', 'magazine', 'unreal-fp-gun']) {
       const bytes = await fs.readFile('public/assets/builtin-' + name + '.glb');
       const asset = await rigLoader().parseAsync(
         bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
@@ -44,6 +44,40 @@ describe('standalone project assets', () => {
       );
       expect(asset.scene.children.length).toBeGreaterThan(0);
     }
+  });
+  it.each(['builtin-rifle', 'builtin-magazine', 'builtin-unreal-fp-gun'])(
+    'preserves %s as a named prop through project save and validation',
+    (asset) => {
+      const s = new StudioStore(),
+        p = blankProject();
+      s.patch({ project: p, workspace: library(p) });
+      const id = s.addProp({
+        name: 'Weapon',
+        asset,
+        scale: 0.75,
+        rotation: [0, 90, 0],
+        offset: [0.1, -0.2, 0],
+        visible: true,
+      });
+      const saved = validateLibrary(JSON.parse(JSON.stringify(s.snapshot())));
+      expect(saved.clips[0].project.props?.[id]).toEqual(s.state.project!.props![id]);
+      expect(visibleControls('body', saved.clips[0].project)).toContain(id);
+      expect(() => validateProject(saved.clips[0].project)).not.toThrow();
+    },
+  );
+  it('rejects unknown built-in prop IDs', () => {
+    expect(() =>
+      validateProps({
+        rifle: {
+          name: 'Unknown',
+          asset: 'builtin-unknown',
+          scale: 1,
+          rotation: [0, 0, 0],
+          offset: [0, 0, 0],
+          visible: true,
+        },
+      }),
+    ).toThrow('Invalid prop asset');
   });
 });
 

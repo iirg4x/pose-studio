@@ -182,13 +182,6 @@
     display: none;
   }
 
-  :root.android .app .tablet-sheet-animations .embedded-library-tabs {
-    display: flex;
-    flex: 0 0 auto;
-    min-width: 0;
-    padding: 4px 8px;
-  }
-
   :root.android .app .tablet-sheet-animations .animation-bar > .library-panel {
     position: relative;
     inset: auto;
@@ -227,11 +220,5 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     padding-bottom: 16px;
-  }
-
-  :root.android .app .tablet-sheet-animations .preview-link {
-    flex: 0 0 auto;
-    max-height: 38%;
-    overflow-y: auto;
   }
 }

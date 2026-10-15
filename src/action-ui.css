@@ -226,33 +226,6 @@
   font-weight: 400;
   color: var(--muted);
 }
-.library-header-tools {
-  display: flex;
-  gap: 3px;
-}
-.library-header-tools button {
-  width: 25px;
-  min-height: 25px;
-  height: 25px;
-  padding: 4px;
-  color: var(--secondary);
-}
-.library-search {
-  margin: 0 12px 8px;
-  padding: 0 8px;
-  min-height: 30px;
-  border-color: var(--border);
-  gap: 7px;
-}
-.library-search input {
-  padding: 6px 0;
-  min-width: 0;
-}
-.library-search button {
-  padding: 3px;
-  min-height: 22px;
-  height: 22px;
-}
 .animation-context-menu {
   position: fixed;
   z-index: 2;
@@ -617,14 +590,6 @@ select:focus-visible {
 .control-list button:focus-visible,
 .transform-options button:focus-visible {
   outline: none;
-}
-.animation-library .library-search input:focus-visible {
-  outline: none;
-  box-shadow: none;
-  border-color: transparent;
-}
-.animation-library .library-search:focus-within {
-  border-color: var(--accent);
 }
 .transform-popover button[aria-checked='true'] {
   background: var(--accent);

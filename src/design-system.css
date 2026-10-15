@@ -107,7 +107,6 @@ body {
     .workspace-tabs,
     .action-switch,
     .segmented,
-    .embedded-library-tabs,
     .rig-mode-switch,
     .export-modes,
     .shared-export-range > .segmented,
@@ -131,7 +130,6 @@ body {
     .workspace-tabs,
     .action-switch,
     .segmented,
-    .embedded-library-tabs,
     .rig-mode-switch,
     .export-modes,
     .shared-export-range > .segmented,
@@ -153,7 +151,6 @@ body {
     .workspace-tabs,
     .action-switch,
     .segmented,
-    .embedded-library-tabs,
     .rig-mode-switch,
     .export-modes,
     .shared-export-range > .segmented,
@@ -171,7 +168,6 @@ body {
     .workspace-tabs,
     .action-switch,
     .segmented,
-    .embedded-library-tabs,
     .rig-mode-switch,
     .export-modes,
     .shared-export-range > .segmented,
@@ -189,7 +185,6 @@ body {
     .workspace-tabs,
     .action-switch,
     .segmented,
-    .embedded-library-tabs,
     .rig-mode-switch,
     .export-modes,
     .shared-export-range > .segmented,
@@ -207,7 +202,6 @@ body {
     .workspace-tabs,
     .action-switch,
     .segmented,
-    .embedded-library-tabs,
     .rig-mode-switch,
     .export-modes,
     .shared-export-range > .segmented,
@@ -227,7 +221,6 @@ body {
     .workspace-tabs,
     .action-switch,
     .segmented,
-    .embedded-library-tabs,
     .rig-mode-switch,
     .export-modes,
     .shared-export-range > .segmented,
@@ -245,7 +238,6 @@ body {
     .workspace-tabs,
     .action-switch,
     .segmented,
-    .embedded-library-tabs,
     .rig-mode-switch,
     .export-modes,
     .shared-export-range > .segmented,
@@ -267,13 +259,13 @@ body {
     .attachment-popover,
     .keyframe-settings
   )
-  :is(input:not([type='range'], [type='checkbox']), select, textarea) {
+  :is(input:not([type='range'], [type='checkbox'], .library-search-input), select, textarea) {
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   background: var(--inset);
   color: var(--text);
 }
-:root .app :is(input, select, textarea):focus-visible {
+:root .app :is(input:not(.library-search-input), select, textarea):focus-visible {
   border-color: var(--accent);
   outline: 2px solid var(--accent);
   outline-offset: -2px;

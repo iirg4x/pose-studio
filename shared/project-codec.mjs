@@ -117,7 +117,7 @@ export async function decodeProject(bytes) {
       if (
         !project ||
         typeof row.id !== 'string' ||
-        !/^([a-f0-9]{64}|builtin-(axe|rifle|magazine)|example-fantasy-(male|female))$/.test(
+        !/^([a-f0-9]{64}|builtin-(axe|rifle|magazine|unreal-fp-gun)|example-fantasy-(male|female))$/.test(
           row.id,
         ) ||
         Object.hasOwn(assets, row.id) ||

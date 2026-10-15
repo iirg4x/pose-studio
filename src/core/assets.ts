@@ -38,7 +38,7 @@ export function validateProps(props: PropBindings) {
       typeof p.name !== 'string' ||
       !p.name.trim() ||
       p.name.length > 100 ||
-      !/^([a-f0-9]{64}|builtin-(axe|rifle|magazine))$/.test(p.asset) ||
+      !/^([a-f0-9]{64}|builtin-(axe|rifle|magazine|unreal-fp-gun))$/.test(p.asset) ||
       !Number.isFinite(p.scale) ||
       p.scale <= 0 ||
       p.scale > 1e4 ||

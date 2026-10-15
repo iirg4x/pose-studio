@@ -13,14 +13,14 @@
 .animation-folder-path {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  margin: 0 12px 8px;
+  padding: 0;
 }
 .animation-folder-path > button {
   flex: none;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  min-height: 32px;
 }
 .animation-folder-path > div {
   display: flex;
@@ -38,17 +38,15 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 6px;
-  border-radius: 4px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: var(--radius-control);
   white-space: nowrap;
-  font-size: 11px;
-  color: var(--muted);
+  font-size: 13px;
+  color: var(--secondary);
 }
 .animation-folder-path button[aria-current='location'] {
   color: var(--text);
-}
-.animation-folder-path button:disabled {
-  opacity: 0.3;
 }
 .animation-folder-results {
   height: min(560px, 65dvh);
@@ -57,21 +55,25 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  padding-bottom: 8px;
+  padding: 0 12px 12px;
 }
 .animation-folder-row {
   display: flex;
   min-width: 0;
+  border-radius: var(--radius-control);
+  overflow: hidden;
 }
-.animation-folder-item {
+:root .app .animation-folder-item {
   display: flex;
   align-items: center;
   min-width: 0;
   flex: 1;
-  gap: 12px;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 4px 8px;
   text-align: left;
-  border-radius: 4px;
+  border: 0;
+  border-radius: var(--radius-flush);
+  background: transparent;
 }
 .animation-folder-item > svg {
   flex: none;
@@ -85,17 +87,19 @@
   flex: 1;
   min-width: 0;
   flex-direction: column;
-  gap: 3px;
+  gap: 0;
 }
 .animation-folder-item strong {
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 18px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .animation-folder-item small {
-  font-size: 10px;
+  font-size: 12px;
+  line-height: 16px;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -105,37 +109,52 @@
   flex: none;
   font-variant-numeric: tabular-nums;
 }
-.animation-folder-item[aria-current='true'] {
+.animation-folder-row[data-active='true'] {
   background: var(--selection);
-  color: var(--cyan);
+  color: var(--text);
+  box-shadow: inset 2px 0 var(--accent);
+}
+:root .app .animation-folder-row > button:hover {
+  background: var(--hover);
+}
+:root .app .animation-folder-row > button:active {
+  background: var(--pressed);
+}
+:root .app .animation-folder-row > .animation-actions {
+  flex: none;
+  align-self: stretch;
+  width: 32px;
+  min-width: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-flush);
+  background: transparent;
+  color: var(--secondary);
 }
 .animation-search-summary {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
-  padding: 8px 12px;
+  padding: 0 12px 8px;
 }
 .android .animation-folder-path > button {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
 }
 .android .animation-folder-path button {
-  min-height: 40px;
-  font-size: 12px;
+  min-height: 44px;
+  font-size: 14px;
 }
 .android .animation-folder-results {
   height: auto;
 }
 .android .animation-folder-item strong {
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 20px;
 }
 .android .animation-folder-item small {
-  font-size: 11px;
+  font-size: 12px;
 }
-.android .animation-folder-item {
-  padding: 8px;
-  gap: 12px;
-}
-.android .animation-folder-row .animation-actions {
+:root.android .app .animation-folder-row .animation-actions {
   min-width: 44px;
 }
 /* One scroll viewport fills the sheet; nested scrolling could hide its last rows. */

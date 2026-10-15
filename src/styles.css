@@ -1143,23 +1143,6 @@ hr {
   min-height: 25px;
   padding: 4px;
 }
-.library-search {
-  margin: 0 16px 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  background: var(--library-inset);
-  padding-left: 8px;
-  color: var(--library-muted);
-}
-.library-search input {
-  border: none;
-  background: none;
-  width: 100%;
-  font-size: 12px;
-}
 .library-list {
   overflow-y: auto;
   min-height: 0;

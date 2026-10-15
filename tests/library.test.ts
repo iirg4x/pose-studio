@@ -1,4 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { encodeProject, decodeProject } from '../shared/project-codec.mjs';
+import { blankProject } from '../src/core/assets';
 import {
   createProject,
   clone,
@@ -130,6 +132,57 @@ describe('animator workspace', () => {
     t.setFrame(30);
     t.pastePose(saved.poses[1]);
     expect(t.state.project!.tracks.hips.keys.some((k) => k.frame === 30)).toBe(true);
+  });
+  it.each([
+    ['firstPerson', false],
+    ['body', false],
+    ['firstPerson', true],
+    ['body', true],
+  ] as const)(
+    'reopens a %s rig pose containing the new gun (asset removed: %s)',
+    async (layer, removeAsset) => {
+      const s = new StudioStore();
+      s.open(blankProject());
+      s.setLayer(layer);
+      const id = s.addProp({
+        name: 'Unreal First Person Gun',
+        asset: 'builtin-unreal-fp-gun',
+        scale: 1,
+        rotation: [0, 0, 0],
+        offset: [0, 0, 0],
+        visible: true,
+      });
+      s.editWorld(id, pose([0.2, 1.3, 0.4]));
+      s.savePose('Armed', 'rig');
+      const expected = clone(s.state.workspace!.poses[0]);
+      expect(expected.poses[id]).toBeDefined();
+      if (removeAsset) s.removeProp(id);
+      const document = await decodeProject(await encodeProject(s.snapshot()!));
+      // A fresh app has not registered the runtime-generated prop identity yet.
+      vi.resetModules();
+      const { CONTROL_IDS } = await import('../src/core/controls'),
+        { validateLibrary: validateFreshLibrary } = await import('../src/core/library');
+      expect(CONTROL_IDS).not.toContain(id);
+      const restored = validateFreshLibrary(document);
+      expect(restored.poses[0]).toEqual(expected);
+      expect(CONTROL_IDS).toContain(id);
+      expect(!!restored.clips[0].project.props?.[id]).toBe(!removeAsset);
+      const reopened = new StudioStore();
+      expect(() => reopened.open(restored)).not.toThrow();
+      expect(reopened.state.workspace!.poses[0].poses[id]).toEqual(expected.poses[id]);
+    },
+  );
+  it.each([
+    ['camera', 'Invalid pose controls'],
+    ['hips', 'Invalid pose controls'],
+    ['prop:unregistered-saved-pose', 'Invalid saved pose'],
+    ['not-a-control', 'Invalid saved pose'],
+  ])('rejects %s in a first-person rig pose', (id, message) => {
+    const s = setup();
+    s.savePose('Armed', 'rig');
+    const invalid = clone(s.snapshot()!);
+    Object.assign(invalid.poses[0].poses, { [id]: pose() });
+    expect(() => validateLibrary(invalid)).toThrow(message);
   });
   it('imports legacy and multi-clip files without replacing existing animations or duplicating IDs', () => {
     const s = setup();

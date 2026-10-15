@@ -380,7 +380,10 @@ html.android body {
   :root.android .app .tablet-sheet-properties .tablet-sheet-content {
     overflow: hidden;
   }
-  :root.android .app .tablet-sheet:not(.tablet-sheet-properties) .tablet-sheet-content {
+  :root.android
+    .app
+    .tablet-sheet:not(.tablet-sheet-properties):not(.tablet-sheet-animations)
+    .tablet-sheet-content {
     padding-top: 10px;
   }
   :root.android .app .tablet-sheet-properties .properties-editor {
@@ -1176,11 +1179,6 @@ html.android body {
     > :is(.library-toggle, .pose-toolbar, .animation-tabs-area) {
     display: none;
   }
-  :root.android .app .tablet-sheet-animations .embedded-library-tabs {
-    flex: none;
-    min-width: 0;
-    padding: 4px 8px;
-  }
   :root.android .app .tablet-sheet-animations .animation-bar > .library-panel {
     position: relative;
     inset: auto;
@@ -1190,7 +1188,7 @@ html.android body {
     width: 100%;
     max-height: none;
     margin: 0;
-    padding: 8px;
+    padding: 0;
     display: block;
     overflow: auto;
     border: 0;

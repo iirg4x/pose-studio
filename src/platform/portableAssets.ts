@@ -32,7 +32,7 @@ export function validateGLB(data: Uint8Array) {
 }
 export const assetHash = sha256Hex;
 export function builtInAsset(id: string) {
-  return /^(example-fantasy-(male|female)|builtin-(axe|rifle|magazine))$/.test(id);
+  return /^(example-fantasy-(male|female)|builtin-(axe|rifle|magazine|unreal-fp-gun))$/.test(id);
 }
 function assetIds(project: unknown) {
   const p = project as {

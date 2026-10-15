@@ -14,6 +14,8 @@ Pose Studio is a 3D animation editor for the Unreal Engine 5 Manny rig. It runs 
 
 Projects stay on your device: in browser storage, or in `.pose` files you save yourself.
 
+The Project assets panel includes Epic’s original First Person template gun (`SK_FPGun`) as a built-in prop. It uses the normal transform and attachment tracks, is available offline, and travels with saved projects.
+
 ## Development
 
 Requires Node.js 22.

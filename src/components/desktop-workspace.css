@@ -169,18 +169,11 @@
   max-height: none;
   border: 0;
   box-shadow: none;
-  padding: 6px;
+  padding: 0;
   background: transparent;
 }
 .area-side .library-panel > header {
   flex: none;
-}
-.area-side .library-panel > header h3,
-.area-side .library-header-tools > button:last-child {
-  display: none;
-}
-.area-side .library-header-tools {
-  margin-left: auto;
 }
 .area-side .animation-folders,
 .area-side .animation-folder-results {
@@ -191,22 +184,6 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-}
-.embedded-library-tabs {
-  display: flex;
-  flex: none;
-  gap: 2px;
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--border);
-}
-.embedded-library-tabs button {
-  flex: 1;
-  height: 24px;
-  min-height: 24px;
-}
-.embedded-library-tabs button[aria-pressed='true'] {
-  background: var(--selection);
-  color: var(--cyan);
 }
 .area-side .control-list > header .context-flair {
   display: none;
@@ -958,12 +935,8 @@
   max-height: none;
   border: 0;
   box-shadow: none;
-  padding: 6px;
+  padding: 0;
   background: transparent;
-}
-.library-popover .library-panel > header h3,
-.library-popover .library-header-tools > button:last-child {
-  display: none;
 }
 .library-popover .animation-folders,
 .library-popover .animation-folder-results {

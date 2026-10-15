@@ -75,6 +75,29 @@
   padding: 8px;
   font-size: 11px;
 }
+.asset-builtin {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px;
+  text-align: left;
+}
+.asset-builtin > svg:first-child {
+  flex-shrink: 0;
+  color: var(--cyan);
+}
+.asset-builtin > span {
+  flex: 1;
+  min-width: 0;
+}
+.asset-builtin small {
+  display: block;
+  margin-top: 4px;
+  color: var(--secondary);
+  font-size: 10px;
+}
 .asset-row {
   display: flex;
   align-items: center;

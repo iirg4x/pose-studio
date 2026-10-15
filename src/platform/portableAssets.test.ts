@@ -6,6 +6,7 @@ import {
   validateGLB,
   embedAssets,
   restoreAssets,
+  builtInAsset,
 } from './portableAssets';
 function glb(json: unknown = { asset: { version: '2.0' } }) {
   const raw = new TextEncoder().encode(JSON.stringify(json)),
@@ -21,7 +22,7 @@ function glb(json: unknown = { asset: { version: '2.0' } }) {
   bytes.set(raw, 20);
   return bytes;
 }
-describe('Android portable assets', () => {
+describe('browser and Android portable assets', () => {
   it('round trips binary across native bridge chunk boundaries', () => {
     const bytes = Uint8Array.from({ length: 800003 }, (_, i) => i % 256);
     expect(decode64(encode64(bytes))).toEqual(bytes);
@@ -72,5 +73,33 @@ describe('Android portable assets', () => {
       ),
     ).rejects.toThrow('checksum');
     expect(writes).toEqual([]);
+  });
+  it.each(['builtin-axe', 'builtin-rifle', 'builtin-magazine', 'builtin-unreal-fp-gun'])(
+    'restores %s from a portable project using the bundled asset',
+    async (id) => {
+      const bytes = glb(),
+        p = { clips: [{ project: { props: { 'prop:weapon': { asset: id } } } }] },
+        writes: string[] = [];
+      expect(builtInAsset(id)).toBe(true);
+      const portable = await embedAssets(p, async (asset) => {
+        expect(asset).toBe(id);
+        return bytes;
+      });
+      expect(portable.characterAssets).toEqual({ [id]: encode64(bytes) });
+      expect(
+        await restoreAssets(portable, async (asset) => {
+          writes.push(asset);
+        }),
+      ).toEqual(p);
+      expect(writes).toEqual([]);
+    },
+  );
+  it('does not treat arbitrary built-in-looking IDs as bundled assets', () => {
+    for (const id of [
+      'builtin-unreal-fp-gun.glb',
+      'builtin-unreal-fp-gun/../rifle',
+      'builtin-unknown',
+    ])
+      expect(builtInAsset(id)).toBe(false);
   });
 });

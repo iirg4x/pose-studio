@@ -930,18 +930,8 @@ html.android {
   margin-top: 8px;
   padding: 8px 0;
 }
-.android
-  .tablet-sheet-animations
-  .library-header-tools
-  button[aria-label='Close animation library'] {
-  display: none;
-}
 .android .tablet-sheet-animations .library-panel header {
   padding: 0 0 8px;
-}
-.android .tablet-sheet-animations .library-search input {
-  min-height: 44px;
-  font-size: 13px;
 }
 
 .android .timeline .key-edit-tools {
