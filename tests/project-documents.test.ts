@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { encodeProject } from '../shared/project-codec.mjs';
 import { blankProject } from '../src/core/assets';
 import { library, validateLibrary } from '../src/core/library';
+import { CONTROL_IDS } from '../src/core/controls';
 import { readProjectDocument, consumeProjectDocument } from '../src/platform/projectDocuments';
 
 describe('prepared project documents', () => {
@@ -31,5 +32,26 @@ describe('prepared project documents', () => {
       'Invalid pose',
     );
     expect(write).not.toHaveBeenCalled();
+  });
+  it('does not register controls when embedded asset restore fails', async () => {
+    const original = library(blankProject()),
+      id = 'prop:restore-failure';
+    original.clips[0].project.props = {
+      [id]: {
+        name: 'Embedded prop',
+        asset: 'builtin-rifle',
+        scale: 1,
+        rotation: [0, 0, 0],
+        offset: [0, 0, 0],
+        visible: true,
+      },
+    };
+    (original as unknown as { characterAssets: Record<string, string> }).characterAssets = {
+      'builtin-rifle': 'AA',
+    };
+    const beforeControls = [...CONTROL_IDS];
+    await expect(readProjectDocument(await encodeProject(original), vi.fn())).rejects.toThrow();
+    expect([...CONTROL_IDS]).toEqual(beforeControls);
+    expect(CONTROL_IDS).not.toContain(id);
   });
 });

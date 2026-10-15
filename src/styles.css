@@ -112,7 +112,7 @@ hr {
 }
 .app {
   height: 100dvh;
-  min-width: 740px;
+  min-width: 0;
   display: grid;
   grid-template-columns: 196px minmax(0, 1fr);
 }

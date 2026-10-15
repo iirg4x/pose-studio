@@ -1,5 +1,17 @@
 import { sha256Hex } from '../core/crypto';
-const MAX = 32 * 1024 * 1024;
+/** Maximum size accepted for one self-contained GLB asset. */
+export const MAX_GLB_BYTES = 32 * 1024 * 1024;
+const GLB_SIZE_ERROR = 'Choose a valid GLB file below 32 MB.';
+
+/**
+ * Reject a portable asset from its metadata before allocating or reading its
+ * contents. Browser File.size and the Android bridge document size both use
+ * this check before their respective byte readers run.
+ */
+export function assertGLBSize(size: number) {
+  if (!Number.isFinite(size) || size < 0 || size > MAX_GLB_BYTES) throw Error(GLB_SIZE_ERROR);
+}
+
 export function decode64(text: string) {
   const raw = atob(text);
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
@@ -11,10 +23,10 @@ export function encode64(data: Uint8Array) {
   return btoa(text);
 }
 export function validateGLB(data: Uint8Array) {
+  assertGLBSize(data.length);
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
   if (
     data.length < 20 ||
-    data.length > MAX ||
     view.getUint32(0, true) !== 0x46546c67 ||
     view.getUint32(4, true) !== 2 ||
     view.getUint32(8, true) !== data.length
@@ -75,7 +87,7 @@ export async function restoreAssets(
     for (const id of assetIds(data)) {
       if (assets[id] === undefined) continue;
       const encoded = assets[id];
-      if (typeof encoded !== 'string' || encoded.length > MAX * 1.4)
+      if (typeof encoded !== 'string' || encoded.length > MAX_GLB_BYTES * 1.4)
         throw Error('Invalid embedded asset.');
       const bytes = validateGLB(decode64(encoded));
       total += bytes.length;

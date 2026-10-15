@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { Check } from 'lucide-react';
@@ -24,31 +25,107 @@ export interface Menu {
 /** Desktop menu bar following the WAI-ARIA menubar pattern. */
 export function MenuBar({ menus, disabled = false }: { menus: Menu[]; disabled?: boolean }) {
   const [open, setOpen] = useState<number | null>(null);
+  const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
+  const [submenuPosition, setSubmenuPosition] = useState({
+    left: 0,
+    top: 0,
+    side: 'right' as 'left' | 'right',
+  });
   const root = useRef<HTMLDivElement>(null);
   const triggers = useRef<(HTMLButtonElement | null)[]>([]);
   const dropdowns = useRef<(HTMLDivElement | null)[]>([]);
+  const pointerMenu = useRef<number | null>(null);
+  const openRef = useRef<number | null>(null);
+  openRef.current = open;
   const close = (focusTrigger = false) => {
     if (focusTrigger && open !== null) triggers.current[open]?.focus();
+    pointerMenu.current = null;
     setOpen(null);
   };
   useEffect(() => {
     if (open === null) return;
     const outside = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) {
+      const target = e.target as Node,
+        activeDropdown = open === null ? null : dropdowns.current[open];
+      if (!root.current?.contains(target) && !activeDropdown?.contains(target)) {
         consumeSceneDismiss(e);
+        pointerMenu.current = null;
         setOpen(null);
       }
     };
     document.addEventListener('pointerdown', outside, true);
     return () => document.removeEventListener('pointerdown', outside, true);
   }, [open]);
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const commandMenu = root.current?.closest('.desktop-command-menu');
+    setPortalHost(commandMenu?.parentElement ?? root.current?.parentElement ?? document.body);
+  }, []);
+  useLayoutEffect(() => {
+    // The application popover owns a document-level Escape listener. Capture
+    // the first Escape while focus is in a portaled submenu so the category
+    // list remains available; the next Escape reaches the application menu.
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      const active = openRef.current;
+      if (active === null) return;
+      const target = event.target as Node | null;
+      if (!target || !dropdowns.current[active]?.contains(target)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      pointerMenu.current = null;
+      triggers.current[active]?.focus();
+      setOpen(null);
+    };
+    document.addEventListener('keydown', onEscape, true);
+    return () => document.removeEventListener('keydown', onEscape, true);
+  }, []);
+  useLayoutEffect(() => {
+    // The menu is mounted when the application menu opens. Put focus on its
+    // first category so keyboard users can immediately move through rows.
+    triggers.current.find((trigger) => !trigger?.disabled)?.focus();
+  }, []);
+  useLayoutEffect(() => {
     if (open === null) return;
     dropdowns.current[open]?.querySelector<HTMLElement>('[role^=menuitem]:not(:disabled)')?.focus();
-  }, [open]);
+
+    const positionSubmenu = () => {
+      const trigger = triggers.current[open],
+        dropdown = dropdowns.current[open];
+      if (!trigger || !dropdown) return;
+      const triggerRect = trigger.getBoundingClientRect(),
+        dropdownRect = dropdown.getBoundingClientRect(),
+        width = dropdownRect.width || 240,
+        height = dropdownRect.height || 0,
+        viewportPadding = 8;
+      let left = triggerRect.right + 4,
+        side: 'left' | 'right' = 'right';
+      if (left + width > innerWidth - viewportPadding) {
+        left = triggerRect.left - width - 4;
+        side = 'left';
+      }
+      left = Math.max(viewportPadding, Math.min(left, innerWidth - width - viewportPadding));
+      const top = Math.max(
+        viewportPadding,
+        Math.min(triggerRect.top, innerHeight - height - viewportPadding),
+      );
+      setSubmenuPosition((current) =>
+        current.left === left && current.top === top && current.side === side
+          ? current
+          : { left, top, side },
+      );
+    };
+    positionSubmenu();
+    window.addEventListener('resize', positionSubmenu);
+    window.addEventListener('scroll', positionSubmenu, true);
+    return () => {
+      window.removeEventListener('resize', positionSubmenu);
+      window.removeEventListener('scroll', positionSubmenu, true);
+    };
+  }, [open, portalHost]);
   const onMenuKey = (e: ReactKeyboardEvent) => {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' || e.key === 'ArrowLeft') {
       e.preventDefault();
+      e.stopPropagation();
       close(true);
       return;
     }
@@ -76,16 +153,26 @@ export function MenuBar({ menus, disabled = false }: { menus: Menu[]; disabled?:
     } else if (e.key === 'Home' || e.key === 'End') {
       e.preventDefault();
       list[e.key === 'Home' ? 0 : list.length - 1]?.focus();
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      const step = e.key === 'ArrowRight' ? 1 : -1;
-      setOpen((o) => (o === null ? o : (o + step + menus.length) % menus.length));
     }
   };
   return (
-    <div className="menubar" role="menubar" aria-label="Main menu" ref={root}>
+    <div
+      className="menubar"
+      role="menubar"
+      aria-label="Main menu"
+      aria-orientation="vertical"
+      ref={root}
+    >
       {menus.map((menu, m) => (
-        <div className="menubar-menu" key={menu.label}>
+        <div
+          className="menubar-menu"
+          key={menu.label}
+          data-submenu-side={open === m ? submenuPosition.side : undefined}
+          onPointerEnter={() => {
+            pointerMenu.current = m;
+            setOpen((current) => (current === m ? current : m));
+          }}
+        >
           <button
             ref={(el) => {
               triggers.current[m] = el;
@@ -93,38 +180,66 @@ export function MenuBar({ menus, disabled = false }: { menus: Menu[]; disabled?:
             role="menuitem"
             aria-haspopup="menu"
             aria-expanded={open === m}
+            aria-controls={`menubar-submenu-${m}`}
             disabled={disabled}
             className="menubar-trigger"
-            onClick={() => setOpen(open === m ? null : m)}
-            onPointerEnter={() => open !== null && open !== m && setOpen(m)}
+            onClick={() => {
+              const enteredByPointer = pointerMenu.current === m;
+              pointerMenu.current = null;
+              setOpen((current) =>
+                enteredByPointer && current === m ? current : current === m ? null : m,
+              );
+            }}
             onKeyDown={(e) => {
-              if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+              if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                const step = e.key === 'ArrowDown' ? 1 : -1;
+                triggers.current[(m + step + menus.length) % menus.length]?.focus();
+              } else if (e.key === 'Home' || e.key === 'End') {
+                e.preventDefault();
+                triggers.current[e.key === 'Home' ? 0 : menus.length - 1]?.focus();
+              } else if (e.key === 'ArrowRight' || e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 setOpen(m);
-              } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+              } else if (e.key === 'ArrowLeft' || e.key === 'Escape') {
                 e.preventDefault();
-                triggers.current[
-                  (m + (e.key === 'ArrowRight' ? 1 : -1) + menus.length) % menus.length
-                ]?.focus();
+                setOpen(null);
               }
             }}
           >
-            {menu.label}
+            <span>{menu.label}</span>
+            <span className="menubar-submenu-indicator" aria-hidden="true">
+              ›
+            </span>
           </button>
-          <MotionPresence show={open === m}>
-            <div
-              ref={(el) => {
-                dropdowns.current[m] = el;
-              }}
-              className="menubar-dropdown"
-              role="menu"
-              aria-label={menu.label}
-              onKeyDown={onMenuKey}
-            >
-              {renderItems(menu.items, () => close(true))}
-              {menu.footer}
-            </div>
-          </MotionPresence>
+          {portalHost
+            ? createPortal(
+                <MotionPresence show={open === m}>
+                  <div
+                    ref={(el) => {
+                      dropdowns.current[m] = el;
+                    }}
+                    className="menubar-dropdown"
+                    role="menu"
+                    id={`menubar-submenu-${m}`}
+                    aria-label={menu.label}
+                    data-editor-overlay
+                    data-submenu="true"
+                    data-side={open === m ? submenuPosition.side : undefined}
+                    style={
+                      open === m
+                        ? { left: submenuPosition.left, top: submenuPosition.top }
+                        : undefined
+                    }
+                    onKeyDown={onMenuKey}
+                  >
+                    {renderItems(menu.items, () => close(true))}
+                    {menu.footer}
+                  </div>
+                </MotionPresence>,
+                portalHost,
+              )
+            : null}
         </div>
       ))}
     </div>

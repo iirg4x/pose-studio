@@ -38,3 +38,14 @@ export function isTypingTarget(target: EventTarget | null) {
     !!target.closest('input,textarea,select,[contenteditable=true],[role=combobox]')
   );
 }
+
+/** Native controls keep their activation/navigation keys; editor shortcuts
+ * are for the viewport or an editor, not the focused chrome. */
+export function isInteractiveShortcutTarget(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    !!target.closest(
+      'button,a[href],summary,input,textarea,select,[contenteditable=true],[role=button],[role=tab],[role=checkbox],[role=radio],[role=switch],[role=slider],[role=menu],[role=dialog],dialog[open]',
+    )
+  );
+}

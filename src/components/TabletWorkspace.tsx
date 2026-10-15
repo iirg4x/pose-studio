@@ -2,7 +2,7 @@ import type { StudioScene } from '../scene/StudioScene';
 import { ActiveLayer } from './PoseActions';
 import { PreviewModel } from './PreviewModel';
 import { useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import {
   ListChecks,
   BoxSelect,
@@ -54,7 +54,13 @@ export function TabletWorkspace({
 }) {
   const s = useStudioChrome();
   const [workspaceMenu, setWorkspaceMenu] = useState(false);
-  const menuRoot = useRef<HTMLDivElement>(null);
+  const menuRoot = useRef<HTMLDivElement>(null),
+    menuTrigger = useRef<HTMLButtonElement>(null);
+  const closeMenu = (restoreFocus = false) => {
+    setWorkspaceMenu(false);
+    if (restoreFocus)
+      requestAnimationFrame(() => menuTrigger.current?.focus({ preventScroll: true }));
+  };
   useEffect(() => {
     if (!workspaceMenu) return;
     const dismiss = (event: PointerEvent) => {
@@ -62,7 +68,7 @@ export function TabletWorkspace({
       setWorkspaceMenu(false);
     };
     const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setWorkspaceMenu(false);
+      if (event.key === 'Escape' && !event.defaultPrevented) closeMenu(true);
     };
     document.addEventListener('pointerdown', dismiss, true);
     window.addEventListener('keydown', escape);
@@ -71,8 +77,38 @@ export function TabletWorkspace({
       window.removeEventListener('keydown', escape);
     };
   }, [workspaceMenu]);
+  useEffect(() => {
+    if (!workspaceMenu) return;
+    menuRoot.current
+      ?.querySelector<HTMLElement>('[role^="menuitem"]:not(:disabled)')
+      ?.focus({ preventScroll: true });
+  }, [workspaceMenu]);
+  const onMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const items = [
+      ...event.currentTarget.querySelectorAll<HTMLButtonElement>(
+        '[role^="menuitem"]:not(:disabled)',
+      ),
+    ];
+    const at = items.indexOf(document.activeElement as HTMLButtonElement);
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeMenu(true);
+    } else if (event.key === 'Tab') {
+      // The menu is a transient command surface; return to its launcher when
+      // the user leaves it so focus never lands on a removed menu item.
+      event.preventDefault();
+      closeMenu(true);
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      items[(at + step + items.length) % items.length]?.focus({ preventScroll: true });
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      items[event.key === 'Home' ? 0 : items.length - 1]?.focus({ preventScroll: true });
+    }
+  };
   const run = (action: () => void) => {
-    setWorkspaceMenu(false);
+    closeMenu(true);
     action();
   };
   return (
@@ -89,25 +125,43 @@ export function TabletWorkspace({
       </button>
       <div className="touch-workspace-menu-root" ref={menuRoot}>
         <button
+          ref={menuTrigger}
           className="touch-workspace-menu-trigger"
           aria-label="Panels and tools"
+          aria-haspopup="menu"
           aria-expanded={workspaceMenu}
           aria-controls="touch-workspace-menu"
           onClick={() => setWorkspaceMenu((open) => !open)}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setWorkspaceMenu(true);
+            } else if (event.key === 'Escape' && workspaceMenu) {
+              event.preventDefault();
+              closeMenu(true);
+            }
+          }}
         >
           <SlidersHorizontal size={20} />
           <span>Panels / tools</span>
           <ChevronDown size={16} />
         </button>
         {workspaceMenu && (
-          <div className="touch-workspace-menu" id="touch-workspace-menu" role="menu">
+          <div
+            className="touch-workspace-menu"
+            id="touch-workspace-menu"
+            role="menu"
+            aria-label="Panels and tools"
+            onKeyDown={onMenuKeyDown}
+          >
             <section>
               <strong>Panels</strong>
               {panels.map(([id, Icon, label]) => (
                 <button
                   key={id}
-                  role="menuitem"
-                  aria-pressed={panel === id}
+                  role="menuitemradio"
+                  aria-checked={panel === id}
+                  tabIndex={-1}
                   onClick={() => run(() => toggle(id))}
                 >
                   <Icon size={20} />
@@ -118,8 +172,9 @@ export function TabletWorkspace({
             <section>
               <strong>Selection</strong>
               <button
-                role="menuitem"
-                aria-pressed={!!s.boxSelection}
+                role="menuitemcheckbox"
+                aria-checked={!!s.boxSelection}
+                tabIndex={-1}
                 disabled={s.gameView || s.retargetMode}
                 onClick={() => run(boxSelect)}
               >
@@ -127,8 +182,9 @@ export function TabletWorkspace({
                 <span>Box select</span>
               </button>
               <button
-                role="menuitem"
-                aria-pressed={s.multiSelect}
+                role="menuitemcheckbox"
+                aria-checked={s.multiSelect}
+                tabIndex={-1}
                 disabled={s.gameView || s.retargetMode}
                 onClick={() => run(() => studio.patch({ multiSelect: !s.multiSelect }))}
               >
@@ -140,6 +196,7 @@ export function TabletWorkspace({
               <strong>Workspace</strong>
               <button
                 role="menuitem"
+                tabIndex={-1}
                 onClick={() =>
                   run(() => {
                     (document.querySelector('.touch-view-toggle') as HTMLButtonElement)?.click();
@@ -149,18 +206,18 @@ export function TabletWorkspace({
                 <Eye size={20} />
                 <span>View</span>
               </button>
-              <button role="menuitem" onClick={() => run(() => toggle('tools'))}>
+              <button role="menuitem" tabIndex={-1} onClick={() => run(() => toggle('tools'))}>
                 <Settings2 size={20} />
                 <span>Settings</span>
               </button>
             </section>
             <section className="touch-menu-history">
               <strong>History</strong>
-              <button role="menuitem" onClick={() => run(() => studio.undo())}>
+              <button role="menuitem" tabIndex={-1} onClick={() => run(() => studio.undo())}>
                 <Undo2 size={20} />
                 <span>Undo</span>
               </button>
-              <button role="menuitem" onClick={() => run(() => studio.redo())}>
+              <button role="menuitem" tabIndex={-1} onClick={() => run(() => studio.redo())}>
                 <Redo2 size={20} />
                 <span>Redo</span>
               </button>

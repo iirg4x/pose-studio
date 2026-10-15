@@ -1,6 +1,6 @@
 import { mirrorTimelineClipboard } from '../../core/mirrorTimeline';
 import { controllerConstraints, groundingClearance } from '../../core/controllerConstraints';
-import { mirrorControlPose, mirrorDestination } from '../../core/mirrorPose';
+import { mirrorControlPose, mirrorControlPoses, mirrorDestination } from '../../core/mirrorPose';
 import { editLayerAllowed } from '../../core/layers';
 import type { AttachmentTarget } from '../attachments';
 import * as T from 'three';
@@ -288,8 +288,7 @@ export abstract class CommandScene extends TransformScene {
     if (!p || !this.rig || !this.bodyRig || !this.store.canEditLayer()) return;
     this.apply(s.frame);
     const rig = p.editing === 'firstPerson' ? this.rig : this.bodyRig,
-      values = evaluate(p, s.frame, s.drafts),
-      poses: Partial<Record<ControlId, Pose>> = {};
+      values = evaluate(p, s.frame, s.drafts);
     const rest = (id: ControlId) => {
       const bone = CONTROLS[id].bone,
         r = bone && rig.rest.get(bone);
@@ -300,21 +299,15 @@ export abstract class CommandScene extends TransformScene {
           }
         : { world: new T.Matrix4(), parent: new T.Matrix4() };
     };
-    for (const id of this.store.selectedControls()) {
-      const target = mirrorDestination(id);
-      if (!target || !controlEnabled(p, target, s.frame)) continue;
-      const a = rest(id),
-        b = rest(target);
-      poses[target] = mirrorControlPose(
-        values[id],
-        a.world,
-        b.world,
-        isBoneControl(id) || CONTROLS[id].kind === 'pivot',
-        a.parent,
-        b.parent,
-        matrix(values.root),
-      );
-    }
+    const poses = mirrorControlPoses(
+      values,
+      this.store.selectedControls().filter((id) => {
+        const target = mirrorDestination(id);
+        return !!target && controlEnabled(p, target, s.frame);
+      }),
+      rest,
+      matrix(values.root),
+    );
     if (!Object.keys(poses).length) {
       this.store.patch({ message: 'Select matching IK or FK controls on both sides to mirror.' });
       return;

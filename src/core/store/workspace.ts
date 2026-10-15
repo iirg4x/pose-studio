@@ -4,13 +4,16 @@ import { controllerConstraints, validateControllerConstraints } from '../control
 import type { ControllerConstraint } from '../controllerConstraints';
 import {
   readPreference,
-  readRecovery,
+  acceptRecoveryCandidate,
+  readRecoveryCandidate,
+  readRecoveryCandidates,
+  rejectRecoveryCandidate,
   RECOVERY,
   isTouch as isAndroid,
 } from '../../platform/storage';
 import { blankProject, hydratePropTracks, projectProps } from '../assets';
 import type { PropAsset } from '../assets';
-import { registerPropControl } from '../controls';
+import { collectPropControlIds, commitPropControls, withProposedPropControls } from '../controls';
 import type { RetargetCharacter } from '../retarget';
 import {
   IDS,
@@ -26,9 +29,212 @@ import { entry, library, newId, validateLibrary, refreshBases, sourceWouldCycle 
 import type { AnimationLibrary } from '../library';
 import { SelectionStore } from './selection';
 import type { StudioState } from './core';
+import {
+  sameEditableWorkspace,
+  sameWorkspaceClipIds,
+  type WorkspaceHistoryEntry,
+  type WorkspaceHistoryState,
+} from './workspaceHistory';
 
 /** Projects, animation clips, characters, props and body sources. */
 export class WorkspaceStore extends SelectionStore {
+  /** Workspace edits share an ordered stream alongside the active clip history. */
+  protected workspacePast: WorkspaceHistoryEntry[] = [];
+  protected workspaceFuture: WorkspaceHistoryEntry[] = [];
+  /** Suppress recording while a saved workspace snapshot is being replayed. */
+  protected workspaceHistoryReplay = false;
+  /** Captured before a workspace method mutates history before calling patch(). */
+  protected pendingWorkspaceHistoryBefore: WorkspaceHistoryState | null = null;
+
+  /**
+   * Workspace mutations share the same ordered undo stream as project edits.
+   * Most workspace methods build a new library and call patch({ workspace });
+   * capture those calls here so rename/preview/character edits do not leave a
+   * deletion entry stranded behind an untracked workspace change.
+   */
+  patch(value: Partial<StudioState>) {
+    const tracksWorkspace = !!value.workspace && !this.workspaceHistoryReplay;
+    const before = tracksWorkspace
+      ? (this.pendingWorkspaceHistoryBefore ?? this.captureWorkspaceHistoryState())
+      : null;
+    if (tracksWorkspace) this.pendingWorkspaceHistoryBefore = null;
+    super.patch(value);
+    if (!tracksWorkspace) return;
+    const after = this.captureWorkspaceHistoryState();
+    if (!before || !after || sameEditableWorkspace(before.workspace, after.workspace)) return;
+    // A new workspace edit invalidates the active clip's project redo as well.
+    // Keep that invalidation in the snapshots so undoing this edit cannot
+    // resurrect a redo branch that was already discarded by the edit.
+    this.future = [];
+    before.future = [];
+    after.future = [];
+    this.recordWorkspaceHistory(before, after);
+  }
+
+  /** Start a workspace edit whose caller must mutate history before patch(). */
+  protected beginWorkspaceHistoryEdit(workspace: AnimationLibrary) {
+    this.future = [];
+    this.workspaceFuture = [];
+    this.pendingWorkspaceHistoryBefore = this.captureWorkspaceHistoryState(workspace);
+  }
+
+  /** Project commits also invalidate a pending workspace redo branch. */
+  protected commitTracks(project: Project, message?: string) {
+    const hadProject = !!this.state.project,
+      result = super.commitTracks(project, message);
+    if (hadProject && result !== false) this.workspaceFuture = [];
+    return result;
+  }
+
+  protected captureWorkspaceHistoryState(
+    workspace = this.workspaceSnapshot(),
+  ): WorkspaceHistoryState | null {
+    if (!workspace || !this.state.project) return null;
+    return {
+      workspace: clone(workspace),
+      project: clone(this.state.project),
+      frame: this.state.frame,
+      selected: this.state.selected,
+      selection: clone(this.state.selection),
+      drafts: clone(this.state.drafts),
+      playing: this.state.playing,
+      timelineSelection: clone(this.state.timelineSelection),
+      past: clone(this.past),
+      future: clone(this.future),
+      histories: [...this.histories.entries()].map(([id, history]) => [
+        id,
+        { past: clone(history.past), future: clone(history.future) },
+      ]),
+    };
+  }
+
+  protected recordWorkspaceHistory(
+    before: WorkspaceHistoryState | null,
+    after: WorkspaceHistoryState | null,
+  ) {
+    if (!before || !after || sameEditableWorkspace(before.workspace, after.workspace)) return;
+    this.workspacePast.push({ before, after });
+    if (this.workspacePast.length > 80) this.workspacePast.shift();
+    this.workspaceFuture = [];
+  }
+
+  protected restoreWorkspaceHistoryState(
+    snapshot: WorkspaceHistoryState,
+    message: string,
+    preserveNavigation = false,
+  ) {
+    this.endGesture();
+    const currentWorkspace = this.workspaceSnapshot(),
+      restoredWorkspace = clone(snapshot.workspace);
+    const characterIds = new Set(
+      (restoredWorkspace.characters ?? []).map((character) => character.id),
+    );
+    if (currentWorkspace) {
+      if (
+        currentWorkspace.activeCharacterId === undefined ||
+        characterIds.has(currentWorkspace.activeCharacterId)
+      )
+        restoredWorkspace.activeCharacterId = currentWorkspace.activeCharacterId;
+      if (
+        currentWorkspace.previewCharacterId === undefined ||
+        characterIds.has(currentWorkspace.previewCharacterId)
+      )
+        restoredWorkspace.previewCharacterId = currentWorkspace.previewCharacterId;
+    }
+    let project = clone(snapshot.project),
+      frame = snapshot.frame,
+      selected = snapshot.selected,
+      drafts = clone(snapshot.drafts),
+      past = clone(snapshot.past),
+      future = clone(snapshot.future);
+    if (
+      preserveNavigation &&
+      currentWorkspace &&
+      sameWorkspaceClipIds(currentWorkspace, restoredWorkspace) &&
+      restoredWorkspace.clips.some((clip) => clip.id === currentWorkspace.activeId)
+    ) {
+      restoredWorkspace.activeId = currentWorkspace.activeId;
+      const active = restoredWorkspace.clips.find(
+        (clip) => clip.id === restoredWorkspace.activeId,
+      )!;
+      restoredWorkspace.openIds = currentWorkspace.openIds.filter((id) =>
+        restoredWorkspace.clips.some((clip) => clip.id === id),
+      );
+      if (!restoredWorkspace.openIds.includes(restoredWorkspace.activeId))
+        restoredWorkspace.openIds.push(restoredWorkspace.activeId);
+      project = clone(active.project);
+      frame = active.frame;
+      selected = active.selected;
+      drafts = clone(active.drafts);
+      const activeHistory = snapshot.histories.find(
+        ([id]) => id === restoredWorkspace.activeId,
+      )?.[1];
+      past = clone(activeHistory?.past ?? []);
+      future = clone(activeHistory?.future ?? []);
+    }
+    this.histories = new Map(
+      snapshot.histories.map(([id, history]) => [
+        id,
+        { past: clone(history.past), future: clone(history.future) },
+      ]),
+    );
+    this.past = past;
+    this.future = future;
+    for (const clip of restoredWorkspace.clips) hydratePropTracks(clip.project);
+    const replaying = this.workspaceHistoryReplay;
+    this.workspaceHistoryReplay = true;
+    try {
+      this.patch({
+        workspace: restoredWorkspace,
+        project,
+        frame,
+        selected,
+        selection: clone(snapshot.selection),
+        drafts,
+        playing: snapshot.playing,
+        timelineSelection: clone(snapshot.timelineSelection),
+        revision: this.state.revision + 1,
+        playbackSeek: this.state.playbackSeek + 1,
+        message,
+      });
+    } finally {
+      this.workspaceHistoryReplay = replaying;
+    }
+    this.hydrateAssets();
+  }
+
+  undo() {
+    const history = this.workspacePast.at(-1),
+      current = this.workspaceSnapshot();
+    if (history && current && sameEditableWorkspace(current, history.after.workspace)) {
+      this.workspacePast.pop();
+      this.workspaceFuture.push(history);
+      this.restoreWorkspaceHistoryState(
+        history.before,
+        'Restored deleted project item',
+        sameWorkspaceClipIds(current, history.before.workspace),
+      );
+      return;
+    }
+    super.undo();
+  }
+
+  redo() {
+    const history = this.workspaceFuture.at(-1),
+      current = this.workspaceSnapshot();
+    if (history && current && sameEditableWorkspace(current, history.before.workspace)) {
+      this.workspaceFuture.pop();
+      this.workspacePast.push(history);
+      this.restoreWorkspaceHistoryState(
+        history.after,
+        'Redid deletion',
+        sameWorkspaceClipIds(current, history.after.workspace),
+      );
+      return;
+    }
+    super.redo();
+  }
+
   addCharacter(character: RetargetCharacter) {
     const w = this.workspaceSnapshot();
     if (!w) return;
@@ -86,13 +292,21 @@ export class WorkspaceStore extends SelectionStore {
   }
   addProp(asset: PropAsset) {
     const id = ('prop:' + randomId()) as ControlId;
-    registerPropControl(id);
-    this.hydrateAssets();
-    const p = clone(this.state.project!);
-    p.props = { ...projectProps(p), [id]: asset };
-    hydratePropTracks(p);
-    this.commit(p, 'Added ' + asset.name);
-    this.selectControl(id);
+    const result = withProposedPropControls(
+      [id],
+      () => {
+        const p = clone(this.state.project!);
+        p.props = { ...projectProps(p), [id]: asset };
+        hydratePropTracks(p);
+        this.commit(p, 'Added ' + asset.name);
+        return { accepted: this.state.project === p, propControls: collectPropControlIds(p) };
+      },
+      false,
+    );
+    if (result.accepted) {
+      commitPropControls(result.propControls);
+      this.selectControl(id);
+    }
     return id;
   }
   configureConstraint(id: ControlId, value: Partial<ControllerConstraint>) {
@@ -146,23 +360,39 @@ export class WorkspaceStore extends SelectionStore {
       );
     } catch {}
   }
-  init(rest: Partial<Record<ControlId, Pose>>) {
+  async init(rest: Partial<Record<ControlId, Pose>>) {
     this.resetProject = createProject(rest, false);
     let workspace = library(blankProject(rest)),
       message = 'Ready · open a project or import assets';
     workspace.name = 'Untitled project';
-    try {
-      const saved =
-        readRecovery() ??
-        readPreference(RECOVERY) ??
-        localStorage.getItem('manny-studio-project-v1');
-      if (saved) {
-        workspace = validateLibrary(typeof saved === 'string' ? JSON.parse(saved) : saved);
-        message = 'Recovered your animation project';
+    let failedRecovery = false;
+    for (const candidate of readRecoveryCandidates()) {
+      try {
+        const candidateData = await readRecoveryCandidate(candidate);
+        const saved = typeof candidateData === 'string' ? JSON.parse(candidateData) : candidateData;
+        workspace = validateLibrary(saved);
+        acceptRecoveryCandidate(candidate, workspace);
+        message = failedRecovery
+          ? 'Recovered an older autosave · the failed copy is preserved'
+          : 'Recovered your animation project';
+        break;
+      } catch (error) {
+        failedRecovery = true;
+        await rejectRecoveryCandidate(candidate, error);
       }
-    } catch {
-      message = 'Could not restore autosave; opened a blank project.';
     }
+    if (!readRecoveryCandidates().length) {
+      try {
+        const saved = readPreference(RECOVERY) ?? localStorage.getItem('manny-studio-project-v1');
+        if (saved) {
+          workspace = validateLibrary(typeof saved === 'string' ? JSON.parse(saved) : saved);
+          message = 'Recovered your animation project';
+        }
+      } catch {
+        message = 'Could not restore autosave; opened a blank project.';
+      }
+    } else if (failedRecovery && message === 'Ready · open a project or import assets')
+      message = 'Could not restore autosave; the original recovery is preserved.';
     try {
       const hidden = JSON.parse(localStorage.getItem('manny-studio-control-visibility-v1') ?? '{}');
       this.state.hiddenControls = {
@@ -200,20 +430,29 @@ export class WorkspaceStore extends SelectionStore {
     this.histories.clear();
     this.past = [];
     this.future = [];
+    this.workspacePast = [];
+    this.workspaceFuture = [];
+    this.pendingWorkspaceHistoryBefore = null;
     for (const clip of workspace.clips) hydratePropTracks(clip.project);
     const active = workspace.clips.find((c) => c.id === workspace.activeId)!;
-    this.patch({
-      timelineSelection: [],
-      workspace,
-      project: clone(active.project),
-      frame: active.frame,
-      selected: active.selected,
-      drafts: clone(active.drafts),
-      playing: false,
-      ready: true,
-      revision: this.state.revision + 1,
-      message,
-    });
+    const replaying = this.workspaceHistoryReplay;
+    this.workspaceHistoryReplay = true;
+    try {
+      this.patch({
+        timelineSelection: [],
+        workspace,
+        project: clone(active.project),
+        frame: active.frame,
+        selected: active.selected,
+        drafts: clone(active.drafts),
+        playing: false,
+        ready: true,
+        revision: this.state.revision + 1,
+        message,
+      });
+    } finally {
+      this.workspaceHistoryReplay = replaying;
+    }
   }
   activate(id: string) {
     const workspace = this.workspaceSnapshot();
@@ -261,6 +500,7 @@ export class WorkspaceStore extends SelectionStore {
     const before = this.workspaceSnapshot(),
       removed = before?.clips.find((c) => c.id === id);
     if (!before || !removed) return;
+    this.beginWorkspaceHistoryEdit(before);
     const workspace = deleteLibraryAnimation(before, id, () => blankProject()),
       active = workspace.clips.find((c) => c.id === workspace.activeId)!;
     this.histories.set(before.activeId, { past: this.past, future: this.future });
@@ -281,7 +521,7 @@ export class WorkspaceStore extends SelectionStore {
       timelineSelection: [],
       revision: this.state.revision + 1,
       playbackSeek: this.state.playbackSeek + 1,
-      message: 'Deleted “' + removed.project.name + '” from this project',
+      message: 'Deleted “' + removed.project.name + '” from this project · Undo to restore',
     });
   }
   setPreviewTiming(mode: 'time' | 'phase') {
@@ -323,6 +563,7 @@ export class WorkspaceStore extends SelectionStore {
       this.updateProject({ name });
       return;
     }
+    this.beginWorkspaceHistoryEdit(workspace);
     const history = this.histories.get(id) ?? { past: [], future: [] };
     history.past.push(clone(clip.project));
     if (history.past.length > 80) history.past.shift();
@@ -359,7 +600,8 @@ export class WorkspaceStore extends SelectionStore {
     this.activate(next.id);
   }
   importAnimations(input: unknown) {
-    const incoming = validateLibrary(input),
+    const propControls = collectPropControlIds(input),
+      incoming = validateLibrary(input, { commitPropControls: false }),
       workspace = this.workspaceSnapshot();
     if (!workspace) return;
     if (workspace.poses.length + incoming.poses.length > 200)
@@ -386,6 +628,7 @@ export class WorkspaceStore extends SelectionStore {
       ];
       workspace.activeCharacterId ??= workspace.characters[0].id;
     }
+    commitPropControls(propControls);
     workspace.clips.push(...imported);
     workspace.poses.push(...incoming.poses.map((p) => ({ ...clone(p), id: newId() })));
     this.patch({ workspace });
@@ -475,7 +718,10 @@ export class WorkspaceStore extends SelectionStore {
   renameWorkspace(name: string) {
     const workspace = this.workspaceSnapshot();
     if (!workspace) return;
-    workspace.name = name.slice(0, 100);
+    const nextName = name.slice(0, 100);
+    if (workspace.name === nextName) return;
+    this.beginWorkspaceHistoryEdit(workspace);
+    workspace.name = nextName;
     this.patch({ workspace });
   }
   setLayer(layer: RigLayer) {

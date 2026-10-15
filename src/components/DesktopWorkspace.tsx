@@ -6,8 +6,7 @@ import {
   Redo2,
   Library,
   Settings2,
-  PanelRightOpen,
-  X,
+  ChevronLeft,
   ListVideo,
   Play,
   Pause,
@@ -64,6 +63,7 @@ export function DesktopWorkspace({
   scene,
   controls,
   inspector,
+  controllerTools,
   animations,
   sizes,
   resize,
@@ -79,6 +79,8 @@ export function DesktopWorkspace({
   controls: ReactNode;
   /** Animate: selection properties. Setup: bone mapping. */
   inspector: ReactNode;
+  /** Fine-pointer pose actions docked beside the contextual properties panel. */
+  controllerTools?: ReactNode;
   animations: ReactNode;
   sizes: { controls: number; inspector: number; timeline: number };
   resize: (panel: 'controls' | 'inspector' | 'timeline', size: number) => void;
@@ -91,6 +93,11 @@ export function DesktopWorkspace({
   toggleEditors: () => void;
 }) {
   const s = useStudioChrome({ frame: 'none' });
+  useEffect(() => {
+    const onToggleProperties = () => toggleProperties();
+    window.addEventListener('pose-toggle-properties', onToggleProperties);
+    return () => window.removeEventListener('pose-toggle-properties', onToggleProperties);
+  }, [toggleProperties]);
   // The library opens as a dropdown under its trigger, kept inside the window.
   const [library, setLibraryOpen] = useState<CSSProperties | null>(null);
   const libraryPresence = usePresence(library);
@@ -133,7 +140,7 @@ export function DesktopWorkspace({
       <div className="desktop-context-cluster">
         <nav className="desktop-panel-nav" aria-label="Animation">
           <button
-            className="desktop-clip-trigger"
+            className="desktop-header-trigger desktop-clip-trigger"
             title="Animation library"
             aria-label="Animation library"
             aria-expanded={!!library}
@@ -141,21 +148,18 @@ export function DesktopWorkspace({
           >
             <Library size={14} />
             <strong>{s.project?.name ?? 'Animations'}</strong>
-            <ChevronDown size={12} />
+            <ChevronDown className="header-chevron" size={12} />
           </button>
         </nav>
       </div>
       <nav className="desktop-utilities" aria-label="Workspace utilities">
         {s.project && !retarget && <ActiveLayer />}
         <button
-          onClick={toggleProperties}
-          aria-label="Properties"
-          aria-pressed={layout.properties}
-          title="Properties"
+          className="desktop-header-trigger desktop-settings-trigger"
+          onClick={openSettings}
+          title="Settings"
+          aria-label="Settings"
         >
-          <PanelRightOpen size={15} />
-        </button>
-        <button onClick={openSettings} title="Settings" aria-label="Settings">
           <Settings2 size={15} />
         </button>
       </nav>
@@ -174,6 +178,15 @@ export function DesktopWorkspace({
     // Retain the last useful inspector while selection-clear closes it. This
     // avoids flashing the empty selection state during the exit transition.
     propertiesPresence = usePresence(showProperties ? { inspector, retarget } : null);
+  const finePointer = window.matchMedia?.('(pointer: fine)').matches ?? true;
+  const showControllerRail =
+    finePointer && !retarget && controllerTools != null && s.selection.length > 0;
+  const controllerRail = showControllerRail ? (
+    <PropertiesControllerRail
+      tools={controllerTools}
+      expanded={showProperties && !propertiesPresence.exiting}
+    />
+  ) : null;
   return (
     <div
       className={'animate-layout' + (retarget ? ' setup-layout' : '')}
@@ -257,18 +270,42 @@ export function DesktopWorkspace({
             {propertiesPresence.value.retarget && (
               <header className="desktop-inspector-header">
                 <h2>Bone mapping</h2>
-                {!propertiesPresence.value.retarget && (
-                  <button aria-label="Close properties" onClick={toggleProperties}>
-                    <X size={16} />
-                  </button>
-                )}
               </header>
             )}
-            <div className="side-content">{propertiesPresence.value.inspector}</div>
+            <div className="properties-dock-shell">
+              {controllerRail}
+              <div className="side-content">{propertiesPresence.value.inspector}</div>
+            </div>
           </aside>
         </>
       )}
+      {!propertiesPresence.value && controllerRail && (
+        <aside className="properties-collapsed-rail" aria-label="Pose tools">
+          {controllerRail}
+        </aside>
+      )}
       <TimeSlider editors={showEditors} toggleEditors={toggleEditors} />
+    </div>
+  );
+}
+
+function PropertiesControllerRail({ tools, expanded }: { tools: ReactNode; expanded: boolean }) {
+  const toggle = () => window.dispatchEvent(new Event('pose-toggle-properties'));
+  return (
+    <div className="properties-controller-rail" data-expanded={expanded}>
+      <div className="properties-controller-tools">{tools}</div>
+      {!expanded && (
+        <button
+          type="button"
+          className="properties-rail-toggle"
+          aria-label="Expand properties"
+          title="Expand properties"
+          aria-expanded={false}
+          onClick={toggle}
+        >
+          <ChevronLeft size={17} />
+        </button>
+      )}
     </div>
   );
 }
@@ -386,7 +423,24 @@ function TimeSlider({ editors, toggleEditors }: { editors: boolean; toggleEditor
       >
         <SkipForward size={15} />
       </button>
-      <output aria-label="Current frame">{s.frame}</output>
+      <ScrubNumber
+        className="time-current-frame"
+        aria-label="Current frame"
+        title="Current frame"
+        type="number"
+        min={0}
+        max={s.end}
+        step={0.01}
+        value={s.frame}
+        disabled={!s.ready || s.setup}
+        onChange={(e) => {
+          if (e.target.value === '') return;
+          const value = Number(e.target.value);
+          if (Number.isFinite(value)) {
+            studio.setFrame(Math.max(0, Math.min(s.end, value)));
+          }
+        }}
+      />
       <span className="time-slash">/</span>
       <ScrubNumber
         aria-label="End frame"

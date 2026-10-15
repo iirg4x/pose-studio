@@ -1,15 +1,51 @@
 import { describe, it, expect } from 'vitest';
 import { Matrix4, Quaternion, Vector3 } from 'three';
-import { mirrorControlPose, mirrorDestination } from '../src/core/mirrorPose';
+import { mirrorControlPose, mirrorControlPoses, mirrorDestination } from '../src/core/mirrorPose';
 import { propControlShape } from '../src/scene/propControlShape';
 import { Box3 } from 'three';
 import { StudioStore } from '../src/core/store';
 import { createProject, clone, evaluate, pose, matrix } from '../src/core/model';
+import { CommandScene } from '../src/scene/studio/commands';
 const near = (a: number[], b: number[]) => a.forEach((v, i) => expect(v).toBeCloseTo(b[i], 6));
 const turn = (x: number, y: number, z: number, r: number) =>
   new Matrix4().makeRotationFromQuaternion(
     new Quaternion().setFromAxisAngle(new Vector3(x, y, z).normalize(), r),
   );
+const rest = () => ({ world: new Matrix4(), parent: new Matrix4() });
+const invokeMirror = (store: StudioStore) => {
+  const rig = {
+    rest: new Map([
+      [
+        'hand_l',
+        { world: new Matrix4(), p: new Vector3(), q: new Quaternion(), s: new Vector3(1, 1, 1) },
+      ],
+      [
+        'hand_r',
+        { world: new Matrix4(), p: new Vector3(), q: new Quaternion(), s: new Vector3(1, 1, 1) },
+      ],
+      [
+        'lowerarm_l',
+        { world: new Matrix4(), p: new Vector3(), q: new Quaternion(), s: new Vector3(1, 1, 1) },
+      ],
+      [
+        'lowerarm_r',
+        { world: new Matrix4(), p: new Vector3(), q: new Quaternion(), s: new Vector3(1, 1, 1) },
+      ],
+    ]),
+  };
+  const scene = Object.create(CommandScene.prototype) as unknown as {
+    store: StudioStore;
+    rig: typeof rig;
+    bodyRig: typeof rig;
+    apply: () => void;
+    mirrorSelectedPose: () => void;
+  };
+  scene.store = store;
+  scene.rig = rig;
+  scene.bodyRig = rig;
+  scene.apply = () => {};
+  scene.mirrorSelectedPose();
+};
 describe('Pose actions', () => {
   it('maps opposite controls without treating a prop name as a bone', () => {
     expect(mirrorDestination('hand_l')).toBe('hand_r');
@@ -47,6 +83,73 @@ describe('Pose actions', () => {
     near(matrix(mirrorControlPose(pose(), a, b, true, pa, pb)).toArray(), new Matrix4().toArray());
     const result = mirrorControlPose(value, a, b, true, pa, pb);
     near(matrix(mirrorControlPose(result, b, a, true, pb, pa)).toArray(), matrix(value).toArray());
+  });
+  it('builds mirrored multi-selection targets from one deterministic source snapshot', () => {
+    const values = {
+        hand_l: pose([0.4, 1, 0]),
+        hand_r: pose([-0.8, 1.1, 0.2]),
+      },
+      forward = mirrorControlPoses(values, ['hand_l', 'hand_r'], rest, new Matrix4()),
+      reverse = mirrorControlPoses(values, ['hand_r', 'hand_l'], rest, new Matrix4());
+    expect(forward).toEqual(reverse);
+    near(forward.hand_l!.p, [0.8, 1.1, 0.2]);
+    near(forward.hand_r!.p, [-0.4, 1, 0]);
+  });
+  it('mirrors the current selected pose around a moved root without mutating its source', () => {
+    const p = createProject({}, false);
+    p.tracks.root.keys[0].p = [2, 0, 0];
+    p.tracks.hand_l.keys[0].p = [0.4, 1, 0];
+    const s = new StudioStore();
+    s.open(p);
+    s.patch({ selected: 'hand_l', selection: ['hand_l'] });
+    const before = clone(s.state.project!),
+      source = clone(evaluate(before, 0).hand_l);
+    invokeMirror(s);
+    const mirrored = evaluate(s.state.project!, 0);
+    expect(mirrored.hand_l).toEqual(source);
+    near(mirrored.hand_r.p, [1.6, 1, 0]);
+    expect(s.state.project!.tracks.hand_r.keys.some((key) => key.frame === 0)).toBe(true);
+    s.undo();
+    expect(s.state.project).toEqual(before);
+  });
+  it('mirrors a selected FK bone frame while leaving the source bone untouched', () => {
+    const p = createProject({}, false);
+    p.limbModes = {
+      firstPerson: {
+        arm_l: [{ frame: 0, mode: 'fk' }],
+        arm_r: [{ frame: 0, mode: 'fk' }],
+      },
+    };
+    p.tracks.wrist_l.keys[0] = {
+      ...pose([0.2, 0.4, 0], [0, 0.2, 0, Math.sqrt(0.96)]),
+      frame: 0,
+    };
+    const s = new StudioStore();
+    s.open(p);
+    s.patch({ selected: 'wrist_l', selection: ['wrist_l'] });
+    const before = clone(s.state.project!),
+      source = clone(evaluate(before, 0).wrist_l);
+    invokeMirror(s);
+    const mirrored = evaluate(s.state.project!, 0);
+    expect(mirrored.wrist_l).toEqual(source);
+    near(mirrored.wrist_r.p, [-0.2, 0.4, 0]);
+    expect(s.state.project!.tracks.wrist_r.keys.some((key) => key.frame === 0)).toBe(true);
+  });
+  it('keeps source drafts and writes only the counterpart draft when Auto key is off', () => {
+    const s = new StudioStore();
+    s.open(createProject({}, false));
+    s.patch({
+      selected: 'hand_l',
+      selection: ['hand_l'],
+      autoKey: false,
+      drafts: { hand_l: pose([0.4, 1, 0]) },
+    });
+    const before = clone(s.state.project!);
+    invokeMirror(s);
+    expect(s.state.project).toEqual(before);
+    expect(s.state.drafts.hand_l!.p).toEqual([0.4, 1, 0]);
+    near(evaluate(s.state.project!, 0, s.state.drafts).hand_r.p, [-0.4, 1, 0]);
+    expect(s.state.drafts.hand_r).toBeDefined();
   });
   it('pastes to the active layer as an unkeyed preview, then keys and undoes it', () => {
     const s = new StudioStore();

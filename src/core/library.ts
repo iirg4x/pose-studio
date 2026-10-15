@@ -2,7 +2,7 @@ import { randomId } from './crypto';
 import { validateFolder } from './animationFolders';
 import { inferPoseLinks } from '../../shared/pose-links.mjs';
 import { refreshPoseLinks } from './poseReferences';
-import { registerPropControl } from './controls';
+import { collectPropControlIds, withProposedPropControls } from './controls';
 import { projectProps } from './assets';
 import { validateCharacters } from './retarget';
 import type { RetargetCharacter } from './retarget';
@@ -243,6 +243,14 @@ export function validateLibrary(
   options: ProjectValidationOptions = {},
 ): AnimationLibrary {
   if (!input || typeof input !== 'object') throw Error('This is not a Manny project.');
+  return withProposedPropControls(
+    collectPropControlIds(input),
+    () => validateLibraryOwned(input, options),
+    options.commitPropControls !== false,
+  );
+}
+
+function validateLibraryOwned(input: unknown, options: ProjectValidationOptions): AnimationLibrary {
   if ((input as { version: number }).version !== 3) return library(validateProject(input, options));
   const raw = input as AnimationLibrary;
   // Validate each project once; embedded model bytes are restored by the file layer.
@@ -279,11 +287,6 @@ export function validateLibrary(
     !(data.characters ?? []).some((c) => c.id === data.previewCharacterId)
   )
     throw Error('Invalid preview model.');
-  // Register every prop identity before validating references across clips.
-  for (const clip of data.clips)
-    if (clip.project?.props)
-      for (const id of Object.keys(clip.project.props))
-        if (id.startsWith('prop:')) registerPropControl(id as ControlId);
   const ids = new Set<string>();
   for (const clip of data.clips) {
     if (typeof clip.id !== 'string' || !clip.id || clip.id.length > 100 || ids.has(clip.id))
@@ -292,7 +295,7 @@ export function validateLibrary(
     ids.add(clip.id);
     clip.project = validateProject(clip.project, options);
     if (
-      !Number.isInteger(clip.frame) ||
+      !Number.isFinite(clip.frame) ||
       clip.frame < 0 ||
       clip.frame > clip.project.end ||
       !IDS.includes(clip.selected)

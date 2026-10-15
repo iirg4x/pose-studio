@@ -1,4 +1,17 @@
 import { useCompactViewport } from './hooks/compactViewport';
+import { FailureNotice } from './components/FailureNotice';
+import { PoseActions } from './components/PoseActions';
+import { reportFailure } from './platform/feedback';
+import { RecoveryNotice } from './components/RecoveryNotice';
+import { UpdateProgress } from './components/UpdateProgress';
+import { useModalFocus } from './hooks/modalFocus';
+import {
+  configurePwaUpdate,
+  initializePwa,
+  notifyPwaIdle,
+  appInstallSnapshot,
+} from './platform/pwa';
+import { getRecoveryState, subscribeRecoveryState } from './platform/storage';
 import { useSurfaceOcclusion } from './hooks/surfaceOcclusion';
 import { DesktopWorkspace, useDesktopLayout } from './components/DesktopWorkspace';
 import { MenuBar, ContextMenu } from './components/MenuBar';
@@ -29,7 +42,6 @@ import { ControlList } from './components/ControlList';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Box,
-  ChevronDown,
   Waypoints,
   Video,
   Upload,
@@ -47,7 +59,7 @@ import {
   consumeSceneDismiss,
   useTransientPopover,
 } from './hooks/transientPopover';
-import { SHORTCUTS, isTypingTarget } from './core/shortcuts';
+import { SHORTCUTS, isTypingTarget, isInteractiveShortcutTarget } from './core/shortcuts';
 import { AssetLibrary } from './components/AssetLibrary';
 import { AnimationImport } from './components/AnimationImport';
 import { blankProject } from './core/assets';
@@ -83,6 +95,13 @@ export default function App() {
     [importing, setImporting] = useState(false),
     [settingsOpen, setSettingsOpen] = useState(false);
   const [newAction, setNewAction] = useState<RigLayer | null>(null);
+  const settingsDialog = useRef<HTMLElement>(null),
+    helpDialog = useRef<HTMLElement>(null);
+  useModalFocus({
+    rootRef: settingsDialog,
+    enabled: settingsOpen,
+    onEscape: () => setSettingsOpen(false),
+  });
   useEffect(() => {
     const open = () => setExporting(true);
     window.addEventListener('pose-export-shared', open);
@@ -105,6 +124,7 @@ export default function App() {
     projectMenu = useRef<HTMLDivElement>(null),
     projectTrigger = useRef<HTMLButtonElement>(null);
   const poseMenuPresence = usePresence(poseMenu);
+  useModalFocus({ rootRef: helpDialog, enabled: help, onEscape: () => setHelp(false) });
   const projectPopover = useTransientPopover({
     owner: 'project',
     open: menu,
@@ -313,6 +333,7 @@ export default function App() {
         if (p) receive(p, merge);
       } catch (e) {
         studio.patch({ message: (e as Error).message });
+        reportFailure('Could not open project: ' + (e as Error).message);
       }
     } else fileInput.current?.click();
     setMenu(false);
@@ -343,14 +364,93 @@ export default function App() {
         const data = studio.recoverySnapshot();
         if (data) await writeRecovery(data);
         setSaved('Recovery copy up to date');
-      } catch {
+      } catch (error) {
+        if (getRecoveryState().writeHeld) {
+          setSaved('Recovery needs attention');
+          return;
+        }
         setSaved('Save needed · autosave full');
+        reportFailure('Could not save local recovery: ' + (error as Error).message);
       }
     }, 650);
     return () => clearTimeout(t);
   }, [s.project, s.workspace, s.drafts]);
+  const updateBlocked = useRef(false);
+  updateBlocked.current =
+    exporting ||
+    recording ||
+    characterExport ||
+    importing ||
+    assets ||
+    !!newAction ||
+    !!file.pending ||
+    file.busy ||
+    settingsOpen ||
+    help ||
+    menu;
+  useEffect(() => {
+    if (!isPwaBuild) return;
+    void initializePwa();
+    return configurePwaUpdate({
+      canReload: () => ({
+        allowed:
+          studio.state.ready &&
+          !studio.state.interacting &&
+          !studio.state.playing &&
+          !updateBlocked.current &&
+          !getRecoveryState().writeHeld &&
+          !studio.state.opening &&
+          !isTypingTarget(document.activeElement),
+        reason: 'The update will apply when the current edit, playback or file operation finishes.',
+      }),
+      persistSnapshot: async () => {
+        const snapshot = studio.recoverySnapshot();
+        if (!snapshot) return false;
+        await writeRecovery(snapshot);
+      },
+      reload: () => {
+        window.dispatchEvent(new Event('pose-before-update-reload'));
+        window.location.reload();
+      },
+      onError: reportFailure,
+    });
+  }, []);
+  useEffect(() => {
+    if (isPwaBuild) notifyPwaIdle();
+  }, [
+    s.ready,
+    s.interacting,
+    s.playing,
+    s.opening,
+    file.pending,
+    file.busy,
+    exporting,
+    importing,
+    recording,
+    characterExport,
+    assets,
+    newAction,
+    settingsOpen,
+    help,
+    menu,
+  ]);
+  useEffect(() => {
+    if (!isPwaBuild) return;
+    const retry = () => {
+      queueMicrotask(() => {
+        void notifyPwaIdle();
+      });
+    };
+    const unsubscribe = subscribeRecoveryState(retry);
+    document.addEventListener('focusout', retry);
+    return () => {
+      unsubscribe();
+      document.removeEventListener('focusout', retry);
+    };
+  }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (appInstallSnapshot().updateApplying) return;
       const resetKey = e.key.toLowerCase();
       if (
         e.altKey &&
@@ -392,6 +492,9 @@ export default function App() {
         file.pending ||
         importing ||
         assets ||
+        settingsOpen ||
+        (!e.ctrlKey && !e.metaKey && isInteractiveShortcutTarget(e.target)) ||
+        !!document.querySelector('dialog[open]') ||
         (e.target as HTMLElement).closest('[role=dialog],[data-editor-overlay]')
       )
         return;
@@ -489,6 +592,11 @@ export default function App() {
             openBoxSelection();
             return;
           }
+          if (k === 't' && !isAndroid) {
+            e.preventDefault();
+            window.dispatchEvent(new Event('pose-toggle-properties'));
+            return;
+          }
           if (k === 'g' || k === 'r') {
             e.preventDefault();
             runtime.current?.beginTransform(k === 'g' ? 'translate' : 'rotate');
@@ -563,7 +671,7 @@ export default function App() {
       const key = e.key.toLowerCase();
       if (key === ' ') {
         e.preventDefault();
-        studio.patch({ playing: !studio.state.playing, drafts: {} });
+        if (!e.repeat) studio.patch({ playing: !studio.state.playing });
       } else if (key === 'k') {
         e.preventDefault();
         studio.addKey();
@@ -600,6 +708,7 @@ export default function App() {
     newAction,
     importing,
     assets,
+    settingsOpen,
   ]);
   const controls = retarget ? <CharacterPanel runtime={runtime.current} /> : <ControlList />;
   const inspector = retarget ? (
@@ -882,8 +991,8 @@ export default function App() {
           <button
             ref={projectTrigger}
             className="brand"
-            aria-label="Project menu"
-            title="Project menu"
+            aria-label="Application menu"
+            title="Application menu"
             disabled={recording || exporting}
             aria-expanded={menu}
             onClick={() => {
@@ -892,8 +1001,6 @@ export default function App() {
             }}
           >
             <Waypoints size={18} />
-            <span>Pose</span>
-            <ChevronDown size={12} />
           </button>
           <MotionPresence show={menu}>
             {!isAndroid ? (
@@ -1106,6 +1213,13 @@ export default function App() {
           scene={<Viewport onRuntime={setRuntime} onThumbs={setThumbs} />}
           controls={controls}
           inspector={inspector}
+          controllerTools={
+            <PoseActions
+              presentation="rail"
+              mirror={() => runtime.current?.mirrorSelectedPose()}
+              pasteMirrored={() => runtime.current?.pasteMirroredPose()}
+            />
+          }
           animations={
             <AnimationBar
               embedded
@@ -1215,6 +1329,9 @@ export default function App() {
         />
       )}
 
+      <FailureNotice />
+      <RecoveryNotice />
+      <UpdateProgress />
       <footer className="statusbar">
         <span role="status">{s.message}</span>
         <span>
@@ -1254,6 +1371,7 @@ export default function App() {
               );
             } catch (err) {
               studio.patch({ opening: null, message: (err as Error).message });
+              reportFailure('Could not open project: ' + (err as Error).message);
             }
           e.target.value = '';
         }}
@@ -1277,6 +1395,7 @@ export default function App() {
       <MotionOverlay show={settingsOpen}>
         <div className="modal-backdrop">
           <section
+            ref={settingsDialog}
             className="modal standalone-settings-dialog"
             role="dialog"
             aria-modal="true"
@@ -1333,7 +1452,7 @@ export default function App() {
       </MotionOverlay>
       <MotionPresence show={help} kind="overlay">
         <div className="modal-backdrop">
-          <section className="modal compact-modal" role="dialog" aria-modal="true">
+          <section ref={helpDialog} className="modal compact-modal" role="dialog" aria-modal="true">
             <header>
               <h2>Make your first animation</h2>
               <button aria-label="Close help" onClick={() => setHelp(false)}>

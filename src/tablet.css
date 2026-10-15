@@ -173,6 +173,7 @@ html.android {
   gap: 8px;
   border-radius: var(--radius-control, 6px);
 }
+.android .touch-workspace-menu button[aria-checked='true'],
 .android .touch-workspace-menu button[aria-pressed='true'] {
   color: var(--cyan);
   background: var(--selection);

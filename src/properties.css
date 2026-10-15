@@ -265,17 +265,6 @@
 .property-vector-label small::before {
   content: '· ';
 }
-/* The approved tablet inspector gives Transform one soft inset group. */
-:root
-  .app
-  .properties-editor[data-layout='full']
-  .property-section[data-property-section='transform'] {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-panel);
-  padding: 4px 8px;
-  margin-bottom: 4px;
-  background: color-mix(in srgb, var(--inset) 8%, transparent);
-}
 .properties-editor .vector-inputs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -506,6 +495,22 @@
   font-size: 13px;
   padding: 3px;
 }
+.property-section-inline-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0 0 var(--space-2);
+}
+.property-section-inline-action > span {
+  min-width: 0;
+  color: var(--secondary);
+  font-size: 11px;
+}
+.property-section-inline-action .rig-mode-switch {
+  flex: 0 0 auto;
+}
 .properties-editor .slider-row {
   margin: 7px 0;
   gap: 5px;
@@ -542,6 +547,12 @@
 }
 .save-confirmation footer {
   gap: 8px;
+}
+.save-recovery-failure {
+  margin-top: 12px;
+}
+.save-recovery-actions {
+  flex-wrap: wrap;
 }
 .save-confirmation .title-spacer {
   min-width: 8px;

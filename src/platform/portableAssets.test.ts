@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   assetHash,
+  assertGLBSize,
   decode64,
   encode64,
+  MAX_GLB_BYTES,
   validateGLB,
   embedAssets,
   restoreAssets,
@@ -23,6 +25,10 @@ function glb(json: unknown = { asset: { version: '2.0' } }) {
   return bytes;
 }
 describe('browser and Android portable assets', () => {
+  it('shares the 32 MiB GLB ceiling with metadata preflight callers', () => {
+    expect(() => assertGLBSize(MAX_GLB_BYTES)).not.toThrow();
+    expect(() => assertGLBSize(MAX_GLB_BYTES + 1)).toThrow('below 32 MB');
+  });
   it('round trips binary across native bridge chunk boundaries', () => {
     const bytes = Uint8Array.from({ length: 800003 }, (_, i) => i % 256);
     expect(decode64(encode64(bytes))).toEqual(bytes);

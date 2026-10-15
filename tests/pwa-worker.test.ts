@@ -6,7 +6,8 @@ function worker(revision = 'one', fail = false) {
   const listeners: Record<string, (event: any) => void> = {},
     stored = new Map<string, Map<string, Response>>(),
     requests: string[] = [],
-    claimed: { value: boolean } = { value: false };
+    claimed: { value: boolean } = { value: false },
+    skipped: { value: boolean } = { value: false };
   const caches = {
     async open(name: string) {
       let data = stored.get(name);
@@ -43,6 +44,9 @@ function worker(revision = 'one', fail = false) {
             claimed.value = true;
           },
         },
+        skipWaiting() {
+          skipped.value = true;
+        },
         addEventListener(type: string, fn: (e: any) => void) {
           listeners[type] = fn;
         },
@@ -64,6 +68,7 @@ function worker(revision = 'one', fail = false) {
     });
     await task;
   };
+  const message = (data: unknown) => listeners.message({ data });
   const request = async (url: string, mode = 'cors', method = 'GET') => {
     let result: Promise<Response> | undefined;
     listeners.fetch({
@@ -74,7 +79,7 @@ function worker(revision = 'one', fail = false) {
     });
     return result ? await (await result).text() : undefined;
   };
-  return { stored, requests, event, request, claimed };
+  return { stored, requests, event, request, message, claimed, skipped };
 }
 describe('installable studio cache', () => {
   it('installs the complete shell under a nested Pages path and works offline', async () => {
@@ -120,5 +125,14 @@ describe('installable studio cache', () => {
     expect(w.stored.size).toBe(2);
     expect(w.stored.has('another-app')).toBe(true);
     expect(w.claimed.value).toBe(true);
+  });
+  it('keeps updates waiting until the page explicitly asks to activate them', async () => {
+    const w = worker();
+    await w.event('install');
+    expect(w.skipped.value).toBe(false);
+    w.message({ type: 'SKIP_WAITING' });
+    expect(w.skipped.value).toBe(true);
+    w.message({ type: 'other-message' });
+    expect(w.skipped.value).toBe(true);
   });
 });

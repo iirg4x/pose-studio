@@ -1,4 +1,4 @@
-import { ActiveLayer, PoseActions } from './PoseActions';
+import { PoseActions } from './PoseActions';
 import { isTouch as isAndroid } from '../platform/storage';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -16,6 +16,7 @@ import { StudioScene } from '../scene/StudioScene';
 import { studio } from '../core/store';
 import { useStudioChrome } from '../hooks';
 import { useTransientPopover } from '../hooks/transientPopover';
+import { GraphicsFallback } from './GraphicsFallback';
 export function Viewport({
   onRuntime,
   onThumbs,
@@ -27,6 +28,8 @@ export function Viewport({
     runtime = useRef<StudioScene | null>(null),
     s = useStudioChrome(),
     [trail, setTrail] = useState(false),
+    [failure, setFailure] = useState<string | null>(null),
+    [attempt, setAttempt] = useState(0),
     [viewOptions, setViewOptions] = useState(false),
     viewPanel = useRef<HTMLDivElement>(null),
     viewTrigger = useRef<HTMLButtonElement>(null),
@@ -38,16 +41,33 @@ export function Viewport({
       triggerRef: viewTrigger,
     });
   useEffect(() => {
-    const r = new StudioScene(ref.current!, studio, () => {
-      onThumbs(r.gripThumbnails());
-    });
-    runtime.current = r;
-    onRuntime(r);
+    let r: StudioScene | undefined;
+    let active = true;
+    setFailure(null);
+    try {
+      r = new StudioScene(
+        ref.current!,
+        studio,
+        () => {
+          if (active && r) onThumbs(r.gripThumbnails());
+        },
+        (message) => {
+          if (active) setFailure(message);
+        },
+      );
+      runtime.current = r;
+      onRuntime(r);
+    } catch (error) {
+      setFailure((error as Error).message || 'The browser could not create a WebGL 2 context.');
+      onRuntime(null);
+    }
     return () => {
-      r.dispose();
+      active = false;
+      r?.dispose();
+      runtime.current = null;
       onRuntime(null);
     };
-  }, [onRuntime, onThumbs]);
+  }, [onRuntime, onThumbs, attempt]);
   return (
     <main
       className={
@@ -55,14 +75,15 @@ export function Viewport({
       }
       ref={ref}
     >
-      <div className="desktop-pose-context controller-overlay-layer">
-        {!isAndroid && <ActiveLayer />}
-        <PoseActions
-          pasteMirrored={() => runtime.current?.pasteMirroredPose()}
-          timeline
-          mirror={() => runtime.current?.mirrorSelectedPose()}
-        />
-      </div>
+      {isAndroid && (
+        <div className="desktop-pose-context controller-overlay-layer">
+          <PoseActions
+            pasteMirrored={() => runtime.current?.pasteMirroredPose()}
+            timeline
+            mirror={() => runtime.current?.mirrorSelectedPose()}
+          />
+        </div>
+      )}
       {isAndroid && (
         <button
           ref={viewTrigger}
@@ -140,7 +161,10 @@ export function Viewport({
           <Camera size={13} />
         </button>
       </div>
-      {!s.ready && (
+      {failure && (
+        <GraphicsFallback message={failure} retry={() => setAttempt((value) => value + 1)} />
+      )}
+      {!s.ready && !failure && (
         <div className="loading-overlay">
           <div className="spinner" />
           <strong>Preparing Manny</strong>

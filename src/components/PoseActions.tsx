@@ -50,9 +50,14 @@ type SelectionAnchorDetail = {
 function useControllerRibbonAnchor(
   ref: RefObject<HTMLElement | null>,
   onCompactChange?: (compact: boolean) => void,
+  enabled = true,
 ) {
   const refreshRef = useRef<() => void>(() => {});
   useEffect(() => {
+    if (!enabled) {
+      refreshRef.current = () => {};
+      return;
+    }
     let raf = 0;
     let pendingDetail: SelectionAnchorDetail | undefined;
     let latestDetail: SelectionAnchorDetail | undefined;
@@ -118,11 +123,38 @@ function useControllerRibbonAnchor(
     const place = (detail: SelectionAnchorDetail) => {
       const ribbon = ref.current;
       if (!ribbon) return;
-      const hidden = !detail.visible || !!detail.dragging || !!detail.playing || !!detail.scrubbing;
+      // Fine-pointer desktop keeps the selected-control actions in a stable
+      // lower viewport dock. The dock still follows the same selection and
+      // activity visibility contract, while coarse pointers retain the
+      // controller-adjacent placement below.
+      const desktopDocked =
+        (window.matchMedia?.('(pointer: fine)').matches ?? false) &&
+        ribbon.closest('.app.desktop-workspace') !== null;
+      const hidden =
+        (!detail.visible && !desktopDocked) ||
+        !!detail.dragging ||
+        !!detail.playing ||
+        !!detail.scrubbing;
       if (hidden) {
         ribbon.dataset.anchorVisible = 'false';
         ribbon.dataset.anchorHidden = 'true';
         pointerNearRibbon = false;
+        return;
+      }
+      if (desktopDocked) {
+        // Remove any inline anchor coordinates left by a prior coarse-pointer
+        // layout before the dock's CSS coordinates take over.
+        ribbon.style.removeProperty('left');
+        ribbon.style.removeProperty('top');
+        ribbon.style.removeProperty('--ribbon-anchor-x');
+        ribbon.style.removeProperty('--ribbon-anchor-y');
+        if (ribbon.dataset.ribbonDensity !== 'full') {
+          ribbon.dataset.ribbonDensity = 'full';
+          onCompactChange?.(false);
+        }
+        ribbon.dataset.anchorVisible = 'true';
+        ribbon.dataset.anchorHidden = 'false';
+        ribbon.dataset.anchorSide = 'docked';
         return;
       }
       const forced = forcePlacement;
@@ -420,7 +452,7 @@ function useControllerRibbonAnchor(
       sizeObserver.disconnect();
       refreshRef.current = () => {};
     };
-  }, [ref, onCompactChange]);
+  }, [ref, onCompactChange, enabled]);
   return () => refreshRef.current();
 }
 
@@ -445,7 +477,7 @@ export function ActiveLayer() {
     <div className="active-layer-control" ref={root} data-editor-overlay>
       <button
         ref={trigger}
-        className="active-layer-trigger"
+        className="desktop-header-trigger active-layer-trigger"
         aria-label={'Active layer: ' + name}
         aria-expanded={open}
         aria-controls={menuId}
@@ -460,7 +492,7 @@ export function ActiveLayer() {
         <small className="context-flair attached-flair">Editing layer</small>
         <Layers size={18} />
         <strong>{name}</strong>
-        <ChevronDown size={15} />
+        <ChevronDown className="header-chevron" size={15} />
       </button>
       <MotionPresence show={open}>
         <section id={menuId} className="active-layer-menu" aria-label="Animation layers">
@@ -523,17 +555,19 @@ export function ActiveLayer() {
 export function PoseActions({
   mirror,
   pasteMirrored,
+  presentation = 'ribbon',
 }: {
   mirror: () => void;
   pasteMirrored: () => void;
   timeline?: boolean;
+  presentation?: 'ribbon' | 'rail';
 }) {
   const ribbon = useRef<HTMLElement>(null);
   const morePanelId = useId();
   const [footToolsOpen, setFootToolsOpen] = useState(false);
   const [compactMode, setCompactMode] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const refreshRibbon = useControllerRibbonAnchor(ribbon, setCompactMode);
+  const refreshRibbon = useControllerRibbonAnchor(ribbon, setCompactMode, presentation !== 'rail');
   const live = useStudioChrome({ frame: 'none' }),
     visible = !!live.project && !!live.selection.length && !live.gameView && !live.retargetMode;
   const presence = usePresence(visible ? live : null),
@@ -543,7 +577,10 @@ export function PoseActions({
     // Foot tools can grow the full ribbon past the available edge slot. Keep
     // the expanded tools reachable when the anchor switches to compact mode.
     if (compactMode && footToolsOpen) setMoreOpen(true);
-  }, [compactMode, footToolsOpen]);
+    // A fine-pointer desktop uses the full docked ribbon, so do not leave the
+    // compact More sheet state behind when the layout returns to full density.
+    if (!compactMode && moreOpen) setMoreOpen(false);
+  }, [compactMode, footToolsOpen, moreOpen]);
   useEffect(() => {
     if (!moreOpen) return;
     const onPointerDown = (event: PointerEvent) => {
@@ -586,6 +623,147 @@ export function PoseActions({
     editable = count > 0 && s.selection.some((id) => editLayerAllowed(p, id)),
     mirrored = s.selection.some((id) => !!mirrorDestination(id)),
     mirrorNotice = s.selection.length === 1 && mirrorDriver(p, s.selected);
+  if (presentation === 'rail') {
+    return (
+      <section
+        data-motion="context"
+        data-state={presence.exiting ? 'closing' : 'open'}
+        inert={presence.exiting || undefined}
+        aria-hidden={presence.exiting || undefined}
+        ref={ribbon}
+        className="controller-ribbon controller-ribbon-rail"
+        aria-label="Selected pose tools"
+        data-editor-overlay
+      >
+        {mirrorNotice ? (
+          <MirrorDriverNotice project={p} id={s.selected} />
+        ) : (
+          <div className="controller-rail-body">
+            <div className="controller-rail-group" role="group" aria-label="Transform mode">
+              <button
+                type="button"
+                aria-label="Move controls"
+                aria-pressed={s.mode === 'translate'}
+                title="Move controls"
+                onClick={() => studio.patch({ mode: 'translate' })}
+              >
+                <Move3D size={17} />
+                <span>Move</span>
+              </button>
+              <button
+                type="button"
+                aria-label="Rotate controls"
+                aria-pressed={s.mode === 'rotate'}
+                title="Rotate controls"
+                onClick={() => studio.patch({ mode: 'rotate' })}
+              >
+                <RotateCw size={17} />
+                <span>Rotate</span>
+              </button>
+            </div>
+            <div
+              className="controller-rail-group controller-rail-transform"
+              role="group"
+              aria-label="Transform options"
+            >
+              <TransformOptions compact />
+            </div>
+            <div className="controller-rail-group" role="group" aria-label="Pose clipboard">
+              <button
+                type="button"
+                aria-label="Copy pose"
+                title="Copy pose"
+                disabled={!count}
+                onClick={() => studio.copySelectedPose()}
+              >
+                <Copy size={17} />
+                <span>Copy</span>
+              </button>
+              {s.clipboard && (
+                <button
+                  type="button"
+                  aria-label="Paste pose"
+                  title="Paste pose"
+                  disabled={!editable}
+                  onClick={() => studio.pastePose(s.clipboard!, true)}
+                >
+                  <ClipboardPaste size={17} />
+                  <span>Paste</span>
+                </button>
+              )}
+              {s.clipboard &&
+                Object.keys(s.clipboard.poses).some(
+                  (id) => !!mirrorDestination(id as keyof typeof s.clipboard.poses),
+                ) && (
+                  <button
+                    type="button"
+                    aria-label="Paste mirrored pose"
+                    title="Paste mirrored pose"
+                    disabled={!editable || s.clipboard.layer !== p.editing}
+                    onClick={pasteMirrored}
+                  >
+                    <FlipHorizontal2 size={17} />
+                    <span>Paste mirrored</span>
+                  </button>
+                )}
+              {mirrored && (
+                <button
+                  type="button"
+                  aria-label="Mirror pose to opposite side"
+                  title="Mirror selected controls to the opposite side; selecting both sides swaps them"
+                  disabled={!editable}
+                  onClick={mirror}
+                >
+                  <FlipHorizontal2 size={17} />
+                  <span>Mirror</span>
+                </button>
+              )}
+            </div>
+            <div
+              className="controller-rail-group"
+              role="group"
+              aria-label="Pose reset and grounding"
+            >
+              {s.selection.some((id) => CONTROLS[id].kind !== 'pivot') && (
+                <button
+                  type="button"
+                  aria-label="Reset location"
+                  title="Reset selected controllers to their rest location"
+                  disabled={!editable}
+                  onClick={() => studio.resetSelected('location')}
+                >
+                  <Move size={17} />
+                  <span>Reset location</span>
+                </button>
+              )}
+              <button
+                type="button"
+                aria-label="Reset rotation"
+                title="Reset selected controllers to their rest rotation"
+                disabled={!editable}
+                onClick={() => studio.resetSelected('rotation')}
+              >
+                <RotateCcw size={17} />
+                <span>Reset rotation</span>
+              </button>
+              {s.selection.some((id) => id !== 'camera') && (
+                <button
+                  type="button"
+                  aria-label="Ground and key selected controls"
+                  title="Place on the floor and key this pose"
+                  disabled={!editable}
+                  onClick={() => window.dispatchEvent(new Event('pose-ground-selection'))}
+                >
+                  <ArrowDownToLine size={17} />
+                  <span>Ground</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  }
   return (
     <section
       data-motion="context"
@@ -718,34 +896,36 @@ export function PoseActions({
             aria-label="More pose actions"
           >
             <div className="controller-ribbon-body">
-              <div className="controller-ribbon-modes" role="group" aria-label="Transform mode">
-                <button
-                  className="controller-ribbon-mode"
-                  aria-label="Move controls"
-                  aria-pressed={s.mode === 'translate'}
-                  title="Move controls"
-                  onClick={() => studio.patch({ mode: 'translate' })}
-                >
-                  <Move3D size={17} />
-                  <span>Move</span>
-                </button>
-                <button
-                  className="controller-ribbon-mode"
-                  aria-label="Rotate controls"
-                  aria-pressed={s.mode === 'rotate'}
-                  title="Rotate controls"
-                  onClick={() => studio.patch({ mode: 'rotate' })}
-                >
-                  <RotateCw size={17} />
-                  <span>Rotate</span>
-                </button>
-              </div>
-              <div className="controller-ribbon-transform">
-                <TransformOptions compact />
+              <div className="controller-ribbon-primary">
+                <div className="controller-ribbon-modes" role="group" aria-label="Transform mode">
+                  <button
+                    className="controller-ribbon-mode"
+                    aria-label="Move controls"
+                    aria-pressed={s.mode === 'translate'}
+                    title="Move controls"
+                    onClick={() => studio.patch({ mode: 'translate' })}
+                  >
+                    <Move3D size={17} />
+                    <span>Move</span>
+                  </button>
+                  <button
+                    className="controller-ribbon-mode"
+                    aria-label="Rotate controls"
+                    aria-pressed={s.mode === 'rotate'}
+                    title="Rotate controls"
+                    onClick={() => studio.patch({ mode: 'rotate' })}
+                  >
+                    <RotateCw size={17} />
+                    <span>Rotate</span>
+                  </button>
+                </div>
+                <div className="controller-ribbon-transform">
+                  <TransformOptions compact />
+                </div>
               </div>
               <div className="controller-ribbon-commands" role="group" aria-label="Pose commands">
                 <div
-                  className="controller-ribbon-command-group"
+                  className="controller-ribbon-command-group controller-ribbon-command-group-clipboard"
                   role="group"
                   aria-label="Clipboard and mirror commands"
                 >
@@ -796,7 +976,7 @@ export function PoseActions({
                   )}
                 </div>
                 <div
-                  className="controller-ribbon-command-group"
+                  className="controller-ribbon-command-group controller-ribbon-command-group-reset"
                   role="group"
                   aria-label="Reset and grounding commands"
                 >

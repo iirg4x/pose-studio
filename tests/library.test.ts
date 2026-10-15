@@ -8,10 +8,12 @@ import {
   matrix,
   pose,
   putKey,
+  rawForWorld,
   switchParent,
 } from '../src/core/model';
 import { applyPose, capturePose, validateLibrary } from '../src/core/library';
 import { StudioStore } from '../src/core/store';
+import { CONTROL_IDS, registerPropControl } from '../src/core/controls';
 const setup = () => {
   const s = new StudioStore();
   s.open(createProject({}, false));
@@ -208,6 +210,102 @@ describe('animator workspace', () => {
     expect(() => s.importAnimations(invalid)).toThrow();
     expect(s.state.workspace!.clips).toHaveLength(1);
   });
+  it('accepts fractional view frames for active and inactive clips', () => {
+    const s = setup();
+    s.addAnimation({});
+    const saved = s.snapshot()!;
+    saved.clips[0].frame = 12.25;
+    saved.clips[1].frame = 24.5;
+    const restored = validateLibrary(saved);
+    expect(restored.clips.map((clip) => clip.frame)).toEqual([12.25, 24.5]);
+  });
+  it('does not register or mutate live state for rejected prop imports', () => {
+    const s = setup();
+    s.editWorld('rifle', pose([0.25, 1.2, 0.4]));
+    const before = s.snapshot()!;
+    const beforeProject = clone(s.state.project!);
+    const beforeValues = evaluate(s.state.project!, s.state.frame);
+    const beforeRaw = rawForWorld(s.state.project!, 'rifle', s.state.frame, beforeValues.rifle);
+    const beforeControls = [...CONTROL_IDS];
+    const invalid = clone(before);
+    invalid.clips[0].project.props = {
+      ...(invalid.clips[0].project.props ?? {}),
+      'prop:transactional-bad': null as never,
+    };
+
+    expect(() => s.importAnimations(invalid)).toThrow('Invalid prop asset.');
+    expect([...CONTROL_IDS]).toEqual(beforeControls);
+    expect(s.snapshot()).toEqual(before);
+    expect(s.state.project).toEqual(beforeProject);
+    expect(evaluate(s.state.project!, s.state.frame)).toEqual(beforeValues);
+    expect(rawForWorld(s.state.project!, 'rifle', s.state.frame, beforeValues.rifle)).toEqual(
+      beforeRaw,
+    );
+    s.undo();
+    expect(s.state.project).not.toEqual(beforeProject);
+  });
+  it('does not register an invalid prop rejected by addProp', () => {
+    const s = setup(),
+      before = s.snapshot()!,
+      beforeControls = [...CONTROL_IDS];
+    expect(() =>
+      s.addProp({
+        name: 'Invalid prop',
+        asset: 'not-a-glb',
+        scale: 1,
+        rotation: [0, 0, 0],
+        offset: [0, 0, 0],
+        visible: true,
+      }),
+    ).toThrow('Invalid prop asset.');
+    expect([...CONTROL_IDS]).toEqual(beforeControls);
+    expect(s.snapshot()).toEqual(before);
+  });
+  it('does not register props when an import limit rejects the document', () => {
+    const s = setup();
+    s.savePose('Existing pose');
+    const invalid = clone(s.snapshot()!);
+    invalid.clips[0].project.props = {
+      'prop:import-limit': {
+        name: 'Imported prop',
+        asset: 'builtin-rifle',
+        scale: 1,
+        rotation: [0, 0, 0],
+        offset: [0, 0, 0],
+        visible: true,
+      },
+    };
+    invalid.poses = Array.from({ length: 200 }, (_, i) => ({
+      id: 'pose-' + i,
+      name: 'Pose ' + i,
+      layer: 'firstPerson' as const,
+      scope: 'control' as const,
+      poses: { hand_l: pose() },
+    }));
+    const beforeControls = [...CONTROL_IDS];
+    expect(() => s.importAnimations(invalid)).toThrow('200 saved poses');
+    expect([...CONTROL_IDS]).toEqual(beforeControls);
+  });
+  it('caps proposed prop controls before accepting an imported document', () => {
+    const s = setup();
+    const invalid = clone(s.snapshot()!);
+    invalid.clips[0].project.props = Object.fromEntries(
+      Array.from({ length: 257 }, (_, i) => [
+        `prop:limit-${i}`,
+        {
+          name: 'Imported prop',
+          asset: 'builtin-rifle',
+          scale: 1,
+          rotation: [0, 0, 0],
+          offset: [0, 0, 0],
+          visible: true,
+        },
+      ]),
+    );
+    const beforeControls = [...CONTROL_IDS];
+    expect(() => validateLibrary(invalid)).toThrow('256 prop controls');
+    expect([...CONTROL_IDS]).toEqual(beforeControls);
+  });
   it('closing the active tab selects another and prevents closing the last tab', () => {
     const s = setup(),
       a = s.state.workspace!.activeId;
@@ -218,5 +316,34 @@ describe('animator workspace', () => {
     expect(s.state.workspace!.clips).toHaveLength(2);
     s.closeAnimation(a);
     expect(s.state.workspace!.openIds).toEqual([a]);
+  });
+  it('caps documents that reference already registered prop controls', () => {
+    const ids = CONTROL_IDS.filter((id) => id.startsWith('prop:'));
+    for (let i = ids.length; i < 255; i++)
+      registerPropControl(`prop:already-registered-${i}` as `prop:${string}`);
+    const s = setup();
+    const invalid = clone(s.snapshot()!);
+    invalid.clips[0].project.props = {
+      ...(invalid.clips[0].project.props ?? {}),
+      'prop:already-imported-a': {
+        name: 'Imported prop A',
+        asset: 'builtin-rifle',
+        scale: 1,
+        rotation: [0, 0, 0],
+        offset: [0, 0, 0],
+        visible: true,
+      },
+      'prop:already-imported-b': {
+        name: 'Imported prop B',
+        asset: 'builtin-rifle',
+        scale: 1,
+        rotation: [0, 0, 0],
+        offset: [0, 0, 0],
+        visible: true,
+      },
+    };
+    const beforeControls = [...CONTROL_IDS];
+    expect(() => validateLibrary(invalid)).toThrow('256 prop controls');
+    expect([...CONTROL_IDS]).toEqual(beforeControls);
   });
 });

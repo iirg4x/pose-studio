@@ -2,7 +2,29 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 type Listener = (...args: unknown[]) => void;
 
-function makeRegistration(update: ReturnType<typeof vi.fn>, active: object | null = {}) {
+const environments = new Set<{ cleanup: () => void }>();
+
+function makeWaitingWorker() {
+  const listeners = new Map<string, Set<Listener>>();
+  return {
+    state: 'installed' as ServiceWorkerState,
+    postMessage: vi.fn(),
+    addEventListener: vi.fn((type: string, listener: Listener) => {
+      let entries = listeners.get(type);
+      if (!entries) listeners.set(type, (entries = new Set()));
+      entries.add(listener);
+    }),
+    removeEventListener: vi.fn((type: string, listener: Listener) => {
+      listeners.get(type)?.delete(listener);
+    }),
+  } as unknown as ServiceWorker;
+}
+
+function makeRegistration(
+  update: ReturnType<typeof vi.fn>,
+  active: object | null = {},
+  waiting: ServiceWorker | undefined = undefined,
+) {
   const listeners = new Map<string, Set<Listener>>();
   const addEventListener = vi.fn((type: string, listener: Listener) => {
     let entries = listeners.get(type);
@@ -14,7 +36,7 @@ function makeRegistration(update: ReturnType<typeof vi.fn>, active: object | nul
   });
   return {
     active,
-    waiting: undefined,
+    waiting,
     installing: undefined,
     update,
     addEventListener,
@@ -26,10 +48,14 @@ function makeRegistration(update: ReturnType<typeof vi.fn>, active: object | nul
   };
 }
 
-function makeEnvironment(register: () => Promise<Record<string, unknown>>) {
+function makeEnvironment(
+  register: () => Promise<Record<string, unknown>>,
+  options: { controller?: object | null } = {},
+) {
   const windowListeners = new Map<string, Set<Listener>>();
   const documentListeners = new Map<string, Set<Listener>>();
   const serviceWorkerListeners = new Map<string, Set<Listener>>();
+  const activeIntervals = new Set<ReturnType<typeof setInterval>>();
   const standaloneChange = vi.fn();
   const add = (map: Map<string, Set<Listener>>, type: string, listener: Listener) => {
     let listeners = map.get(type);
@@ -42,12 +68,25 @@ function makeEnvironment(register: () => Promise<Record<string, unknown>>) {
     map.get(type)?.forEach((listener) => listener({}));
   const serviceWorker = {
     register: vi.fn(register),
+    controller: options.controller === undefined ? {} : options.controller,
     addEventListener: vi.fn((type: string, listener: Listener) =>
       add(serviceWorkerListeners, type, listener),
     ),
     removeEventListener: vi.fn((type: string, listener: Listener) =>
       remove(serviceWorkerListeners, type, listener),
     ),
+  };
+  const setWindowInterval = (
+    handler: Parameters<typeof setInterval>[0],
+    timeout?: number,
+  ): ReturnType<typeof setInterval> => {
+    const handle = setInterval(handler, timeout);
+    activeIntervals.add(handle);
+    return handle;
+  };
+  const clearWindowInterval = (handle: ReturnType<typeof setInterval>) => {
+    clearInterval(handle);
+    activeIntervals.delete(handle);
   };
   const documentMock = {
     baseURI: 'https://example.test/pose-studio/',
@@ -62,8 +101,8 @@ function makeEnvironment(register: () => Promise<Record<string, unknown>>) {
     devicePixelRatio: 2,
     screen: { width: 390, height: 844 },
     visualViewport: undefined,
-    setInterval,
-    clearInterval,
+    setInterval: setWindowInterval,
+    clearInterval: clearWindowInterval,
     addEventListener: (type: string, listener: Listener) => add(windowListeners, type, listener),
     removeEventListener: (type: string, listener: Listener) =>
       remove(windowListeners, type, listener),
@@ -82,7 +121,7 @@ function makeEnvironment(register: () => Promise<Record<string, unknown>>) {
     configurable: true,
     value: () => ({ matches: false, addEventListener: standaloneChange }),
   });
-  return {
+  const environment = {
     windowListeners,
     documentListeners,
     serviceWorkerListeners,
@@ -97,7 +136,13 @@ function makeEnvironment(register: () => Promise<Record<string, unknown>>) {
     setOnline(value: boolean) {
       navigatorMock.onLine = value;
     },
+    cleanup() {
+      for (const handle of activeIntervals) clearWindowInterval(handle);
+      activeIntervals.clear();
+    },
   };
+  environments.add(environment);
+  return environment;
 }
 
 async function loadPwa() {
@@ -112,6 +157,8 @@ async function flush() {
 }
 
 afterEach(() => {
+  for (const environment of environments) environment.cleanup();
+  environments.clear();
   vi.clearAllTimers();
   vi.useRealTimers();
   vi.unstubAllEnvs();
@@ -208,5 +255,123 @@ describe('PWA update lifecycle', () => {
     expect(attempt).toBe(2);
     expect(environment.serviceWorkerListeners.get('controllerchange')?.size).toBe(1);
     expect(fresh.listeners.get('updatefound')?.size).toBe(1);
+  });
+
+  it('persists before explicitly activating a waiting worker and reloads after control changes', async () => {
+    const update = vi.fn(async () => undefined);
+    const waiting = makeWaitingWorker();
+    const registration = makeRegistration(update, {}, waiting);
+    const environment = makeEnvironment(async () => registration);
+    const persisted = vi.fn(async () => undefined);
+    const reloaded = vi.fn();
+    const pwa = await loadPwa();
+    pwa.configurePwaUpdate({
+      persistSnapshot: persisted,
+      canReload: () => true,
+      reload: reloaded,
+    });
+
+    await pwa.initializePwa();
+    await flush();
+    expect(persisted).toHaveBeenCalledTimes(1);
+    expect(waiting.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+    expect(reloaded).not.toHaveBeenCalled();
+
+    environment.dispatchServiceWorker('controllerchange');
+    expect(reloaded).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not reload when the first install takes control of an open page', async () => {
+    const update = vi.fn(async () => undefined);
+    const waiting = makeWaitingWorker();
+    const registration = makeRegistration(update, {}, waiting);
+    const environment = makeEnvironment(async () => registration, { controller: null });
+    const persisted = vi.fn(async () => undefined);
+    const reloaded = vi.fn();
+    const pwa = await loadPwa();
+    pwa.configurePwaUpdate({
+      persistSnapshot: persisted,
+      canReload: () => true,
+      reload: reloaded,
+    });
+
+    await pwa.initializePwa();
+    await flush();
+    expect(waiting.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+
+    registration.waiting = undefined;
+    environment.dispatchServiceWorker('controllerchange');
+    expect(reloaded).not.toHaveBeenCalled();
+    expect(pwa.appInstallSnapshot().updateApplying).toBe(false);
+  });
+
+  it('keeps a waiting update visible when the recovery write fails', async () => {
+    const update = vi.fn(async () => undefined);
+    const waiting = makeWaitingWorker();
+    const registration = makeRegistration(update, {}, waiting);
+    makeEnvironment(async () => registration);
+    const reported = vi.fn();
+    const pwa = await loadPwa();
+    pwa.configurePwaUpdate({
+      persistSnapshot: async () => {
+        throw Error('quota exceeded');
+      },
+      canReload: () => true,
+      reload: vi.fn(),
+      onError: reported,
+    });
+
+    await pwa.initializePwa();
+    await flush();
+    expect(pwa.appInstallSnapshot().status).toBe('update');
+    expect(pwa.appInstallSnapshot().updateApplying).toBe(false);
+    expect(pwa.appInstallSnapshot().updateMessage).toMatch(/recovery copy/i);
+    expect(reported).toHaveBeenCalledWith(expect.stringMatching(/recovery copy/i));
+    expect(waiting.postMessage).not.toHaveBeenCalled();
+  });
+
+  it('rechecks the reload gate after persistence and retries once the editor is idle', async () => {
+    const update = vi.fn(async () => undefined);
+    const waiting = makeWaitingWorker();
+    const registration = makeRegistration(update, {}, waiting);
+    const environment = makeEnvironment(async () => registration);
+    let releasePersist!: () => void;
+    let persistCalls = 0;
+    const persisted = vi.fn(() => {
+      persistCalls += 1;
+      if (persistCalls === 1) {
+        return new Promise<void>((resolve) => {
+          releasePersist = resolve;
+        });
+      }
+      return Promise.resolve();
+    });
+    const reloaded = vi.fn();
+    let allowed = true;
+    const pwa = await loadPwa();
+    pwa.configurePwaUpdate({
+      persistSnapshot: persisted,
+      canReload: () => allowed,
+      reload: reloaded,
+    });
+
+    await pwa.initializePwa();
+    await flush();
+    expect(persisted).toHaveBeenCalledTimes(1);
+
+    allowed = false;
+    releasePersist();
+    await flush();
+    expect(waiting.postMessage).not.toHaveBeenCalled();
+    expect(reloaded).not.toHaveBeenCalled();
+    expect(pwa.appInstallSnapshot().updateMessage).toMatch(/edit|playback|state/i);
+
+    allowed = true;
+    await pwa.notifyPwaIdle();
+    expect(persisted).toHaveBeenCalledTimes(2);
+    expect(waiting.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+
+    environment.dispatchServiceWorker('controllerchange');
+    expect(reloaded).toHaveBeenCalledTimes(1);
   });
 });

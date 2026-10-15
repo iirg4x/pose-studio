@@ -106,9 +106,11 @@ export class PosingStore extends LayerStore {
   }
   removePose(id: string) {
     const workspace = this.workspaceSnapshot();
-    if (!workspace) return;
+    const removed = workspace?.poses.find((pose) => pose.id === id);
+    if (!workspace || !removed) return;
+    this.beginWorkspaceHistoryEdit(workspace);
     workspace.poses = workspace.poses.filter((p) => p.id !== id);
-    this.patch({ workspace, message: 'Saved pose removed.' });
+    this.patch({ workspace, message: 'Saved pose removed · Undo to restore' });
   }
   resetSelected(kind: 'location' | 'rotation' | 'all') {
     const s = this.state;

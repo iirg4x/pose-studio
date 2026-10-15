@@ -1,6 +1,7 @@
 import { decodeProject } from '../../shared/project-codec.mjs';
 import { validateLibrary } from '../core/library';
 import type { AnimationLibrary } from '../core/library';
+import { collectPropControlIds, commitPropControls } from '../core/controls';
 import { restoreAssets } from './portableAssets';
 
 // Only fresh file bytes can create a prepared document. The opening UI consumes
@@ -12,8 +13,10 @@ export async function readProjectDocument(
   writeAsset: (id: string, data: Uint8Array) => Promise<void>,
 ): Promise<AnimationLibrary> {
   const parsed = await decodeProject(bytes);
-  const library = validateLibrary(parsed, { takeOwnership: true });
+  const propControls = collectPropControlIds(parsed);
+  const library = validateLibrary(parsed, { takeOwnership: true, commitPropControls: false });
   await restoreAssets(parsed, writeAsset);
+  commitPropControls(propControls);
   prepared.add(library);
   return library;
 }

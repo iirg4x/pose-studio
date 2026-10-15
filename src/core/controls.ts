@@ -31,7 +31,73 @@ export interface ControlDefinition {
   limb: LimbId | null;
   only: LimbMode | null;
 }
-export const CONTROLS = {} as Record<ControlId, ControlDefinition>;
+
+/**
+ * Dynamic prop controls are part of a project document, but the editor keeps
+ * the runtime control registry process-wide. Validation needs to see proposed
+ * controls without exposing them to the live registry until the document has
+ * passed every check. The two proxies below provide that document-local view
+ * while preserving the existing array/object APIs used by the core.
+ */
+const globalControls = {} as Record<ControlId, ControlDefinition>;
+const globalControlIds: ControlId[] = [];
+const MAX_DYNAMIC_PROP_CONTROLS = 256;
+let globalDynamicPropCount = 0;
+interface ValidationControls {
+  ids: ControlId[];
+  dynamic: Set<ControlId>;
+  proposed: Set<ControlId>;
+  definitions: Record<ControlId, ControlDefinition>;
+}
+let validationControls: ValidationControls | undefined;
+
+const currentControlIds = () => validationControls?.ids ?? globalControlIds;
+
+export const CONTROLS = new Proxy(globalControls, {
+  get(target, property, receiver) {
+    if (typeof property === 'string' && validationControls?.definitions[property as ControlId])
+      return validationControls.definitions[property as ControlId];
+    return Reflect.get(target, property, receiver);
+  },
+  has(target, property) {
+    return (
+      (typeof property === 'string' && !!validationControls?.definitions[property as ControlId]) ||
+      Reflect.has(target, property)
+    );
+  },
+  ownKeys(target) {
+    return [
+      ...new Set([
+        ...Reflect.ownKeys(target),
+        ...Object.keys(validationControls?.definitions ?? {}),
+      ]),
+    ];
+  },
+  getOwnPropertyDescriptor(target, property) {
+    if (typeof property === 'string' && validationControls?.definitions[property as ControlId])
+      return {
+        configurable: true,
+        enumerable: true,
+        value: validationControls.definitions[property as ControlId],
+        writable: true,
+      };
+    return Reflect.getOwnPropertyDescriptor(target, property);
+  },
+}) as Record<ControlId, ControlDefinition>;
+
+export const CONTROL_IDS = new Proxy(globalControlIds, {
+  get(_target, property, receiver) {
+    const ids = currentControlIds();
+    const value = Reflect.get(ids, property, receiver === CONTROL_IDS ? ids : receiver);
+    return typeof value === 'function' ? value.bind(ids) : value;
+  },
+  ownKeys() {
+    return Reflect.ownKeys(currentControlIds());
+  },
+  getOwnPropertyDescriptor(_target, property) {
+    return Reflect.getOwnPropertyDescriptor(currentControlIds(), property);
+  },
+}) as ControlId[];
 const add = (
   id: ControlId,
   label: string,
@@ -42,7 +108,8 @@ const add = (
   limb: LimbId | null = null,
   only: LimbMode | null = null,
 ) => {
-  CONTROLS[id] = { label, group, bone, source, kind, limb, only };
+  globalControls[id] = { label, group, bone, source, kind, limb, only };
+  globalControlIds.push(id);
 };
 add('root', 'Root', 'Master', 'root', 'root', 'target');
 add('hips', 'Hips', 'Body', 'pelvis', 'ikp_pelvis');
@@ -191,13 +258,161 @@ for (const side of ['l', 'r'] as const) {
 add('rifle', 'Rifle', 'Props', null, null, 'target');
 add('magazine', 'Magazine', 'Props', null, null, 'target');
 add('camera', 'Camera', 'Camera', null, null, 'target');
-export const CONTROL_IDS = Object.keys(CONTROLS) as ControlId[];
-export function registerPropControl(id: ControlId) {
-  if (!/^prop:[a-zA-Z0-9_-]{1,100}$/.test(id)) throw Error('Invalid prop control.');
-  if (CONTROLS[id]) return;
-  add(id, 'Prop', 'Props', null, null, 'target');
-  CONTROL_IDS.push(id);
+
+const PROP_CONTROL_PATTERN = /^prop:[a-zA-Z0-9_-]{1,100}$/;
+const propDefinition = (): ControlDefinition => ({
+  label: 'Prop',
+  group: 'Props',
+  bone: null,
+  source: null,
+  kind: 'target',
+  limb: null,
+  only: null,
+});
+
+function validatePropControlId(id: ControlId) {
+  if (!PROP_CONTROL_PATTERN.test(id)) throw Error('Invalid prop control.');
 }
+
+function addProposedControl(id: ControlId) {
+  validatePropControlId(id);
+  if (!validationControls) throw Error('No document validation scope.');
+  if (!validationControls.dynamic.has(id)) validationControls.dynamic.add(id);
+  if (validationControls.dynamic.size > MAX_DYNAMIC_PROP_CONTROLS)
+    throw Error('Import exceeds the project limit of 256 prop controls.');
+  if (globalControls[id] || validationControls.proposed.has(id)) return;
+  if (globalDynamicPropCount + validationControls.proposed.size >= MAX_DYNAMIC_PROP_CONTROLS)
+    throw Error('Import exceeds the project limit of 256 prop controls.');
+  validationControls.proposed.add(id);
+  validationControls.ids.push(id);
+  validationControls.definitions[id] = propDefinition();
+}
+
+function commitPropControl(id: ControlId) {
+  validatePropControlId(id);
+  if (globalControls[id]) return;
+  if (globalDynamicPropCount >= MAX_DYNAMIC_PROP_CONTROLS)
+    throw Error('Import exceeds the project limit of 256 prop controls.');
+  globalControls[id] = propDefinition();
+  globalControlIds.push(id);
+  globalDynamicPropCount++;
+}
+
+/** Register a runtime prop, or add it to the active document-local scope. */
+export function registerPropControl(id: ControlId) {
+  if (validationControls) {
+    addProposedControl(id);
+    return;
+  }
+  commitPropControl(id);
+}
+
+/** Register all controls after a successful document validation. */
+export function commitPropControls(ids: Iterable<ControlId>) {
+  const pending = new Set<ControlId>();
+  for (const id of ids) {
+    validatePropControlId(id);
+    if (!globalControls[id]) pending.add(id);
+  }
+  if (globalDynamicPropCount + pending.size > MAX_DYNAMIC_PROP_CONTROLS)
+    throw Error('Import exceeds the project limit of 256 prop controls.');
+  for (const id of pending) commitPropControl(id);
+}
+
+/**
+ * Collect control identities that can legitimately introduce dynamic props.
+ * Saved pose/control maps are intentionally excluded: a pose cannot create an
+ * unbound prop identity by itself.
+ */
+export function collectPropControlIds(input: unknown): ControlId[] {
+  const ids = new Set<ControlId>();
+  const collectKeys = (value: unknown) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+    for (const id of Object.keys(value))
+      if (id.startsWith('prop:')) {
+        ids.add(id as ControlId);
+        if (ids.size > MAX_DYNAMIC_PROP_CONTROLS)
+          throw Error('Import exceeds the project limit of 256 prop controls.');
+      }
+  };
+  const collectProject = (value: unknown) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+    const project = value as Record<string, unknown>;
+    collectKeys(project.props);
+    collectKeys(project.tracks);
+    collectKeys(project.otherTracks);
+    if (Array.isArray(project.layers))
+      for (const layer of project.layers) {
+        if (layer && typeof layer === 'object')
+          collectKeys((layer as Record<string, unknown>).tracks);
+      }
+    const source = project.bodyBase;
+    if (source && typeof source === 'object')
+      collectProject((source as Record<string, unknown>).source);
+  };
+  if (
+    input &&
+    typeof input === 'object' &&
+    !Array.isArray(input) &&
+    (input as { version?: unknown }).version === 3
+  ) {
+    const clips = (input as { clips?: unknown }).clips;
+    if (Array.isArray(clips))
+      for (const clip of clips)
+        if (clip && typeof clip === 'object')
+          collectProject((clip as Record<string, unknown>).project);
+  } else collectProject(input);
+  return [...ids];
+}
+
+/**
+ * Run validation with document-local prop controls. Global registration is
+ * committed only when the callback returns successfully.
+ */
+export function withProposedPropControls<T>(
+  ids: Iterable<ControlId>,
+  callback: () => T,
+  commit = true,
+): T {
+  const parent = validationControls;
+  const proposed = new Set(parent?.proposed ?? []);
+  const scope: ValidationControls = {
+    ids: [...globalControlIds, ...(parent ? [...parent.proposed] : [])],
+    dynamic: new Set(parent?.dynamic ?? []),
+    proposed,
+    definitions: { ...parent?.definitions } as Record<ControlId, ControlDefinition>,
+  };
+  for (const id of ids) addProposedControlToScope(scope, id);
+  validationControls = scope;
+  try {
+    const result = callback();
+    if (parent) {
+      for (const id of scope.dynamic) parent.dynamic.add(id);
+      for (const id of scope.proposed) {
+        parent.proposed.add(id);
+        if (!parent.ids.includes(id)) parent.ids.push(id);
+        parent.definitions[id] = scope.definitions[id]!;
+      }
+    } else if (commit) commitPropControls(scope.proposed);
+    return result;
+  } finally {
+    validationControls = parent;
+  }
+}
+
+function addProposedControlToScope(scope: ValidationControls, id: ControlId) {
+  validatePropControlId(id);
+  if (!scope.dynamic.has(id)) scope.dynamic.add(id);
+  if (scope.dynamic.size > MAX_DYNAMIC_PROP_CONTROLS)
+    throw Error('Import exceeds the project limit of 256 prop controls.');
+  if (globalControls[id] || scope.proposed.has(id)) return;
+  if (globalDynamicPropCount + scope.proposed.size >= MAX_DYNAMIC_PROP_CONTROLS)
+    throw Error('Import exceeds the project limit of 256 prop controls.');
+  scope.proposed.add(id);
+  scope.ids.push(id);
+  scope.definitions[id] = propDefinition();
+}
+
 export const BONE_CONTROLS = CONTROL_IDS.filter((id) => CONTROLS[id].kind === 'bone');
 export const LEGACY_IDS: ControlId[] = [
   'root',

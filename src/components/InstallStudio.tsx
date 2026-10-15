@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { CheckCircle2, Download, Share, PlusSquare, X, RefreshCw } from 'lucide-react';
 import {
   appInstallSnapshot,
+  applyPwaUpdate,
   subscribeAppInstall,
   checkAppUpdate,
   getPwaDiagnostics,
@@ -111,16 +112,16 @@ export function InstallStudio({
       <div className={'install-status ' + state.status} role="status">
         <CheckCircle2 size={18} />
         <span>
-          {status}
+          {state.updateApplying ? 'Saving recovery copy and applying update…' : status}
           {!state.online ? ' · Offline' : ''}
         </span>
       </div>
       {state.status === 'update' && (
         <p className="install-note">
-          Save your project first. Then close{' '}
-          <strong>all Pose tabs and any installed Pose Home Screen app</strong> before reopening
-          Pose. A browser refresh alone does not apply this update, and an open project is never
-          reloaded automatically.
+          {state.updateApplying
+            ? 'Pose is saving a recovery copy before activating the update. Keep this page open.'
+            : state.updateMessage ||
+              'A new version is ready. Pose will save a recovery copy and reload when the editor is idle.'}
         </p>
       )}
       {state.status === 'error' && (
@@ -161,9 +162,22 @@ export function InstallStudio({
         </div>
       </details>
       <footer>
-        <button onClick={() => void checkAppUpdate({ force: true })}>
+        <button
+          aria-busy={state.updateApplying || undefined}
+          onClick={() =>
+            void (state.status === 'update'
+              ? applyPwaUpdate({ force: true })
+              : checkAppUpdate({ force: true }))
+          }
+        >
           <RefreshCw size={16} />
-          {state.status === 'error' ? 'Retry download' : 'Check for updates'}
+          {state.status === 'update'
+            ? state.updateApplying
+              ? 'Applying update…'
+              : 'Apply update'
+            : state.status === 'error'
+              ? 'Retry download'
+              : 'Check for updates'}
         </button>
         <button className="install-done" onClick={close}>
           Back to studio

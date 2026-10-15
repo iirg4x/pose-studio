@@ -16,8 +16,10 @@ import {
   CONTROLS,
   CONTROL_IDS,
   LEGACY_IDS,
+  collectPropControlIds,
   isOffsetControl,
   controlLayerVisible,
+  withProposedPropControls,
 } from './controls';
 import type { ControlId, LimbId, LimbMode } from './controls';
 export type { ControlId, LimbId, LimbMode } from './controls';
@@ -734,10 +736,16 @@ export function createProject(rest: Partial<Record<ControlId, Pose>> = {}, demo 
 }
 export interface ProjectValidationOptions {
   takeOwnership?: boolean;
+  /** Keep dynamic prop controls local until the containing operation commits. */
+  commitPropControls?: boolean;
 }
 export function validateProject(input: unknown, options: ProjectValidationOptions = {}): Project {
   if (!input || typeof input !== 'object') throw Error('This is not an animation project.');
-  return validateOwnedProject((options.takeOwnership ? input : clone(input)) as Project);
+  return withProposedPropControls(
+    collectPropControlIds(input),
+    () => validateOwnedProject((options.takeOwnership ? input : clone(input)) as Project),
+    options.commitPropControls !== false,
+  );
 }
 // Validation owns this copy, including nested source clips. Copying it again
 // doubles transient document memory without providing any further isolation.

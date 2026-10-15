@@ -42,6 +42,24 @@ import type { StudioStore } from '../core/store';
 import { ExportScene } from './studio/export';
 
 export class StudioScene extends ExportScene {
+  private graphicsLost = false;
+  private onFailure: (message: string | null) => void = () => {};
+  private contextLost = (event: Event) => {
+    event.preventDefault();
+    this.graphicsLost = true;
+    this.store.endGesture();
+    this.store.patch({ playing: false, interacting: false });
+    this.onFailure(
+      'The graphics context was lost. The view will resume if the browser restores it. You can also retry or download your project.',
+    );
+  };
+  private contextRestored = () => {
+    if (this.disposed) return;
+    this.graphicsLost = false;
+    this.forcePose = true;
+    this.drawDirty = true;
+    this.onFailure(null);
+  };
   protected trails = new MotionTrail({
     add: (line) => this.overlays.add(line),
     key: () => {
@@ -79,11 +97,17 @@ export class StudioScene extends ExportScene {
       this.drawDirty = true;
     },
   });
-  constructor(host: HTMLElement, store: StudioStore, onReady: () => void) {
+  constructor(
+    host: HTMLElement,
+    store: StudioStore,
+    onReady: () => void,
+    onFailure?: (message: string | null) => void,
+  ) {
     super();
     this.host = host;
     this.store = store;
     this.onReady = onReady;
+    if (onFailure) this.onFailure = onFailure;
     this.renderer = new T.WebGLRenderer({
       antialias: true,
       alpha: false,
@@ -287,6 +311,8 @@ export class StudioScene extends ExportScene {
     this.unsubscribe = store.subscribe(() => {
       if (!this.dragging && store.state.selected !== this.lastSelected) this.lastSelected = '';
     });
+    this.renderer.domElement.addEventListener('webglcontextlost', this.contextLost);
+    this.renderer.domElement.addEventListener('webglcontextrestored', this.contextRestored);
     this.load();
     this.loop();
   }
@@ -408,11 +434,15 @@ export class StudioScene extends ExportScene {
       });
       for (const legs of this.bodyLegs) legParents.get(legs)!.add(legs);
       this.playerCamera.layers.set(1);
-      this.store.init(this.restControls);
+      // Retrying a failed graphics view must not replace the live document,
+      // drafts or undo history with an older recovery snapshot.
+      if (!this.store.state.ready) await this.store.init(this.restControls);
       this.apply(this.store.state.frame);
       this.onReady();
     } catch (e) {
+      if (this.disposed) return;
       this.store.patch({ message: 'Could not load Manny: ' + (e as Error).message });
+      this.onFailure('Could not load the character: ' + (e as Error).message);
     }
   }
   override apply(frame: number, project = this.store.state.project, usePreview = true) {
@@ -823,7 +853,16 @@ export class StudioScene extends ExportScene {
   }
   protected loop = () => {
     if (this.disposed) return;
+    try {
+      if (!this.graphicsLost) this.drawFrame();
+    } catch (error) {
+      this.store.patch({ playing: false, interacting: false });
+      this.onFailure('The 3D view stopped: ' + (error as Error).message);
+      return;
+    }
     this.raf = requestAnimationFrame(this.loop);
+  };
+  private drawFrame() {
     if (this.recording || document.hidden) {
       this.lastActiveDraw = 0;
       this.cadence.reset();
@@ -897,7 +936,7 @@ export class StudioScene extends ExportScene {
         this.resizePending = true;
       this.lastActiveDraw = now;
     } else this.lastActiveDraw = 0;
-  };
+  }
   /** Resolves once the open project's props and characters are loaded, its shaders
    * compiled and a frame drawn: when opening a project has visibly finished. */
   async settled(timeout = 30000) {
@@ -932,6 +971,8 @@ export class StudioScene extends ExportScene {
     this.trails.toggle();
   }
   dispose() {
+    this.renderer.domElement.removeEventListener('webglcontextlost', this.contextLost);
+    this.renderer.domElement.removeEventListener('webglcontextrestored', this.contextRestored);
     this.store.restPose = undefined;
     window.removeEventListener('keydown', this.selectionKeys);
     window.removeEventListener('keyup', this.selectionKeys);

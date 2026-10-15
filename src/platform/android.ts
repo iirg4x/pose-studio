@@ -4,10 +4,12 @@ import type { PluginListenerHandle } from '@capacitor/core';
 import { isAndroid, initializeStorage, readAsset, writeAsset } from './storage';
 import {
   assetHash,
+  assertGLBSize,
   builtInAsset,
   decode64,
   encode64,
   embedAssets,
+  MAX_GLB_BYTES,
   restoreAssets,
   validateGLB,
 } from './portableAssets';
@@ -18,7 +20,7 @@ import { readProjectDocument } from './projectDocuments';
 type Document = { id: string; name: string; uri: string; size: number };
 type Destination = { id: string; path: string; uri: string };
 interface Files {
-  open(): Promise<Document>;
+  open(options?: { maxBytes?: number }): Promise<Document>;
   openUri(o: { uri: string }): Promise<Document>;
   takeProject(): Promise<Document>;
   read(o: { id: string; position: number }): Promise<{ data: string }>;
@@ -31,10 +33,17 @@ interface Files {
 }
 const native = registerPlugin<Files>('PoseFiles');
 const CHUNK = 512 * 1024;
-async function bytes(doc: Document) {
+const MAX_DOCUMENT_BYTES = 512 * 1024 * 1024;
+function assertDocumentSize(size: number) {
+  if (!Number.isSafeInteger(size) || size < 0 || size > MAX_DOCUMENT_BYTES)
+    throw Error('Choose a document below 512 MB.');
+}
+async function bytes(doc: Document, checkSize: (size: number) => void = assertDocumentSize) {
   if (!doc?.id) return null;
   try {
-    if (doc.size > 512 * 1024 * 1024) throw Error('Choose a document below 512 MB.');
+    // Check bridge metadata before allocating the destination or requesting
+    // the first base64 chunk. GLB callers pass the stricter shared 32 MiB cap.
+    checkSize(doc.size);
     const data = new Uint8Array(doc.size);
     let position = 0;
     while (position < data.length) {
@@ -76,13 +85,16 @@ async function readCharacter(id: string) {
   return validateGLB(data);
 }
 async function importModel() {
-  const doc = await native.open();
-  const data = await bytes(doc);
-  if (!data) return null;
-  if (!/\.glb$/i.test(doc.name))
+  const doc = await native.open({ maxBytes: MAX_GLB_BYTES });
+  if (!doc?.id) return null;
+  if (!/\.glb$/i.test(doc.name)) {
+    await native.close({ id: doc.id });
     throw Error(
       'Android imports self-contained GLB models. Convert FBX, OBJ or Blender models to GLB, or transfer them inside a desktop .pose project.',
     );
+  }
+  const data = await bytes(doc, assertGLBSize);
+  if (!data) return null;
   validateGLB(data);
   const asset = await assetHash(data);
   await writeAsset('asset:' + asset, data);
@@ -169,8 +181,9 @@ export async function initializeAndroid() {
   document.documentElement.classList.add('android');
   const { AndroidAnimationImport } = await import('./androidAnimation');
   const animations = new AndroidAnimationImport(async () => {
-    const doc = await native.open(),
-      data = await bytes(doc);
+    const doc = await native.open({ maxBytes: MAX_GLB_BYTES });
+    if (!doc?.id) return null;
+    const data = await bytes(doc, assertGLBSize);
     return data ? { name: doc.name, data } : null;
   });
   window.studioDesktop = {

@@ -16,6 +16,10 @@ export function mirrorDestination(id: ControlId): ControlId | undefined {
   }
   return isOffsetControl(id) ? id : undefined;
 }
+export interface MirrorRest {
+  world: Matrix4;
+  parent: Matrix4;
+}
 /** Mirror a pose across the character's X plane, accounting for asymmetric bone axes. */
 export function mirrorControlPose(
   value: Pose,
@@ -46,4 +50,36 @@ export function mirrorControlPose(
     targetBasis,
   );
   return fromMatrix(root.clone().multiply(q.setPosition(p)), clone(value));
+}
+
+/**
+ * Build one current-frame pose for each selected control's opposite side.
+ * Read every source from the same immutable values snapshot so selecting both
+ * sides swaps them deterministically instead of letting an earlier write feed
+ * a later source.
+ */
+export function mirrorControlPoses(
+  values: Partial<Record<ControlId, Pose>>,
+  ids: readonly ControlId[],
+  rest: (id: ControlId) => MirrorRest,
+  root: Matrix4,
+) {
+  const poses: Partial<Record<ControlId, Pose>> = {};
+  for (const id of [...new Set(ids)].sort()) {
+    const value = values[id],
+      target = mirrorDestination(id);
+    if (!value || !target) continue;
+    const sourceRest = rest(id),
+      targetRest = rest(target);
+    poses[target] = mirrorControlPose(
+      value,
+      sourceRest.world,
+      targetRest.world,
+      isOffsetControl(id),
+      sourceRest.parent,
+      targetRest.parent,
+      root,
+    );
+  }
+  return poses;
 }

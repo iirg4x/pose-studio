@@ -7,6 +7,8 @@ import {
   writePreference,
   RECOVERY,
   BASELINE,
+  readRecoveryCandidates,
+  listRecoveryGenerations,
 } from '../platform/storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { studio } from '../core/store';
@@ -16,6 +18,8 @@ import { projectSaveSignature } from '../core/projectSaving';
 import { activateDocument, linkedDocument, openedDocument } from '../platform/linkedDocuments';
 import type { LinkedDocument } from '../platform/linkedDocuments';
 import { checkLinkedProject } from '../platform/android';
+import { reportFailure } from '../platform/feedback';
+import { useModalFocus } from '../hooks/modalFocus';
 type Pending =
   | { kind: 'close' }
   | { kind: 'open'; data: AnimationLibrary; source?: LinkedDocument };
@@ -30,10 +34,28 @@ export function useProjectFile(
   const saved = useRef<string | null>(null),
     [pending, setPending] = useState<Pending | null>(null),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    [recoveryError, setRecoveryError] = useState(''),
+    [recoveryBusy, setRecoveryBusy] = useState(false);
   const busyRef = useRef(false),
+    recoveredReload = useRef(false),
+    recoveryBusyRef = useRef(false),
     hadRecovery = useRef(false),
-    initialized = useRef(false);
+    initialized = useRef(false),
+    saveDialog = useRef<HTMLElement>(null),
+    saveDialogCancel = useRef<HTMLButtonElement>(null);
+  const dismissSaveDialog = () => {
+    if (busyRef.current || recoveryBusyRef.current) return;
+    setPending(null);
+    setError('');
+    setRecoveryError('');
+  };
+  useModalFocus({
+    rootRef: saveDialog,
+    initialFocusRef: saveDialogCancel,
+    enabled: !!pending,
+    onEscape: dismissSaveDialog,
+  });
   const [followProject, setFollowProjectState] = useState(
     () => localStorage.getItem('pose-follow-document') !== 'false',
   );
@@ -62,10 +84,13 @@ export function useProjectFile(
   useEffect(() => {
     try {
       saved.current = readPreference(BASELINE);
+      const hasGenerationRecovery =
+        readRecoveryCandidates().length > 0 || listRecoveryGenerations().length > 0;
       hadRecovery.current = !!(
         readRecovery() ||
         readPreference(RECOVERY) ||
-        localStorage.getItem('manny-studio-project-v1')
+        localStorage.getItem('manny-studio-project-v1') ||
+        hasGenerationRecovery
       );
     } catch {}
   }, []);
@@ -96,12 +121,17 @@ export function useProjectFile(
         studio.patch({ message: 'Saved ' + filename });
       } else {
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(
+        const url = URL.createObjectURL(
           new Blob([await encodeProject(data)], { type: 'application/octet-stream' }),
         );
+        a.href = url;
         a.download = data.name + '.pose';
         a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        // The browser exposes no completion signal for a download. Report the
+        // request accurately while still treating the requested file as the
+        // user's saved project for dirty-state purposes.
+        studio.patch({ message: 'Download requested: ' + a.download });
       }
       markSaved(data);
       return true;
@@ -109,6 +139,7 @@ export function useProjectFile(
       const message = 'Could not save: ' + (e as Error).message;
       setError(message);
       studio.patch({ message });
+      reportFailure(message);
       return false;
     } finally {
       busyRef.current = false;
@@ -122,18 +153,24 @@ export function useProjectFile(
         await nextPaint();
         studio.openValidated(data);
         await settled();
+      } catch (e) {
+        const message = 'Could not open project: ' + (e as Error).message;
+        setError(message);
+        studio.patch({ message });
+        reportFailure(message);
+        return;
       } finally {
         studio.patch({ opening: null });
       }
       const current = studio.recoverySnapshot();
       if (current) {
         markSaved(current);
-        void writeRecovery(current).catch((e) =>
-          studio.patch({
-            message:
-              'Project opened, but local recovery could not be saved: ' + (e as Error).message,
-          }),
-        );
+        void writeRecovery(current).catch((e) => {
+          const message =
+            'Project opened, but local recovery could not be saved: ' + (e as Error).message;
+          studio.patch({ message });
+          reportFailure(message);
+        });
       }
       if (isAndroid) activateDocument(source);
       setPending(null);
@@ -151,9 +188,12 @@ export function useProjectFile(
           studio.patch({ opening: null });
           setPending({ kind: 'open', data: validated, source });
           setError('');
+          setRecoveryError('');
         } else void open(validated, source);
       } catch (e) {
-        studio.patch({ opening: null, message: (e as Error).message });
+        const message = (e as Error).message;
+        studio.patch({ opening: null, message });
+        reportFailure('Could not open project: ' + message);
       }
     },
     [dirty, open],
@@ -222,7 +262,15 @@ export function useProjectFile(
     const update = projectUpdate;
     if (!update) return;
     if (dirty() && !(await save())) return;
-    await recover();
+    try {
+      await recover();
+    } catch (e) {
+      const message = 'Could not keep the recovery copy: ' + (e as Error).message;
+      setProjectError(message);
+      studio.patch({ message });
+      reportFailure(message);
+      return;
+    }
     open(update.data, update.source);
     setProjectUpdate(null);
   };
@@ -234,8 +282,15 @@ export function useProjectFile(
   };
   const beforeInstall = async () => {
     if (dirty() && !(await save())) return false;
-    await recover();
-    return true;
+    try {
+      await recover();
+      return true;
+    } catch (e) {
+      const message = 'Could not keep the recovery copy: ' + (e as Error).message;
+      studio.patch({ message });
+      reportFailure(message);
+      return false;
+    }
   };
   // Listen before requesting the startup file; queued OS opens wait for recovery and dialogs.
   useEffect(() => {
@@ -273,23 +328,55 @@ export function useProjectFile(
       })
       .catch((e) => {
         consumed = true;
-        studio.patch({ message: 'Could not open project: ' + (e as Error).message });
+        const message = 'Could not open project: ' + (e as Error).message;
+        studio.patch({ message });
+        reportFailure(message);
       })
       .finally(() => {
         opening.current = false;
         if (consumed || retryOpen.current) setQueued((n) => n + 1);
       });
   }, [ready, blocked, pending, busy, queued, requestOpen]);
+  const proceed = async (action: Pending) => {
+    try {
+      if (action.kind === 'close') {
+        setPending(null);
+        await window.studioDesktop?.confirmClose();
+      } else await open(action.data, action.source);
+    } catch (e) {
+      const message = 'Could not complete the project change: ' + (e as Error).message;
+      setError(message);
+      studio.patch({ message });
+      reportFailure(message);
+      setPending(action);
+    }
+  };
   const finish = async () => {
-    if (!pending) return;
+    const action = pending;
+    if (!action || recoveryBusyRef.current) return;
     setError('');
+    setRecoveryError('');
+    recoveryBusyRef.current = true;
+    setRecoveryBusy(true);
     try {
       await recover();
-      if (pending.kind === 'close') window.studioDesktop?.confirmClose();
-      else void open(pending.data, pending.source);
     } catch (e) {
-      setError('Could not keep the recovery copy: ' + (e as Error).message);
+      const message = 'Could not keep the recovery copy: ' + (e as Error).message;
+      setRecoveryError(message);
+      studio.patch({ message });
+      reportFailure(message);
+      return;
+    } finally {
+      recoveryBusyRef.current = false;
+      setRecoveryBusy(false);
     }
+    await proceed(action);
+  };
+  const continueWithoutRecovery = () => {
+    const action = pending;
+    if (!action || recoveryBusyRef.current) return;
+    setRecoveryError('');
+    void proceed(action);
   };
   useEffect(
     () =>
@@ -297,7 +384,7 @@ export function useProjectFile(
         if (busyRef.current) return;
         if (isAndroid) {
           if (pending) {
-            setPending(null);
+            dismissSaveDialog();
             return;
           }
           // Native Back dismisses the current dialog before it can close the editor.
@@ -328,12 +415,16 @@ export function useProjectFile(
         if (dirty()) {
           setPending({ kind: 'close' });
           setError('');
+          setRecoveryError('');
         } else {
           try {
             await recover();
             await window.studioDesktop?.confirmClose();
           } catch (e) {
-            setError((e as Error).message);
+            const message = 'Could not keep the recovery copy: ' + (e as Error).message;
+            setRecoveryError(message);
+            studio.patch({ message });
+            reportFailure(message);
             setPending({ kind: 'close' });
           }
         }
@@ -342,25 +433,31 @@ export function useProjectFile(
   );
   useEffect(() => {
     if (window.studioDesktop && window.studioDesktop.platform !== 'web') return;
+    const updateReload = () => {
+      recoveredReload.current = true;
+    };
     const before = (e: BeforeUnloadEvent) => {
-      if (dirty()) {
+      if (!recoveredReload.current && dirty()) {
         e.preventDefault();
         e.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', before);
-    return () => window.removeEventListener('beforeunload', before);
+    window.addEventListener('pose-before-update-reload', updateReload);
+    return () => {
+      window.removeEventListener('beforeunload', before);
+      window.removeEventListener('pose-before-update-reload', updateReload);
+    };
   }, [dirty]);
   const dialog = pending && (
     <div className="modal-backdrop">
       <section
+        ref={saveDialog}
+        tabIndex={-1}
         className="modal compact-modal save-confirmation"
         role="dialog"
         aria-modal="true"
         aria-labelledby="save-confirm-title"
-        onKeyDown={(e) => {
-          if (e.key === 'Escape' && !busy) setPending(null);
-        }}
       >
         <header>
           <h2 id="save-confirm-title">Save changes?</h2>
@@ -380,29 +477,65 @@ export function useProjectFile(
             {error}
           </p>
         )}
-        <footer>
-          <button disabled={busy} onClick={finish}>
-            Don't Save
-          </button>
-          <span className="title-spacer" />
-          <button autoFocus disabled={busy} onClick={() => setPending(null)}>
-            Cancel
-          </button>
-          <button
-            className="primary"
-            disabled={busy}
-            onClick={async () => {
-              if (await save()) await finish();
-            }}
-          >
-            {busy ? 'Saving…' : 'Save'}
-          </button>
-        </footer>
+        {recoveryError && (
+          <div className="save-recovery-failure" role="alert">
+            <p className="save-error">{recoveryError}</p>
+            <p className="help-text">
+              The recovery copy could not be updated. Your saved project or requested download is
+              unchanged.
+            </p>
+          </div>
+        )}
+        {recoveryError ? (
+          <footer className="save-recovery-actions">
+            <button disabled={busy || recoveryBusy} onClick={finish}>
+              {recoveryBusy ? 'Retrying…' : 'Retry'}
+            </button>
+            <button
+              className="primary"
+              disabled={busy || recoveryBusy}
+              onClick={continueWithoutRecovery}
+            >
+              Continue without recovery
+            </button>
+            <button
+              ref={saveDialogCancel}
+              disabled={busy || recoveryBusy}
+              onClick={dismissSaveDialog}
+            >
+              Cancel
+            </button>
+          </footer>
+        ) : (
+          <footer>
+            <button disabled={busy || recoveryBusy} onClick={finish}>
+              Don't Save
+            </button>
+            <span className="title-spacer" />
+            <button
+              ref={saveDialogCancel}
+              disabled={busy || recoveryBusy}
+              onClick={dismissSaveDialog}
+            >
+              Cancel
+            </button>
+            <button
+              className="primary"
+              disabled={busy || recoveryBusy}
+              onClick={async () => {
+                if (await save()) await finish();
+              }}
+            >
+              {busy ? 'Saving…' : 'Save'}
+            </button>
+          </footer>
+        )}
       </section>
     </div>
   );
   return {
     save,
+    busy: busy || recoveryBusy,
     requestOpen,
     dialog,
     pending: !!pending,

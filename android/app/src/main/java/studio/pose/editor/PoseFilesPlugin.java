@@ -17,6 +17,7 @@ import java.util.*;
 public class PoseFilesPlugin extends Plugin {
     private static final int CHUNK = 768 * 1024;
     private static final long MAX = 512L * 1024 * 1024;
+    private static final long MAX_GLB = 32L * 1024 * 1024;
     private final Map<String, File> streams = new HashMap<>();
     private final Map<String, Uri> destinations = new HashMap<>();
     private boolean picking;
@@ -27,7 +28,25 @@ public class PoseFilesPlugin extends Plugin {
         } catch (Exception ignored) {}
         return "Project.pose";
     }
+    private long declaredSize(Uri uri) {
+        try (Cursor c = getContext().getContentResolver().query(uri, new String[]{OpenableColumns.SIZE}, null, null, null)) {
+            if (c != null && c.moveToFirst() && !c.isNull(0)) {
+                long size = c.getLong(0);
+                if (size >= 0) return size;
+            }
+        } catch (Exception ignored) {}
+        return -1;
+    }
+    private String sizeError(long maxBytes) {
+        return maxBytes == MAX_GLB ? "Choose a valid GLB file below 32 MB." : "Choose a document below 512 MB.";
+    }
     private JSObject cacheDocument(Uri uri) throws IOException {
+        return cacheDocument(uri, MAX);
+    }
+    private JSObject cacheDocument(Uri uri, long requestedMax) throws IOException {
+        long maxBytes = requestedMax > 0 ? Math.min(requestedMax, MAX) : MAX;
+        long declared = declaredSize(uri);
+        if (declared > maxBytes) throw new IOException(sizeError(maxBytes));
         String id = UUID.randomUUID().toString();
         File file = new File(getContext().getCacheDir(), "pose-read-" + id);
         try (InputStream in = getContext().getContentResolver().openInputStream(uri); OutputStream out = new FileOutputStream(file)) {
@@ -35,7 +54,7 @@ public class PoseFilesPlugin extends Plugin {
             byte[] buffer = new byte[65536]; long total = 0; int count;
             while ((count = in.read(buffer)) != -1) {
                 total += count;
-                if (total > MAX) throw new IOException("Choose a document below 512 MB.");
+                if (total > maxBytes) throw new IOException(sizeError(maxBytes));
                 out.write(buffer, 0, count);
             }
         } catch (Exception e) { file.delete(); throw e; }
@@ -55,7 +74,8 @@ public class PoseFilesPlugin extends Plugin {
         Uri uri = result.getData().getData();
         try {
             try { getContext().getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); } catch (SecurityException ignored) {}
-            call.resolve(cacheDocument(uri));
+            long requestedMax = call.getData().optLong("maxBytes", 0L);
+            call.resolve(cacheDocument(uri, requestedMax));
         } catch (Exception e) { call.reject("Could not open document: " + e.getMessage()); }
     }
     @PluginMethod public void openUri(PluginCall call) {

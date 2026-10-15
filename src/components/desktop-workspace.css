@@ -60,7 +60,7 @@
   height: 24px;
   min-height: 24px;
   padding: 3px 5px;
-  border-radius: 4px;
+  border-radius: var(--radius-shared);
 }
 .desktop-tools button[aria-pressed='true'],
 .desktop-panel-nav button[aria-pressed='true'],
@@ -105,6 +105,84 @@
   display: flex;
   flex-direction: column;
   overflow: auto;
+}
+.properties-dock-shell {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--surface-quick);
+}
+.properties-controller-rail {
+  display: flex;
+  flex: 0 0 var(--controller-rail-width);
+  flex-direction: column;
+  align-self: flex-start;
+  height: max-content;
+  min-width: var(--controller-rail-width);
+  min-height: 0;
+  border-inline-end: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-menu) 72%, var(--surface-quick));
+}
+.properties-controller-tools {
+  flex: 0 0 auto;
+  min-height: 0;
+  overflow: visible;
+  scrollbar-width: thin;
+}
+.properties-rail-toggle {
+  display: inline-flex;
+  flex: 0 0 var(--control-height);
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 44px;
+  min-height: var(--control-height);
+  height: var(--control-height);
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--muted);
+  background: transparent;
+}
+.properties-rail-toggle:hover,
+.properties-rail-toggle:focus-visible {
+  color: var(--text);
+  background: var(--hover);
+}
+.properties-rail-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.properties-dock-shell > .side-content {
+  flex: 1 1 auto;
+  max-height: none;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+.properties-collapsed-rail {
+  position: absolute;
+  z-index: 42;
+  top: 60px;
+  right: 12px;
+  bottom: 52px;
+  display: flex;
+  width: 56px;
+  min-width: 56px;
+  min-height: 0;
+  max-height: calc(100vh - 112px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-shared);
+  background: var(--surface-quick);
+  box-shadow: var(--shadow-panel, 0 3px 10px #05090f45, 0 18px 44px -10px #05090f80);
+}
+.properties-collapsed-rail > .properties-controller-rail {
+  width: 100%;
+  border-inline-end: 0;
 }
 .side-content > .control-list,
 .side-content > .inspector,
@@ -218,7 +296,7 @@
   height: 22px;
   min-height: 22px;
   padding: 3px;
-  border-radius: 4px;
+  border-radius: var(--radius-shared);
   color: var(--muted);
 }
 .time-slider > button:hover {
@@ -274,7 +352,7 @@
   color: var(--text);
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-shared);
   box-shadow: var(--shadow-panel, 0 12px 48px #0008);
 }
 .delete-animation-dialog::backdrop {
@@ -319,7 +397,7 @@
 .app.desktop-workspace:not(.curves-open) {
   position: relative;
   display: block;
-  min-width: 800px;
+  min-width: 0;
   overflow: hidden;
   background: var(--canvas);
 }
@@ -349,18 +427,24 @@
 .app.desktop-workspace > .titlebar .desktop-panel-nav {
   min-height: 32px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-group, 8px);
+  border-radius: var(--radius-shared);
   background: var(--surface-quick);
   box-shadow: var(--shadow-tools, 0 2px 5px #060a1030, 0 6px 18px #060a1040);
+}
+.app.desktop-workspace > .titlebar .desktop-panel-nav {
+  border: 0;
+  border-radius: var(--radius-flush);
+  background: transparent;
+  box-shadow: none;
 }
 .app.desktop-workspace > .titlebar .brand-mark {
   width: 32px;
   height: 32px;
   justify-content: center;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control, 6px);
-  background: var(--surface-menu);
-  box-shadow: var(--shadow-tools, 0 2px 5px #060a1030, 0 6px 18px #060a1040);
+  border: 0;
+  border-radius: var(--radius-flush);
+  background: transparent;
+  box-shadow: none;
 }
 .app.desktop-workspace > .titlebar .title-spacer {
   display: flex;
@@ -398,15 +482,15 @@
   > .titlebar
   :is(.desktop-tools, .desktop-panel-nav, .desktop-utilities)
   > button:first-child {
-  border-start-start-radius: 7px;
-  border-end-start-radius: 7px;
+  border-start-start-radius: var(--radius-shared);
+  border-end-start-radius: var(--radius-shared);
 }
 .app.desktop-workspace
   > .titlebar
   :is(.desktop-tools, .desktop-panel-nav, .desktop-utilities)
   > button:last-child {
-  border-start-end-radius: 7px;
-  border-end-end-radius: 7px;
+  border-start-end-radius: var(--radius-shared);
+  border-end-end-radius: var(--radius-shared);
 }
 .app.desktop-workspace > .titlebar :is(.desktop-tools, .desktop-panel-nav, .desktop-utilities) > i {
   width: 1px;
@@ -461,7 +545,7 @@
   max-height: calc(100vh - 112px);
   min-width: 0;
   border: 1px solid var(--border);
-  border-radius: var(--radius-panel, 12px);
+  border-radius: var(--radius-shared);
   overflow: hidden;
   background: var(--surface-quick);
   box-shadow: var(--shadow-panel, 0 3px 10px #05090f45, 0 18px 44px -10px #05090f80);
@@ -470,6 +554,10 @@
     opacity var(--motion-surface) var(--motion-ease),
     translate var(--motion-surface) var(--motion-ease);
 }
+.animate-layout > .area-side:has(.properties-dock-shell) {
+  display: flex;
+  flex-direction: column;
+}
 .animate-layout > .split-side {
   position: absolute;
   z-index: 43;
@@ -477,7 +565,7 @@
   right: calc(clamp(320px, var(--side-width), 440px) + 10px);
   bottom: 56px;
   width: 4px;
-  border-radius: 2px;
+  border-radius: var(--radius-shared);
   background: transparent;
 }
 
@@ -512,6 +600,10 @@
 .animate-layout[data-editors='true'] > .area-side {
   max-height: calc(100vh - clamp(180px, var(--editors-height), 28vh) - 112px);
 }
+.animate-layout[data-editors='true'] > .properties-collapsed-rail {
+  bottom: calc(clamp(180px, var(--editors-height), 28vh) + 52px);
+  max-height: calc(100vh - clamp(180px, var(--editors-height), 28vh) - 112px);
+}
 .animate-layout > :is(.split-side, .split-editors)[data-state='closing'] {
   pointer-events: none;
 }
@@ -538,10 +630,10 @@
   border-radius: 0;
 }
 .animate-layout > .time-slider > button[aria-label='First frame'] {
-  border-radius: var(--radius-group, 8px) 0 0 var(--radius-group, 8px);
+  border-radius: var(--radius-shared) 0 0 var(--radius-shared);
 }
 .animate-layout > .time-slider > button[aria-label='Last frame'] {
-  border-radius: 0 var(--radius-group, 8px) var(--radius-group, 8px) 0;
+  border-radius: 0 var(--radius-shared) var(--radius-shared) 0;
 }
 .animate-layout > .time-slider > button.play {
   width: 36px;
@@ -555,7 +647,7 @@
   min-width: 88px;
   gap: 6px;
   padding-inline: 10px;
-  border-radius: var(--radius-control, 6px);
+  border-radius: var(--radius-shared);
 }
 .animate-layout > .time-slider > .timeline-toggle[aria-pressed='true'] {
   background: var(--accent);
@@ -594,7 +686,7 @@
   left: 12px;
   width: clamp(280px, var(--setup-width), 380px);
   border: 1px solid var(--border);
-  border-radius: var(--radius-panel, 12px);
+  border-radius: var(--radius-shared);
   overflow: hidden;
   background: var(--surface-menu);
   box-shadow: var(--shadow-panel, 0 3px 10px #05090f45, 0 18px 44px -10px #05090f80);
@@ -619,13 +711,227 @@
   min-height: 24px;
   padding: 0 8px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-control, 6px);
+  border-radius: var(--radius-shared);
   background: var(--surface-menu);
   box-shadow: var(--shadow-tools, 0 2px 5px #060a1030, 0 6px 18px #060a1040);
   pointer-events: none;
 }
 .app.desktop-workspace > .statusbar > span:last-child {
   display: none;
+}
+
+/* Fine-pointer desktop uses one dock frame at every window size. The scene
+ * owns the first grid row and receives the remaining cell dimensions, while
+ * Properties and the editor/transport rows reserve their own space. */
+@media (pointer: fine) {
+  .app.desktop-workspace > .animate-layout:not(.setup-layout) {
+    position: absolute;
+    inset: var(--desktop-dock-top) 0 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(280px, var(--side-width), 440px);
+    grid-template-rows: minmax(0, 1fr) minmax(180px, var(--editors-height)) 40px;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--canvas);
+  }
+
+  .app.desktop-workspace > .animate-layout:not(.setup-layout):not(:has(> .area-editors)) {
+    grid-template-rows: minmax(0, 1fr) 40px;
+  }
+
+  .app.desktop-workspace
+    > .animate-layout:not(.setup-layout):not(:has(.area-side)):has(.properties-collapsed-rail) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app.desktop-workspace
+    > .animate-layout:not(.setup-layout):not(:has(.area-side)):not(
+      :has(.properties-collapsed-rail)
+    ) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app.desktop-workspace > .animate-layout:not(.setup-layout) > .area-viewport {
+    position: relative;
+    inset: auto;
+    z-index: 0;
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+    background: var(--canvas);
+  }
+
+  .app.desktop-workspace > .animate-layout:not(.setup-layout) > .area-side {
+    position: relative;
+    inset: auto;
+    z-index: 42;
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    height: auto;
+    max-height: none;
+    min-width: 0;
+    min-height: 0;
+    border: 0;
+    border-inline-start: 1px solid var(--border);
+    border-radius: var(--radius-flush);
+    overflow: visible;
+    background: var(--surface-dock);
+    box-shadow: none;
+  }
+
+  .app.desktop-workspace
+    > .animate-layout:not(.setup-layout)
+    > .area-side
+    > .properties-dock-shell {
+    position: relative;
+    display: block;
+    overflow: visible;
+    background: var(--surface-dock);
+    border-radius: var(--radius-flush);
+  }
+
+  .app.desktop-workspace
+    > .animate-layout:not(.setup-layout)
+    > .area-side
+    > .properties-dock-shell
+    > .properties-controller-rail {
+    position: absolute;
+    z-index: 2;
+    inset-block-start: 0;
+    inset-inline-start: calc(-1 * var(--controller-rail-width));
+    width: var(--controller-rail-width);
+    background: var(--surface-dock);
+  }
+
+  .app.desktop-workspace
+    > .animate-layout:not(.setup-layout)
+    > .area-side
+    > .properties-dock-shell
+    > .side-content {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    min-width: 0;
+    min-height: 0;
+    background: var(--surface-dock);
+  }
+
+  .app.desktop-workspace > .animate-layout:not(.setup-layout) > .properties-collapsed-rail {
+    position: relative;
+    inset: auto;
+    z-index: 42;
+    grid-column: 1;
+    grid-row: 1;
+    align-self: start;
+    justify-self: end;
+    width: auto;
+    height: max-content;
+    max-height: none;
+    min-width: var(--controller-rail-width);
+    min-height: 0;
+    border: 0;
+    border-inline-start: 0;
+    border-radius: var(--radius-flush);
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .app.desktop-workspace
+    > .animate-layout:not(.setup-layout)
+    > .properties-collapsed-rail
+    > .properties-controller-rail {
+    position: static;
+    width: var(--controller-rail-width);
+    background: var(--surface-dock);
+  }
+
+  .app.desktop-workspace > .animate-layout:not(.setup-layout) > .area-editors {
+    position: relative;
+    inset: auto;
+    z-index: 38;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: auto;
+    height: auto;
+    max-height: none;
+    min-width: 0;
+    min-height: 0;
+    border: 0;
+    border-top: 1px solid var(--border);
+    border-radius: var(--radius-flush);
+    overflow: hidden;
+    background: var(--surface-dock);
+    box-shadow: none;
+  }
+
+  .app.desktop-workspace > .animate-layout:not(.setup-layout) > .area-editors > .timeline {
+    min-width: 0;
+    min-height: 0;
+    background: var(--surface-dock);
+    border-top: 0;
+  }
+
+  .app.desktop-workspace > .animate-layout:not(.setup-layout) > .split-side {
+    position: relative;
+    inset: auto;
+    z-index: 43;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: start;
+    align-self: stretch;
+    width: 8px;
+    height: auto;
+    border-radius: var(--radius-flush);
+    background: transparent;
+  }
+
+  .app.desktop-workspace > .animate-layout:not(.setup-layout):not(:has(.area-side)) > .split-side {
+    display: none;
+  }
+
+  .app.desktop-workspace > .animate-layout:not(.setup-layout) > .split-editors {
+    position: relative;
+    inset: auto;
+    z-index: 39;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: stretch;
+    align-self: start;
+    width: auto;
+    height: 8px;
+    border-radius: var(--radius-flush);
+    background: transparent;
+  }
+
+  .app.desktop-workspace > .animate-layout:not(.setup-layout) > .time-slider {
+    position: relative;
+    inset: auto;
+    z-index: 45;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 40px;
+    padding: 4px 12px;
+    border: 0;
+    border-top: 1px solid var(--border);
+    border-radius: var(--radius-flush);
+    background: var(--surface-dock);
+    box-shadow: none;
+  }
+
+  .app.desktop-workspace
+    > .animate-layout:not(.setup-layout):not(:has(> .area-editors))
+    > .time-slider {
+    grid-row: 2;
+  }
 }
 
 @media (max-width: 1180px) {
@@ -734,38 +1040,49 @@
   min-height: 32px;
   padding: 0 10px;
   gap: 6px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-group, 8px);
-  background: var(--surface-menu);
+  border: 0;
+  border-radius: var(--radius-flush);
+  background: transparent;
   color: var(--text);
-  box-shadow: var(--shadow-tools, 0 2px 5px #060a1030, 0 6px 18px #060a1040);
+  box-shadow: none;
 }
 .desktop-command-menu {
   position: absolute;
   z-index: 240;
   top: calc(100% + 6px);
   left: 0;
-  min-width: 360px;
+  min-width: 220px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
   padding: 4px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-panel, 12px);
+  border-radius: var(--radius-shared);
   background: var(--surface-menu);
   box-shadow: var(--shadow-popover, 0 4px 12px #05090f55, 0 16px 36px -6px #05090f80);
+  overflow: visible;
 }
 .desktop-command-menu > .menubar {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(100px, 1fr));
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 2px;
+  width: min(220px, calc(100vw - 24px));
+}
+.desktop-command-menu .menubar-menu {
   width: 100%;
 }
 .desktop-command-menu .menubar-trigger {
   width: 100%;
-  justify-content: flex-start;
+  justify-content: space-between;
   text-align: left;
 }
-.desktop-command-menu .menubar-dropdown {
-  top: calc(100% + 6px);
+.menubar-dropdown[data-submenu] {
+  position: fixed;
+  top: 0;
   left: 0;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow: auto;
 }
 .menubar-menu {
   position: relative;
@@ -775,7 +1092,7 @@
   min-height: 30px;
   padding: 0 10px;
   border: 0;
-  border-radius: var(--radius-control, 6px);
+  border-radius: var(--radius-shared);
   background: none;
   color: var(--text);
   font-size: 13px;
@@ -783,6 +1100,15 @@
 .menubar-trigger:hover,
 .menubar-trigger[aria-expanded='true'] {
   background: var(--selection);
+}
+.menubar-submenu-indicator {
+  margin-inline-start: 16px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+}
+.menubar-menu[data-submenu-side='left'] .menubar-submenu-indicator {
+  transform: rotate(180deg);
 }
 .menubar-dropdown {
   position: absolute;
@@ -795,7 +1121,7 @@
   flex-direction: column;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-shared);
   box-shadow: 0 10px 30px #0008;
 }
 .menubar-dropdown > button {
@@ -807,7 +1133,7 @@
   min-height: 26px;
   padding: 0 8px 0 4px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-shared);
   background: none;
   color: var(--text);
   font-size: 12px;
@@ -854,7 +1180,7 @@
   margin-left: 0;
   padding: 0;
   overflow: hidden;
-  border-radius: var(--radius-group, 8px);
+  border-radius: var(--radius-shared);
   background: var(--surface-menu);
   border: 1px solid var(--border);
   -webkit-app-region: no-drag;
@@ -882,7 +1208,7 @@
   min-height: 32px;
   padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-control, 6px);
+  border-radius: var(--radius-shared);
   background: var(--surface-menu);
   color: var(--secondary);
   font-size: 13px;
@@ -991,7 +1317,7 @@
   min-height: 22px;
   padding: 0 7px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-shared);
   background: none;
   color: var(--muted);
   font-size: 11px;
@@ -1033,4 +1359,196 @@
   width: 32px;
   height: 32px;
   padding: 0;
+}
+
+/* A short, narrow desktop window still owns the full-screen scene. Keep its
+ * compact controls inside the viewport instead of inheriting the old 740/800px
+ * desktop floors, which pushed the utility row and transport off-screen. */
+@media (pointer: fine) and (max-width: 740px), (pointer: fine) and (max-height: 540px) {
+  .app.desktop-workspace,
+  .app.desktop-workspace.curves-open,
+  .app.desktop-workspace:not(.curves-open) {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  /* Keep the short scene usable when the persisted editor height came from a
+   * larger window. At 640x450 this resolves to 180px for the editor row,
+   * leaving the 178px scene row after the 52px titlebar and 40px transport. */
+  .app.desktop-workspace > .animate-layout:not(.setup-layout):has(> .area-editors) {
+    --short-editor-min: min(180px, calc(100% - 40px));
+    --short-editor-max: min(
+      var(--editors-height),
+      max(var(--short-editor-min), calc(100% - 220px))
+    );
+    grid-template-rows: minmax(0, 1fr) minmax(var(--short-editor-min), var(--short-editor-max)) 40px;
+  }
+
+  .app.desktop-workspace > .titlebar {
+    inset: 8px;
+    gap: 4px;
+  }
+  .app.desktop-workspace > .titlebar > .title-menu {
+    flex: 0 0 34px;
+    width: 34px;
+  }
+  .app.desktop-workspace > .titlebar > .title-menu .brand {
+    justify-content: center;
+    width: 34px;
+    padding: 0;
+  }
+  .app.desktop-workspace > .titlebar > .title-menu .brand span,
+  .app.desktop-workspace > .titlebar > .project-title,
+  .app.desktop-workspace > .titlebar > .save-indicator,
+  .app.desktop-workspace > .titlebar > .update-indicator {
+    display: none;
+  }
+  .app.desktop-workspace > .titlebar .title-spacer:has(.desktop-context-cluster) {
+    position: static;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .app.desktop-workspace > .titlebar .desktop-context-cluster {
+    position: absolute;
+    top: 4px;
+    left: 42px;
+    gap: 0;
+  }
+  .app.desktop-workspace > .titlebar .desktop-clip-trigger {
+    width: 32px;
+    max-width: 32px;
+    min-width: 32px;
+    justify-content: center;
+    padding: 0;
+  }
+  .app.desktop-workspace > .titlebar .desktop-clip-trigger strong,
+  .app.desktop-workspace > .titlebar .desktop-clip-trigger > svg:last-child {
+    display: none;
+  }
+  .app.desktop-workspace > .titlebar .desktop-utilities {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    gap: 0;
+    min-height: 32px;
+    max-width: calc(100% - 84px);
+    overflow: visible;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-shared);
+    background: var(--surface-quick);
+    box-shadow: var(--shadow-tools, 0 2px 5px #060a1030, 0 6px 18px #060a1040);
+  }
+  .app.desktop-workspace > .titlebar:has(.window-buttons) .desktop-utilities {
+    right: 122px;
+  }
+  .app.desktop-workspace > .titlebar .desktop-utilities .active-layer-control {
+    flex: 0 1 132px;
+    min-width: 0;
+    max-width: 132px;
+  }
+  .app.desktop-workspace > .titlebar .desktop-utilities .active-layer-trigger {
+    width: 100%;
+    max-width: 132px;
+    min-height: 30px;
+    height: 30px;
+    padding: 3px 6px;
+    gap: 4px;
+  }
+  .app.desktop-workspace > .titlebar .desktop-utilities > button {
+    flex: 0 0 30px;
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+    padding: 0;
+  }
+
+  /* The dock grid above remains authoritative in short windows. Only constrain
+   * the rail to its scene row so a tall action set scrolls inside the dock. */
+  .app.desktop-workspace
+    > .animate-layout:not(.setup-layout)
+    > .area-side
+    > .properties-dock-shell
+    > .properties-controller-rail,
+  .app.desktop-workspace
+    > .animate-layout:not(.setup-layout)
+    > .properties-collapsed-rail
+    > .properties-controller-rail {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .app.desktop-workspace
+    > .animate-layout:not(.setup-layout)
+    > .area-side
+    > .properties-dock-shell
+    > .properties-controller-rail {
+    inset-block-end: 0;
+    height: auto;
+    max-height: 100%;
+  }
+  .app.desktop-workspace
+    > .animate-layout:not(.setup-layout)
+    :is(.area-side, .properties-collapsed-rail)
+    .properties-controller-tools {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .app.desktop-workspace > .animate-layout:not(.setup-layout) > .properties-collapsed-rail {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .app.desktop-workspace
+    > .animate-layout:not(.setup-layout)
+    > .properties-collapsed-rail
+    > .properties-controller-rail {
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .animate-layout > .time-slider {
+    right: 0;
+    left: 0;
+    gap: 2px;
+    padding: 4px 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+  .animate-layout > .time-slider > * {
+    flex: 0 0 auto;
+  }
+  .animate-layout > .time-slider .transport-history {
+    margin-right: 0;
+  }
+  .animate-layout > .time-slider > button,
+  .animate-layout > .time-slider > button.play,
+  .animate-layout > .time-slider > .timeline-toggle {
+    width: 30px;
+    min-width: 30px;
+    padding: 0;
+  }
+  .animate-layout > .time-slider > .timeline-toggle {
+    gap: 0;
+  }
+  .animate-layout > .time-slider > .timeline-toggle span {
+    display: none;
+  }
+  .animate-layout > .time-slider input[type='range'] {
+    flex: 1 1 72px;
+    min-width: 72px;
+    margin: 0 4px;
+  }
+  .animate-layout > .time-slider output {
+    min-width: 26px;
+  }
+  .animate-layout > .time-slider input[type='number'] {
+    width: 38px;
+  }
 }

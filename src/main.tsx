@@ -1,6 +1,7 @@
 import { initializeBrowser } from './platform/browser';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { StudioErrorBoundary } from './components/StudioErrorBoundary';
 import './styles.css';
 import './dark-ui.css';
 import './action-ui.css';
@@ -16,7 +17,13 @@ import './motion.css';
 import './interpolation-settings.css';
 initializeAndroid()
   .then(initializeBrowser)
-  .then(() => createRoot(document.getElementById('root')!).render(<App />))
+  .then(() =>
+    createRoot(document.getElementById('root')!).render(
+      <StudioErrorBoundary>
+        <App />
+      </StudioErrorBoundary>,
+    ),
+  )
   .catch((error) => {
     document.getElementById('root')!.textContent =
       'Pose could not initialize local storage: ' + error.message;

@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Camera, PersonStanding, Link2, X } from 'lucide-react';
 import { useStudio } from '../hooks';
 import { studio } from '../core/store';
 import type { ControlId, Pose, RigLayer } from '../core/model';
+import { useModalFocus } from '../hooks/modalFocus';
 export function NewActionDialog({
   initial,
   rest,
@@ -14,17 +15,22 @@ export function NewActionDialog({
 }) {
   const s = useStudio(),
     clips = s.workspace!.clips;
+  const dialog = useRef<HTMLFormElement>(null),
+    initialFocus = useRef<HTMLInputElement>(null);
   const suggest = (_type: RigLayer) => 'New animation';
   const [type, setType] = useState(initial),
     [name, setName] = useState(() => suggest(initial)),
     [sourceId, setSourceId] = useState(''),
     [error, setError] = useState('');
+  useModalFocus({ rootRef: dialog, initialFocusRef: initialFocus, onEscape: close });
   const sources = clips.filter((c) => c.project.editing !== type),
     source = sources.find((c) => c.id === sourceId),
     sourceLabel = type === 'body' ? 'First-person' : 'Full-body';
   return (
     <div className="modal-backdrop">
       <form
+        ref={dialog}
+        tabIndex={-1}
         className="modal compact-modal new-action-modal"
         role="dialog"
         aria-modal="true"
@@ -69,7 +75,7 @@ export function NewActionDialog({
         <label className="action-field">
           Name
           <input
-            autoFocus
+            ref={initialFocus}
             aria-label="New animation name"
             value={name}
             maxLength={100}

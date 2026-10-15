@@ -1,3 +1,11 @@
+## 0.8.25 — audit remediation and resilient workspace UI
+
+Audit remediation keeps fractional current-frame edits editable, adds a visible WebGL fallback with retry/download routes, gives failed recovery explicit Retry/Continue/Cancel choices, validates dynamic properties transactionally with a 256-item global cap, and hardens keyboard and modal focus. Phone errors remain visible, compact windows no longer inherit a minimum width, Tools menus support keyboard navigation, GLB imports reject files above 32 MiB across browser and Android provider/stream paths, and browser zoom no longer applies a `maximum-scale` restriction.
+
+Recovery/session updates merge by session and generation atomically, quarantine failed data durably, and hold missing-generation fallback while lazy loading completes. Animation and pose deletion now use ordered undo history while preserving references and drafts. Fine-pointer desktop reserves scene space for opaque, collapsible Properties and bottom timeline docks; touch layouts remain contextual. Shared UI refinements apply the 8px radius, ghost-button rest state, centered numeric values and dropdown chevrons, with a logo-only menu, a collapsible Properties bookmark rail, per-bone current-pose Mirror controls and distinct timeline tracks.
+
+PWA releases now check automatically, wait for editing, playback and file operations to finish, preserve a recovery snapshot, and reload into the new release. The Properties rail ends at its last tool, scrolls within short windows, and keeps a compact restore control when collapsed.
+
 ## 0.8.10 — keyed grounding and coordinate editing
 
 **Ground** is a one-shot pose-authoring command. It places the selected mesh on the floor, flattens the contact rotation, and keys the current frame, including the toes when grounding a foot. It works with Auto Key off and is one undo step. Normal track interpolation controls the approach and lift; there is no automatic floor clamp during playback or export. Old saved Grounded flags are accepted but no longer evaluated. Fixed IK reach remains fixed; the editor reports when it prevents contact.

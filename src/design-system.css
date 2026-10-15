@@ -53,23 +53,49 @@
   --library-secondary: var(--secondary);
   --library-muted: var(--muted);
 
-  /* One radius language. */
+  /* One radius language. Every visible outer corner uses this shared value;
+   * joined interiors and viewport edges opt into the explicit flush token. */
   --radius-flush: 0px;
-  --radius-flair: 4px;
-  --radius-control: 6px;
-  --radius-group: 8px;
-  --radius-panel: 12px;
-  --radius-dialog: 16px;
-  /* Legacy names migrate into the shared scale. */
-  --ds-radius: var(--radius-control);
-  --ds-radius-lg: var(--radius-group);
-  --tool-radius: var(--radius-panel);
+  --radius-shared: 8px;
+  --radius-flair: var(--radius-shared);
+  --radius-control: var(--radius-shared);
+  --radius-group: var(--radius-shared);
+  --radius-panel: var(--radius-shared);
+  --radius-dialog: var(--radius-shared);
+  /* Compatibility aliases intentionally resolve to the same outer geometry. */
+  --ds-radius: var(--radius-shared);
+  --ds-radius-lg: var(--radius-shared);
+  --tool-radius: var(--radius-shared);
+
+  /* Shared rhythm. Components choose a semantic step instead of inventing
+   * near-equivalent gaps for each toolbar, menu or panel header. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --control-height: 32px;
+  --touch-target: 44px;
+  --icon-size: 16px;
+  --icon-size-emphasis: 18px;
+  --chrome-control-height: var(--control-height);
+  --chrome-touch-height: var(--touch-target);
+  --chrome-icon-size: var(--icon-size);
+  --chrome-icon-size-emphasis: var(--icon-size-emphasis);
+  --desktop-titlebar-inset: 12px;
+  --desktop-titlebar-height: 40px;
+  --desktop-dock-top: calc(var(--desktop-titlebar-inset) + var(--desktop-titlebar-height));
+  --controller-rail-width: 56px;
 
   /* Surface alpha is part of the component contract, not a container opacity. */
   --surface-quick: rgb(18 29 40 / 70%);
   --surface-menu: rgb(18 29 40 / 70%);
   --surface-timeline: rgb(18 29 40 / 70%);
   --surface-ruler: rgb(18 29 40 / 70%);
+  /* Fine-pointer desktop docks reserve space for the scene, so their shared
+   * shell is opaque and does not let the canvas bleed through the data. */
+  --surface-dock: var(--panel);
 }
 
 html,
@@ -88,6 +114,39 @@ body {
 }
 :root .app :is(input, select, textarea) {
   border-radius: var(--radius-control);
+}
+
+/* Shared chrome rhythm. Headers separate their title from actions by one
+ * related-control step; compact icon toolbars use the smaller step so they
+ * stay visually grouped without touching. */
+:root
+  .app
+  :is(
+    .properties-heading,
+    .desktop-inspector-header,
+    .retarget-heading,
+    .animation-library-toolbar,
+    .animation-library-actions,
+    .controller-ribbon-header
+  ) {
+  gap: var(--space-2);
+}
+:root .app .pose-toolbar {
+  gap: var(--space-1);
+}
+
+/* Menu rows share the same readable icon-to-label relationship as toolbars;
+ * their outer padding and device-specific hit targets remain component-owned. */
+:root
+  :is(
+    .active-layer-menu > button,
+    .transform-popover > button,
+    .animation-context-menu > button,
+    .keyframe-menu > button,
+    .keyframe-settings > button,
+    .file-menu > button
+  ) {
+  gap: var(--space-2);
 }
 
 /* Four contrast levels are used by the panels without whole-panel opacity. */
@@ -248,7 +307,7 @@ body {
   outline-color: var(--accent-ink);
 }
 
-/* Independent fields and buttons retain a compact 6px shape. */
+/* Independent fields and buttons use the shared outer shape. */
 :root
   .app
   :is(
@@ -276,22 +335,31 @@ body {
   outline-offset: -2px;
 }
 
-/* Commands have transient feedback; they do not acquire a selected-state fill. */
+/* Commands remain transparent at rest; hover/press and explicit disclosure
+ * state provide transient feedback without inventing a latched command mode. */
 :root .app :is(.ground-key-command, .pose-reset-command, [data-command='true']) {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  background: var(--raised);
-  color: var(--text);
+  border: 0;
+  border-radius: var(--radius-shared);
+  background: transparent;
+  color: var(--secondary);
 }
 :root
   .app
   :is(.ground-key-command, .pose-reset-command, [data-command='true']):hover:not(:disabled) {
   background: var(--hover);
+  color: var(--text);
 }
 :root
   .app
   :is(.ground-key-command, .pose-reset-command, [data-command='true']):active:not(:disabled) {
   background: var(--pressed);
+  color: var(--text);
+}
+:root
+  .app
+  :is(.ground-key-command, .pose-reset-command, [data-command='true'])[aria-expanded='true'] {
+  background: var(--selection);
+  color: var(--text);
 }
 
 /* Inspector hierarchy. The optional inspector is translucent at its surface
@@ -393,7 +461,74 @@ body {
   color: var(--accent);
 }
 
-/* Standalone controls use the larger dialog radius; embedded panels do not. */
+/* Toolbars and menu rows keep a clean transparent rest state. Their parent
+ * shell supplies the surface; hover/focus and explicit selection supply the
+ * feedback. This covers portalled menu roots as well as in-panel toolbars. */
+:root
+  :is(
+    .pose-toolbar > button,
+    .animation-library-toolbar button,
+    .animation-library-actions button,
+    .menubar-dropdown > button,
+    .file-menu > button,
+    .animation-context-menu button,
+    .keyframe-menu button,
+    .keyframe-settings button,
+    .track-options-menu button,
+    .curve-view-menu button
+  ) {
+  border: 0;
+  border-radius: var(--radius-flush);
+  background: transparent;
+  color: var(--secondary);
+}
+:root
+  :is(
+    .pose-toolbar > button,
+    .animation-library-toolbar button,
+    .animation-library-actions button,
+    .menubar-dropdown > button,
+    .file-menu > button,
+    .animation-context-menu button,
+    .keyframe-menu button,
+    .keyframe-settings button,
+    .track-options-menu button,
+    .curve-view-menu button
+  ):hover:not(:disabled),
+:root
+  :is(
+    .pose-toolbar > button,
+    .animation-library-toolbar button,
+    .animation-library-actions button,
+    .menubar-dropdown > button,
+    .file-menu > button,
+    .animation-context-menu button,
+    .keyframe-menu button,
+    .keyframe-settings button,
+    .track-options-menu button,
+    .curve-view-menu button
+  ):focus-visible {
+  background: var(--hover);
+  color: var(--text);
+}
+:root
+  :is(
+    .pose-toolbar > button,
+    .animation-library-toolbar button,
+    .animation-library-actions button,
+    .menubar-dropdown > button,
+    .file-menu > button,
+    .animation-context-menu button,
+    .keyframe-menu button,
+    .keyframe-settings button,
+    .track-options-menu button,
+    .curve-view-menu button
+  ):is([aria-expanded='true'], [aria-pressed='true'], [aria-selected='true']) {
+  background: var(--selection);
+  color: var(--text);
+}
+
+/* Standalone controls and embedded panels share the same outer geometry. */
 :root .modal,
 :root dialog {
   box-shadow: var(--shadow-dialog);
@@ -405,6 +540,316 @@ body {
 }
 :root .app .active-layer-trigger {
   border-radius: var(--radius-control);
+}
+
+/* Header triggers share one compact control contract. The surrounding nav
+ * supplies the translucent shell; a button is transparent at rest and only
+ * gains a fill for hover, focus or an open/selected state. Keeping the
+ * chevron as a named child makes layer and clip menus use the same ink. */
+:root .app.desktop-workspace :is(.desktop-header-trigger, .titlebar > .title-menu > .brand) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  height: var(--chrome-control-height);
+  min-height: var(--chrome-control-height);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-shared);
+  background: transparent;
+  box-shadow: none;
+  color: var(--secondary);
+  line-height: 1;
+  vertical-align: middle;
+}
+:root .app.desktop-workspace :is(.desktop-header-trigger, .titlebar > .title-menu > .brand) > svg {
+  flex: none;
+  width: var(--chrome-icon-size);
+  height: var(--chrome-icon-size);
+}
+:root
+  .app.desktop-workspace
+  :is(.desktop-header-trigger, .titlebar > .title-menu > .brand)
+  .header-chevron {
+  color: var(--secondary);
+  margin-inline-start: auto;
+}
+:root
+  .app.desktop-workspace
+  :is(.desktop-header-trigger, .titlebar > .title-menu > .brand):hover:not(:disabled),
+:root
+  .app.desktop-workspace
+  :is(.desktop-header-trigger, .titlebar > .title-menu > .brand):focus-visible {
+  background: var(--hover);
+  color: var(--text);
+}
+:root
+  .app.desktop-workspace
+  :is(.desktop-header-trigger, .titlebar > .title-menu > .brand):is(
+    [aria-expanded='true'],
+    [aria-pressed='true']
+  ) {
+  background: var(--selection);
+  color: var(--text);
+}
+:root
+  .app.desktop-workspace
+  :is(.desktop-header-trigger, .titlebar > .title-menu > .brand):is(
+    [aria-expanded='true'],
+    [aria-pressed='true']
+  )
+  .header-chevron {
+  color: var(--text);
+}
+:root .app.desktop-workspace .active-layer-trigger {
+  justify-content: flex-start;
+  max-width: 260px;
+  text-align: left;
+}
+:root .app.desktop-workspace .active-layer-trigger > svg:first-of-type {
+  width: var(--chrome-icon-size);
+  height: var(--chrome-icon-size);
+}
+
+/* Loop is one joined silhouette: each action owns a full cell and the
+ * disclosure cell follows the same selected-state treatment. */
+:root .app .loop-controls {
+  display: inline-flex;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-shared);
+  background: transparent;
+  overflow: hidden;
+  isolation: isolate;
+}
+:root .app .loop-controls > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: var(--control-height);
+  height: var(--control-height);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-flush);
+  background: transparent;
+  color: var(--secondary);
+}
+:root .app .loop-controls > button + button {
+  border-inline-start: 1px solid var(--border);
+}
+:root .app .loop-controls > button:hover:not(:disabled),
+:root .app .loop-controls > button:focus-visible {
+  background: var(--hover);
+  color: var(--text);
+}
+:root .app .loop-controls > button:is([aria-pressed='true'], [aria-expanded='true']) {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+:root
+  .app
+  .loop-controls
+  > button:is([aria-pressed='true'], [aria-expanded='true']):hover:not(:disabled) {
+  background: var(--accent-hover);
+  color: var(--accent-ink);
+}
+:root .app .loop-controls > button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+:root .app .loop-controls > button:is([aria-pressed='true'], [aria-expanded='true']):focus-visible {
+  outline-color: var(--accent-ink);
+}
+:root .app .loop-panel {
+  border-radius: var(--radius-shared);
+}
+
+/* Transport buttons are quiet until they are hovered or semantically active.
+ * The timeline surface remains translucent; only the button rest treatment is
+ * normalized here. */
+:root .app.desktop-workspace .time-slider > button {
+  background: transparent;
+  color: var(--secondary);
+}
+:root .app.desktop-workspace .time-slider > button:hover:not(:disabled),
+:root .app.desktop-workspace .time-slider > button:focus-visible {
+  background: var(--hover);
+  color: var(--text);
+}
+:root .app.desktop-workspace .time-slider > button.play[aria-label='Pause'],
+:root .app.desktop-workspace .time-slider > button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+:root .app.desktop-workspace .time-slider > button.play[aria-label='Pause']:hover:not(:disabled),
+:root .app.desktop-workspace .time-slider > button[aria-pressed='true']:hover:not(:disabled) {
+  background: var(--accent-hover);
+  color: var(--accent-ink);
+}
+:root .app.desktop-workspace .time-slider > button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+:root .app.desktop-workspace .time-slider .transport-history.joined {
+  gap: var(--space-1);
+  margin-inline-end: var(--space-3);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-flush);
+  background: transparent;
+  overflow: visible;
+}
+:root .app.desktop-workspace .time-slider .transport-history.joined > button {
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+}
+:root .app.desktop-workspace .time-slider .transport-history.joined > button + button {
+  border-inline-start: 0;
+}
+:root .app.desktop-workspace .time-slider .time-current-frame {
+  width: 52px;
+  min-width: 52px;
+  height: var(--control-height);
+  min-height: var(--control-height);
+  padding-inline: var(--space-1);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+:root .app.desktop-workspace .time-slider :is(.scrub-number, select) {
+  min-height: var(--control-height);
+  height: var(--control-height);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-shared);
+  background: var(--inset);
+  color: var(--text);
+  outline: none;
+  box-shadow: none;
+}
+:root .app.desktop-workspace .time-slider .scrub-number {
+  padding-inline: var(--space-1);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+:root .app.desktop-workspace .time-slider select {
+  padding-inline: var(--space-2) 30px;
+  background-position: right var(--space-2) center;
+  text-align: center;
+  text-align-last: center;
+}
+:root .app.desktop-workspace .time-slider :is(.scrub-number, select):focus {
+  border-color: var(--border);
+  outline: none;
+  box-shadow: none;
+}
+:root .app.desktop-workspace .time-slider :is(.scrub-number, select):focus-visible {
+  border-color: transparent;
+  outline: 1px solid var(--accent);
+  outline-offset: 0;
+  box-shadow: none;
+}
+
+@media (pointer: coarse) {
+  :root
+    .app.desktop-workspace
+    > .titlebar
+    :is(.title-menu, .desktop-tools, .desktop-panel-nav, .desktop-utilities),
+  :root .app.desktop-workspace :is(.desktop-header-trigger, .titlebar > .title-menu > .brand),
+  :root .app .loop-controls > button {
+    min-height: var(--chrome-touch-height);
+    min-width: var(--chrome-touch-height);
+    height: var(--chrome-touch-height);
+  }
+}
+
+/* Touch command groups use the same quiet rest state as desktop transport.
+ * Group shells stay connected through subtle separators; only hover, focus
+ * and semantic pressed states add a fill. Targets keep their device-specific
+ * 44px sizing from the phone/tablet sheets. */
+:root.android .app :is(.touch-history, .touch-playback) {
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-flush);
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+:root.android .app :is(.touch-history, .touch-playback) > button {
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  box-shadow: none;
+}
+:root.android .app :is(.touch-history, .touch-playback) > button + button {
+  border-inline-start: 1px solid var(--border-subtle);
+}
+:root.android .app :is(.touch-history, .touch-playback) > button:hover:not(:disabled),
+:root.android .app :is(.touch-history, .touch-playback) > button:focus-visible {
+  background: var(--hover);
+}
+:root.android
+  .app
+  :is(.touch-transport, .touch-pose-rail, .touch-panel-rail, .touch-utility-rail)
+  > button:not([aria-pressed='true']):not([aria-expanded='true']):not(.active),
+:root.android
+  .app
+  :is(.touch-transport, .touch-pose-rail, .touch-panel-rail, .touch-utility-rail)
+  .transform-options
+  > button:not([aria-pressed='true']):not([aria-expanded='true']):not(.active),
+:root.android
+  .app
+  .controller-ribbon
+  :is(.controller-ribbon-modes, .transform-options, .controller-ribbon-command-group)
+  > button:not([aria-pressed='true']):not([aria-expanded='true']):not(.active),
+:root.android
+  .app
+  .pose-action-buttons
+  > button:not([aria-pressed='true']):not([aria-expanded='true']):not(.active) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+:root.android
+  .app
+  :is(.touch-transport, .touch-pose-rail, .touch-panel-rail, .touch-utility-rail)
+  > button:not([aria-pressed='true']):not([aria-expanded='true']):not(.active):hover:not(:disabled),
+:root.android
+  .app
+  :is(.touch-transport, .touch-pose-rail, .touch-panel-rail, .touch-utility-rail)
+  .transform-options
+  > button:not([aria-pressed='true']):not([aria-expanded='true']):not(.active):hover:not(:disabled),
+:root.android
+  .app
+  .controller-ribbon
+  :is(.controller-ribbon-modes, .transform-options, .controller-ribbon-command-group)
+  > button:not([aria-pressed='true']):not([aria-expanded='true']):not(.active):hover:not(:disabled),
+:root.android
+  .app
+  .pose-action-buttons
+  > button:not([aria-pressed='true']):not([aria-expanded='true']):not(.active):hover:not(
+    :disabled
+  ) {
+  background: var(--hover);
+}
+
+/* Icon-only project chrome should size to the logo and save-state indicator,
+ * rather than retaining the old fixed empty phone title shell. */
+@media (max-width: 700px), (max-height: 540px) {
+  :root.android .app > .titlebar.titlebar {
+    width: max-content;
+    max-width: calc(100% - 160px);
+  }
+  :root.android .app > .titlebar .brand.brand {
+    width: var(--touch-target);
+    min-width: var(--touch-target);
+    padding-inline: 0;
+  }
+  :root.android .app > .titlebar .save-indicator {
+    flex: 0 0 auto;
+  }
 }
 
 /* Axis identity is redundant with labels but remains useful at a glance. */

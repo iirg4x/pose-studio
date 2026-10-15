@@ -18,7 +18,7 @@ import { BodyBasePanel } from './BodyBasePanel';
 import { controlTint } from '../core/controlStyle';
 import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
-import { Hand, Bone, Layers, Move3D, SlidersHorizontal, X } from 'lucide-react';
+import { Hand, Bone, Layers, Move3D, SlidersHorizontal, ChevronRight } from 'lucide-react';
 import { useStudioChrome } from '../hooks';
 import { studio } from '../core/store';
 import { controlLabels, clone, limbMode, controlEnabled, evaluate } from '../core/model';
@@ -154,11 +154,11 @@ export function Inspector({
         </button>
         <button
           className="properties-close"
-          aria-label="Close properties"
-          title="Close properties"
+          aria-label="Collapse properties"
+          title="Collapse properties"
           onClick={onClose}
         >
-          <X size={20} />
+          <ChevronRight size={20} />
         </button>
       </header>
       {compact && context === 'control' && s.selection.length > 0 && (
@@ -324,7 +324,9 @@ export function Inspector({
                     id="limb-posing"
                     title={limb.startsWith('arm') ? 'Arm posing' : 'Leg posing'}
                     defaultOpen={false}
-                    headerAction={
+                  >
+                    <div className="property-section-inline-action">
+                      <span>Pose mode</span>
                       <div
                         className="segmented rig-mode-switch"
                         title="Matches the current pose and keys the IK/FK mode"
@@ -332,6 +334,7 @@ export function Inspector({
                         {(['ik', 'fk'] as const).map((mode) => (
                           <button
                             key={mode}
+                            type="button"
                             aria-pressed={limbMode(s.project!, limb, s.frame) === mode}
                             onClick={() => switchLimb(limb, mode)}
                           >
@@ -339,8 +342,7 @@ export function Inspector({
                           </button>
                         ))}
                       </div>
-                    }
-                  >
+                    </div>
                     {!enabled && (
                       <p className="property-note">
                         Switch to {definition.only?.toUpperCase()} to pose this control.

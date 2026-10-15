@@ -4,7 +4,14 @@ import { randomId } from '../core/crypto';
 import { encodeProject } from '../../shared/project-codec.mjs';
 import { readProjectDocument } from './projectDocuments';
 import { readAsset, writeAsset, isTouch } from './storage';
-import { assetHash, builtInAsset, embedAssets, restoreAssets, validateGLB } from './portableAssets';
+import {
+  assetHash,
+  assertGLBSize,
+  builtInAsset,
+  embedAssets,
+  restoreAssets,
+  validateGLB,
+} from './portableAssets';
 const noop = () => () => {};
 function download(data: Uint8Array, name: string, type = 'application/octet-stream') {
   const url = URL.createObjectURL(new Blob([data.slice().buffer], { type })),
@@ -25,6 +32,11 @@ function pick(accept: string): Promise<File | null> {
     input.click();
   });
 }
+/** Read a user-selected GLB only after its metadata passes the shared limit. */
+export async function readGLBFile(file: Pick<File, 'size' | 'arrayBuffer'>) {
+  assertGLBSize(file.size);
+  return new Uint8Array(await file.arrayBuffer());
+}
 async function readCharacter(id: string) {
   if (!/^(?:[a-f0-9]{64}|builtin-[a-z-]+|example-fantasy-(?:male|female))$/.test(id))
     throw Error('Invalid model ID');
@@ -40,7 +52,7 @@ async function readCharacter(id: string) {
 async function importModel() {
   const file = await pick('.glb');
   if (!file) return null;
-  const data = validateGLB(new Uint8Array(await file.arrayBuffer())),
+  const data = validateGLB(await readGLBFile(file)),
     asset = await assetHash(data);
   await writeAsset('asset:' + asset, data);
   return { asset, name: file.name.replace(/\.glb$/i, ''), data };
@@ -90,7 +102,7 @@ export async function initializeBrowser() {
   const { AndroidAnimationImport } = await import('./androidAnimation');
   const animations = new AndroidAnimationImport(async () => {
     const file = await pick('.glb');
-    return file ? { name: file.name, data: new Uint8Array(await file.arrayBuffer()) } : null;
+    return file ? { name: file.name, data: await readGLBFile(file) } : null;
   });
   const unsupported = async (): Promise<never> => {
     throw Error(

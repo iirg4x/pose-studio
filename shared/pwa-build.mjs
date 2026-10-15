@@ -27,6 +27,9 @@ self.addEventListener('install',event=>event.waitUntil((async()=>{
  catch(error){await caches.delete(CACHE);throw error;}
  // Do not skipWaiting: an update must not replace an editor with unsaved work.
 })()));
+self.addEventListener('message',event=>{
+ if(event.data?.type==='SKIP_WAITING') self.skipWaiting();
+});
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
  for(const name of await caches.keys())if(name.startsWith(PREFIX)&&name!==CACHE)await caches.delete(name);
  await self.clients.claim();
