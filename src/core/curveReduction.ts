@@ -3,6 +3,14 @@ import { baseCurve, handles, readCurve, channelsFor } from './curves';
 import type { Channel, Curve, CurveKey } from './curves';
 import { sample } from './model';
 import type { ControlId, Track } from './model';
+import { detectNoise } from './bakedNoise';
+import type { BlenderNoiseSettings } from './blenderNoise';
+
+export interface NoiseReduction {
+  algorithm: 'blender';
+  maxError: number;
+  validationError: number;
+}
 
 export interface ReductionOptions {
   position: number;
@@ -14,6 +22,8 @@ export interface ReductionOptions {
   /** Baked phase reconstruction: negligible drift as a percentage of range. */
   drift?: number;
   range?: [number, number];
+  /** Infer a Blender-compatible Noise modifier from baked samples when safe. */
+  detectNoise?: boolean;
 }
 export const DEFAULT_REDUCTION: ReductionOptions = {
   position: 0.02,
@@ -22,6 +32,7 @@ export const DEFAULT_REDUCTION: ReductionOptions = {
   fit: 'auto',
   skimHandles: true,
   preserveExtrema: true,
+  detectNoise: false,
 };
 export interface ReductionInput {
   id: ControlId;
@@ -40,6 +51,7 @@ interface ReductionRow {
   bezier: number;
   linear: number;
   reason?: string;
+  noise?: NoiseReduction;
 }
 export interface ReductionResult {
   id: ControlId;
@@ -604,6 +616,33 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
       holds.push(candidate);
   holds.sort((a, b) => a.a - b.a);
   if (holds.length < 2) return;
+  const holdValue = (hold: { a: number; b: number }) => {
+    const values = observations
+      .slice(hold.a, hold.b + 1)
+      .map((point) => point.value)
+      .sort((a, b) => a - b);
+    return Math.max(Math.abs(values[0]), Math.abs(values.at(-1)!)) <= band
+      ? 0
+      : values[Math.floor(values.length / 2)];
+  };
+  // A maximal min/max window can stop short of the visually flat phase when
+  // harmless chatter exists elsewhere in that window. Extend each chosen hold
+  // through adjacent observations that are individually within the drift band
+  // of its robust level. Midpoints between neighboring holds keep expansions
+  // from consuming a distinct motion phase.
+  const originalHolds = holds.map((hold) => ({ ...hold }));
+  for (let i = 0; i < holds.length; i++) {
+    const hold = holds[i],
+      value = holdValue(hold),
+      leftLimit = i ? Math.ceil((originalHolds[i - 1].b + originalHolds[i].a) / 2) : 0,
+      rightLimit =
+        i + 1 < holds.length
+          ? Math.floor((originalHolds[i].b + originalHolds[i + 1].a) / 2)
+          : observations.length - 1;
+    while (hold.a > leftLimit && Math.abs(observations[hold.a - 1].value - value) <= band) hold.a--;
+    while (hold.b < rightLimit && Math.abs(observations[hold.b + 1].value - value) <= band)
+      hold.b++;
+  }
   const phaseKeys: CurveKey[] = [];
   const insert = (frame: number, value: number) => {
     if (phaseKeys.at(-1)?.frame !== frame)
@@ -611,14 +650,7 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
   };
   insert(first, observations[0].value);
   for (const hold of holds) {
-    const values = observations
-        .slice(hold.a, hold.b + 1)
-        .map((point) => point.value)
-        .sort((a, b) => a - b),
-      value =
-        Math.max(Math.abs(values[0]), Math.abs(values.at(-1)!)) <= band
-          ? 0
-          : values[Math.floor(values.length / 2)];
+    const value = holdValue(hold);
     if (phaseKeys.at(-1)?.frame === observations[hold.a].frame) phaseKeys.at(-1)!.value = value;
     else insert(observations[hold.a].frame, value);
     insert(observations[hold.b].frame, value);
@@ -673,14 +705,22 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
     }
   }
   phaseKeys.sort((a, b) => a.frame - b.frame);
-  // Overlapping stable windows can leave an interior key in an already-flat
-  // run. Its neighbors carry the hold boundaries without that redundant key.
+  // A stable window can leave an interior boundary in a run whose entire
+  // observed range is below the requested drift. Its neighbors already carry
+  // that hold, even when their canonical values differ by roundoff.
   for (let i = phaseKeys.length - 2; i > 0; i--)
-    if (
-      phaseKeys[i - 1].value === phaseKeys[i].value &&
-      phaseKeys[i].value === phaseKeys[i + 1].value
-    )
-      phaseKeys.splice(i, 1);
+    if (!turns.has(phaseKeys[i].frame)) {
+      const from = phaseKeys[i - 1].frame,
+        to = phaseKeys[i + 1].frame;
+      let low = Math.min(phaseKeys[i - 1].value, phaseKeys[i].value, phaseKeys[i + 1].value),
+        high = Math.max(phaseKeys[i - 1].value, phaseKeys[i].value, phaseKeys[i + 1].value);
+      for (const point of observations)
+        if (point.frame >= from && point.frame <= to) {
+          low = Math.min(low, point.value);
+          high = Math.max(high, point.value);
+        }
+      if (high - low <= band) phaseKeys.splice(i, 1);
+    }
   if (phaseKeys.length >= keys.length) return;
   if (phaseKeys.some((key, index) => index > 0 && key.frame - phaseKeys[index - 1].frame < 0.002))
     return;
@@ -695,6 +735,24 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
     const start = phaseKeys[i],
       finish = phaseKeys[i + 1];
     if (start.value === finish.value) continue;
+    const duration = finish.frame - start.frame,
+      linearEpsilon = Math.max(1e-8, band * 0.01);
+    let linearError = 0;
+    for (const point of observations)
+      if (point.frame >= start.frame && point.frame <= finish.frame) {
+        const t = (point.frame - start.frame) / duration,
+          value = start.value + (finish.value - start.value) * t;
+        linearError = Math.max(linearError, Math.abs(point.value - value));
+      }
+    // Preserve literal constant-speed motion as linear. A Bezier with
+    // collinear handles evaluates similarly, but presents the wrong authored
+    // interpolation and needless handles to the curve editor.
+    if (linearError <= linearEpsilon) {
+      start.interpolation = 'linear';
+      delete start.right;
+      delete finish.left;
+      continue;
+    }
     const a = reference.keys.findIndex((key) => key.frame === start.frame),
       b = reference.keys.findIndex((key) => key.frame === finish.frame),
       // A small opening secant followed by a larger one identifies a soft
@@ -714,11 +772,48 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
         !turns.has(start.frame) &&
         openingSpeed > band / minimumHold &&
         openingSpeed >= nextSpeed * 0.6,
-      fit = fitSpan(reference, a, b, options, 0, {
-        approximate: true,
-        ...(sharp ? { verticalStart: true } : { startSlope: 0 }),
-        endSlope: 0,
-      });
+      tangentModels: { constraints: FitConstraints; freedom: number }[] = [
+        {
+          freedom: 0,
+          constraints: {
+            approximate: true,
+            ...(sharp ? { verticalStart: true } : { startSlope: 0 }),
+            endSlope: 0,
+          },
+        },
+        {
+          freedom: 1,
+          constraints: {
+            approximate: true,
+            ...(sharp ? { verticalStart: true } : { startSlope: 0 }),
+          },
+        },
+        { freedom: 1, constraints: { approximate: true, endSlope: 0 } },
+        { freedom: 2, constraints: { approximate: true } },
+      ],
+      fits = tangentModels.map(({ constraints, freedom }) => ({
+        ...fitSpan(reference, a, b, options, 0, constraints),
+        freedom,
+      })),
+      // Horizontal (or deliberately vertical) phase tangents are the simplest
+      // explanation for a bake. Free an endpoint only when doing so recovers
+      // more observed motion than the user has declared negligible drift. If
+      // any model meets that declared band, prefer the least-free such model;
+      // otherwise retain the penalized best effort rather than adding handles
+      // that cannot materially improve the reconstruction.
+      withinBand = fits.filter((candidate) => candidate.error <= band),
+      fit = withinBand.length
+        ? withinBand.reduce((best, candidate) =>
+            candidate.freedom < best.freedom ||
+            (candidate.freedom === best.freedom && candidate.error < best.error)
+              ? candidate
+              : best,
+          )
+        : fits.reduce((best, candidate) =>
+            candidate.error + band * candidate.freedom < best.error + band * best.freedom
+              ? candidate
+              : best,
+          );
     if (!fit.span) return;
     start.interpolation = 'bezier';
     start.right = fit.span.right;
@@ -735,7 +830,8 @@ export function reduceCurve(
   tolerance: number,
   options: ReductionOptions,
   protectedFrames: number[] = [],
-): { curve: Curve; error: number; bound: number } {
+  noiseHints: readonly BlenderNoiseSettings[] = [],
+): { curve: Curve; error: number; bound: number; noise?: NoiseReduction } {
   if (!Number.isFinite(tolerance) || tolerance <= 0)
     throw Error('Choose a positive error tolerance.');
   if (
@@ -760,6 +856,24 @@ export function reduceCurve(
   )
     return { curve: { ...cp(curve), keys: [cp(curve.keys[0])] }, error: 0, bound: 0 };
   if (n < 2) return { curve: cp(curve), error: 0, bound: 0 };
+  const hasInteriorProtectedFrame = protectedFrames.some(
+    (frame) => frame > keys[0].frame && frame < keys[n - 1].frame,
+  );
+  // Noise inference is deliberately opt-in and only runs on a plain source
+  // curve. Existing modifiers, loops, protected attachment boundaries, and
+  // locked source curves must remain procedural/source-authored data.
+  if (
+    options.detectNoise &&
+    options.fit !== 'linear' &&
+    !options.range &&
+    !hasInteriorProtectedFrame &&
+    !curve.keyLock &&
+    !curve.loop &&
+    curve.modifiers.length === 0
+  ) {
+    const noise = detectNoise(curve, tolerance, noiseHints);
+    if (noise) return noise;
+  }
   const gain = curve.modifiers.reduce(
       (g, m) => (m.enabled && m.type === 'scale' ? g * Math.abs(m.factor) : g),
       1,
@@ -1038,6 +1152,7 @@ export function reduceTrack(
   const frames = options.fit === 'baked' ? [...observed].sort((a, b) => a - b) : subframes;
   const eulerRotationChannels = input.channels.filter((c) => ['rx', 'ry', 'rz'].includes(c)).length;
   const positionChannels = input.channels.filter((c) => ['px', 'py', 'pz'].includes(c)).length;
+  const noiseHints: BlenderNoiseSettings[] = [];
   for (const channel of input.channels) {
     const source = readCurve(original, channel),
       tolerance = position(channel)
@@ -1047,7 +1162,7 @@ export function reduceTrack(
           : rotation(channel)
             ? options.rotation / Math.max(1, eulerRotationChannels)
             : options.scalar;
-    const result = reduceCurve(source, tolerance, options, protectedFrames),
+    const result = reduceCurve(source, tolerance, options, protectedFrames, noiseHints),
       candidate = result.curve;
     const row: ReductionRow = {
       channel,
@@ -1058,13 +1173,22 @@ export function reduceTrack(
       tolerance,
       bezier: candidate.keys.filter((k) => k.interpolation === 'bezier').length,
       linear: candidate.keys.filter((k) => k.interpolation === 'linear').length,
+      ...(result.noise ? { noise: result.noise } : {}),
     };
-    if (candidate.keys.length < source.keys.length) {
+    if (candidate.keys.length < source.keys.length || result.noise) {
       next.curves ??= {};
       next.curves[channel] = candidate;
-      if (options.fit !== 'baked' && (rotation(channel) || position(channel))) {
+      const transformChannel = rotation(channel) || position(channel);
+      const noiseNeedsTransformCheck = !!result.noise && transformChannel;
+      if ((options.fit !== 'baked' || noiseNeedsTransformCheck) && transformChannel) {
         const error = poseErrors(original, next, frames);
-        if (error.position > options.position || error.rotation > options.rotation) {
+        const subframeError = result.noise ? poseErrors(original, next, subframes) : error;
+        if (
+          error.position > options.position ||
+          error.rotation > options.rotation ||
+          subframeError.position > options.position ||
+          subframeError.rotation > options.rotation
+        ) {
           if (original.curves?.[channel]) next.curves[channel] = cp(original.curves[channel]!);
           else delete next.curves[channel];
           Object.assign(row, {
@@ -1073,8 +1197,15 @@ export function reduceTrack(
             bound: 0,
             reason: 'Kept original: combined transform error exceeds tolerance',
           });
+          delete row.noise;
         }
       }
+    }
+    if (row.noise) {
+      const modifier = candidate.modifiers.find(
+        (m) => m.type === 'noise' && m.algorithm === 'blender',
+      );
+      if (modifier?.type === 'noise') noiseHints.push(modifier);
     }
     rows.push(row);
   }

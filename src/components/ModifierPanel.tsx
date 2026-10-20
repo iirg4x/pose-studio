@@ -233,6 +233,16 @@ function ModifierCard({
           {m.type === 'noise' && m.algorithm === 'blender' ? (
             <>
               <p className="curve-note">Blender noise</p>
+              <label className="curve-field">
+                <span>
+                  <input
+                    type="checkbox"
+                    checked={!!m.legacy}
+                    onChange={(e) => update({ legacy: e.target.checked })}
+                  />{' '}
+                  Legacy noise
+                </span>
+              </label>
               <div className="curve-field-pair">
                 {param('amplitude', 'Strength', 0.001)}
                 {param('period', 'Scale', 0.1)}

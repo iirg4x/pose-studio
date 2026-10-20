@@ -122,6 +122,7 @@ export function sparseMotion(
       fit: 'auto',
       skimHandles: true,
       preserveExtrema: true,
+      detectNoise: true,
     },
     end,
   ).track;

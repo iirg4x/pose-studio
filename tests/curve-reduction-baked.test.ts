@@ -117,8 +117,10 @@ it('retains both Position Y peaks and the valley hold while dropping flat noise'
   expect(source.keys).toHaveLength(39);
   expect(result.before).toBe(39);
   expect(reduced.keys.length).toBeLessThan(source.keys.length);
-  // The two visible peaks need at least two more phase anchors than the prior seven-key fit.
-  expect(reduced.keys.length).toBeGreaterThanOrEqual(9);
+  // Drift-equivalent chatter before the first authored lift is one hold, not
+  // another editable boundary at frame 7.
+  expect(reduced.keys.filter((key) => key.frame < 53).map((key) => key.frame)).toEqual([0]);
+  expect(reduced.keys.map((key) => key.frame)).toEqual([0, 53, 58, 64, 68, 70, 82, 103]);
   peak(56, 60, 10.15 - 0.21, 10.15 + 0.21);
   peak(69, 71, 5.48 - 0.21, 5.48 + 0.21);
   peak(64, 68, 3.43 - 0.21, 3.43 + 0.21);
@@ -136,6 +138,63 @@ it('retains both Position Y peaks and the valley hold while dropping flat noise'
   for (const channel of ['px', 'pz', 'rx', 'ry', 'rz'] as Channel[])
     expect(result.track.curves?.[channel]).toEqual(original.curves?.[channel]);
   expect(fixture.track).toEqual(original);
+});
+
+it('frees baked endpoint tangents when horizontal easing loses meaningful motion', () => {
+  const bezier = (t: number, a: number, b: number, c: number, d: number) => {
+    const s = 1 - t;
+    return s ** 3 * a + 3 * s ** 2 * t * b + 3 * s * t ** 2 * c + t ** 3 * d;
+  };
+  const source = linearCurve(
+    Array.from({ length: 41 }, (_, frame) => [
+      frame,
+      frame <= 8 ? 0 : frame >= 28 ? -10 : bezier((frame - 8) / 20, 0, -8, -2, -10),
+    ]),
+  );
+  const result = reduceCurve(source, 0.1, { ...bakedOptions, drift: 2 });
+
+  expect(result.curve.keys.map((key) => key.frame)).toEqual([0, 8, 28, 40]);
+  expect(result.error).toBeLessThan(1e-6);
+  expect(Math.abs(result.curve.keys[1].right?.[1] ?? 0)).toBeGreaterThan(1);
+  expect(Math.abs(result.curve.keys[2].left?.[1] ?? 0)).toBeGreaterThan(1);
+  for (const key of result.curve.keys)
+    for (const handle of [key.left, key.right])
+      if (handle) expect(handle.every(Number.isFinite)).toBe(true);
+  expect(scalarError(source, result.curve, denseFrames(40))).toBeLessThan(0.03);
+});
+
+it('keeps a baked constant-speed phase literally linear', () => {
+  const source = linearCurve(
+    Array.from({ length: 31 }, (_, frame) => [
+      frame,
+      frame <= 6 ? 0 : frame >= 24 ? 9 : (frame - 6) / 2,
+    ]),
+  );
+  const result = reduceCurve(source, 0.1, { ...bakedOptions, drift: 1 });
+
+  expect(result.curve.keys.map((key) => key.frame)).toEqual([0, 6, 24, 30]);
+  expect(result.curve.keys[1].interpolation).toBe('linear');
+  expect(result.curve.keys[1].right).toBeUndefined();
+  expect(result.curve.keys[2].left).toBeUndefined();
+  expect(scalarError(source, result.curve, denseFrames(30))).toBeLessThan(1e-8);
+});
+
+it('preserves the Inspect weapon descent and recovery with sparse finite tangents', () => {
+  const fixture = JSON.parse(
+    fs.readFileSync('tests/fixtures/inspect-weapon-reduction.json', 'utf8'),
+  ) as { end: number; curve: Curve };
+  const original = structuredClone(fixture.curve);
+  const result = reduceCurve(fixture.curve, 0.1, { ...bakedOptions, drift: 2 });
+
+  // Forced horizontal/vertical endpoints lost over 11 degrees on this source.
+  expect(result.curve.keys.length).toBeLessThan(20);
+  expect(scalarError(original, result.curve, denseFrames(fixture.end))).toBeLessThan(3.1);
+  expect(
+    result.curve.keys.some(
+      (key) => key.right && Math.abs(key.right[0]) > 0.01 && Math.abs(key.right[1]) > 1,
+    ),
+  ).toBe(true);
+  expect(fixture.curve).toEqual(original);
 });
 
 it('keeps phase-fit flat-topped peaks and troughs bounded', () => {

@@ -1,11 +1,14 @@
 import { portablePlatform as isAndroid } from '../platform/storage';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FolderOpen, X, Clapperboard, LoaderCircle } from 'lucide-react';
 import { studio } from '../core/store';
 import { autoMapBones, RETARGET_SLOTS } from '../core/retarget';
 import { importMotion } from '../core/importAnimation';
 import type { AnimationInspection } from '../core/importAnimation';
+import { clone } from '../core/model';
 import type { RigLayer } from '../core/model';
+import type { ControlId } from '../core/controls';
+import { reduceImportedMotion } from '../core/importMotionWorker';
 import type { StudioScene } from '../scene/StudioScene';
 import { ScrubNumber } from './ScrubNumber';
 import './assets.css';
@@ -32,7 +35,17 @@ export function AnimationImport({
     [error, setError] = useState(''),
     [query, setQuery] = useState(''),
     [detail, setDetail] = useState('balanced'),
-    [placement, setPlacement] = useState<'scene' | 'camera'>('camera');
+    [placement, setPlacement] = useState<'scene' | 'camera'>('camera'),
+    fitAbort = useRef<AbortController | null>(null),
+    mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      fitAbort.current?.abort();
+      fitAbort.current = null;
+    };
+  }, []);
   const rig = file?.rigs[rigIndex],
     action = rig?.actions[actionIndex];
   function chooseRig(data: AnimationInspection, i: number) {
@@ -52,22 +65,25 @@ export function AnimationImport({
     setError('');
     try {
       const data = await window.studioDesktop?.inspectAnimation();
-      if (data) {
+      if (mounted.current && data) {
         setFile(data);
         setFps(Math.max(1, Math.min(120, Math.round(data.fps))));
         chooseRig(data, 0);
         if (/(?:^|_)FP(?:_|\.)/i.test(data.filename)) setType('firstPerson');
       }
     } catch (e) {
-      setError((e as Error).message);
+      if (mounted.current) setError((e as Error).message);
     } finally {
-      setBusy('');
+      if (mounted.current) setBusy('');
     }
   }
   async function run() {
     if (!file || !rig || !action || !runtime?.bodyRig) return;
-    setBusy('Importing and fitting editable curves…');
+    setBusy('Retargeting animation…');
     setError('');
+    fitAbort.current?.abort();
+    const abortController = new AbortController();
+    fitAbort.current = abortController;
     try {
       const data = await window.studioDesktop!.sampleAnimation(file.token, {
         rig: rig.name,
@@ -76,6 +92,11 @@ export function AnimationImport({
         end,
         fps,
       });
+      if (!mounted.current || abortController.signal.aborted) return;
+      // Keep matrix retargeting on the main thread, but leave the dense
+      // imported tracks untouched until the worker has fitted them. Noise
+      // detection is intentionally part of sparseMotion, so this prevents a
+      // long procedural fit from freezing the modal or the viewport.
       const project = importMotion(
         data,
         mapping,
@@ -83,22 +104,39 @@ export function AnimationImport({
         type,
         facing,
         1,
-        {
-          position: 0.0002,
-          rotation:
-            (({ precise: 0.1, balanced: 0.25, editable: 0.5 }[detail] ?? 0.25) * Math.PI) / 180,
-        },
+        false,
         type === 'firstPerson' ? placement : 'scene',
       );
+      const tolerance = {
+        position: 0.0002,
+        rotation:
+          (({ precise: 0.1, balanced: 0.25, editable: 0.5 }[detail] ?? 0.25) * Math.PI) / 180,
+      };
+      setBusy('Fitting editable curves…');
+      const reduced = await reduceImportedMotion(
+        project.tracks,
+        tolerance,
+        (completed, total) => setBusy(`Fitting editable curves… ${completed}/${total}`),
+        abortController.signal,
+      );
+      for (const [rawId, result] of Object.entries(reduced)) {
+        const id = rawId as ControlId;
+        project.tracks[id] = { ...project.tracks[id], ...result };
+      }
+      // importMotion creates this mirror before reduction. Refresh it only
+      // after all worker results have landed so both layer views share the
+      // exact same editable curves and noise modifiers.
+      project.otherTracks = clone(project.tracks);
       if (/Unreal Take|Base Layer/i.test(data.name))
         project.name = file.filename.replace(/\.[^.]+$/, '');
       studio.addImportedAction(project);
       studio.patch({ retargetMode: false, retargetRest: false });
       close();
     } catch (e) {
-      setError((e as Error).message);
+      if ((e as Error).name !== 'AbortError' && mounted.current) setError((e as Error).message);
     } finally {
-      setBusy('');
+      if (fitAbort.current === abortController) fitAbort.current = null;
+      if (mounted.current) setBusy('');
     }
   }
   return (
@@ -333,7 +371,12 @@ export function AnimationImport({
               {busy}
             </span>
           )}
-          <button disabled={!!busy} onClick={close}>
+          <button
+            onClick={() => {
+              fitAbort.current?.abort();
+              close();
+            }}
+          >
             Cancel
           </button>
           <button

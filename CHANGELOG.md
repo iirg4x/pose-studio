@@ -1,3 +1,11 @@
+## 0.8.36 — detect noise in baked curves
+
+Reduce keyframes now detects Blender-style Noise motion from baked samples in the full-curve modes, while leaving Linear and range-limited modes deterministic. An accepted fit keeps an editable Noise modifier over two base keys instead of expanding the noise into a key on nearly every frame. Detection searches negative phases and different octave counts, then uses a conservative finite model of a linear base plus one additive Noise modifier. It reserves samples for validation and checks between-sample motion and combined transform error before accepting a fit; if validation fails, ordinary key reduction remains the fallback. Existing modifiers, loops, attachment/space switches and locked curves are excluded from detection.
+
+The detector uses the official Blender noise runtime behavior and independently matches Blender 5.2 within 3e-8 raw units across four synthetic cases. FBX and GLB imports run dense fitting in a cancellable `AnimationImport` worker and report progress per track. Exact recovery of every authored modifier parameter is not promised when only baked samples are available.
+
+Baked easing also merges drift-equivalent hold boundaries and compares constrained and free endpoint tangents against the observed motion. Straight motion stays linear. The supplied reload Position Y curve now uses eight keys without the redundant frame-7 key, while its six-key Rotation X fit remains intact. The Inspect weapon Rotation Z fit reduces sampled deviation from 11.65° to 2.81°.
+
 ## 0.8.35 — preserve imported frame rates in playback controls
 
 Desktop and touch playback selectors now include the current animation rate alongside the standard presets. Imported 96 fps and other supported rates display their actual value instead of falling back visually to 24 fps.

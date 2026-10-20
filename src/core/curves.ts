@@ -611,6 +611,8 @@ export function validateCurves(track: Track) {
         )
           throw Error('Invalid procedural modifier.');
         if (m.type === 'noise') {
+          if (m.legacy !== undefined && typeof m.legacy !== 'boolean')
+            throw Error('Invalid noise algorithm.');
           if (m.algorithm !== undefined && !['smooth', 'blender'].includes(m.algorithm))
             throw Error('Invalid noise algorithm.');
           for (const key of [

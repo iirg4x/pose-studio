@@ -12,6 +12,8 @@ import { DEFAULT_REDUCTION, reductionChannels } from '../core/curveReduction';
 import type { ReductionInput, ReductionOptions, ReductionResult } from '../core/curveReduction';
 import type { ReductionReply, ReductionRequest } from '../core/curveReduction.worker';
 
+const noiseForRow = (row: ReductionResult['rows'][number]) => row.noise;
+
 export function CurveReducer({
   channel,
   selectedFrames = [],
@@ -34,6 +36,7 @@ export function CurveReducer({
       fit: 'baked',
       drift: 2,
       preserveExtrema: false,
+      detectNoise: true,
     });
   const [range, setRange] = useState(selectedFrames.length > 1),
     [from, setFrom] = useState(selectedFrames.length ? Math.min(...selectedFrames) : 0),
@@ -52,6 +55,11 @@ export function CurveReducer({
     (n, r) => ({ before: n.before + r.before, after: n.after + r.after }),
     { before: 0, after: 0 },
   );
+  const inferredNoise =
+    results?.reduce(
+      (count, result) => count + result.rows.filter((row) => noiseForRow(row)).length,
+      0,
+    ) ?? 0;
   useEffect(() => {
     dialog.current?.focus();
     return () => worker.current?.terminate();
@@ -333,6 +341,23 @@ export function CurveReducer({
               />
               Fit handle lengths
             </label>
+            {options.fit !== 'linear' && (
+              <label
+                title={
+                  range
+                    ? 'Noise detection analyzes the complete curve'
+                    : 'Fit an editable Blender-compatible Noise modifier when baked samples pass validation'
+                }
+              >
+                <input
+                  type="checkbox"
+                  checked={options.detectNoise ?? true}
+                  disabled={range}
+                  onChange={(e) => configure({ detectNoise: e.target.checked })}
+                />
+                Detect noise
+              </label>
+            )}
             {!baked && (
               <label>
                 <input
@@ -391,6 +416,9 @@ export function CurveReducer({
             {baked
               ? 'Rebuilds flat holds and eased motion. Drift is measured as a percentage of the channel range; measured changes are shown below.'
               : 'Each axis reduces independently. Modifiers and stepped, spring and bounce segments stay intact.'}{' '}
+            {options.detectNoise && options.fit !== 'linear' && !range
+              ? 'Validated noise is kept as an editable Blender-compatible Noise modifier; other curves use the current key fitting.'
+              : ''}{' '}
             Attachment switches and loop boundaries are protected.
           </p>
           {!eligible.length && (
@@ -420,7 +448,9 @@ export function CurveReducer({
                   <strong>{total.after.toLocaleString()}</strong>
                   <span>axis keys</span>
                 </div>
-                <b>{Math.round((1 - total.after / Math.max(1, total.before)) * 100)}% fewer</b>
+                <b>
+                  {Math.round((1 - total.after / Math.max(1, total.before)) * 1000) / 10}% fewer
+                </b>
               </div>
               {stale && (
                 <p role="alert" className="error-message">
@@ -506,7 +536,13 @@ export function CurveReducer({
                       <tr>
                         <th>Axis</th>
                         <th>Keys</th>
-                        <th>{baked ? 'Frame deviation' : 'Error bound'}</th>
+                        <th>
+                          {active.rows.some((r) => !!r.noise)
+                            ? 'Max deviation'
+                            : baked
+                              ? 'Frame deviation'
+                              : 'Error bound'}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -522,23 +558,38 @@ export function CurveReducer({
                           </th>
                           <td>
                             {r.before} → {r.after}
+                            {noiseForRow(r) && ' · Noise modifier'}
                           </td>
                           <td
                             title={
-                              r.reason ??
-                              (baked
-                                ? 'Maximum deviation at source-frame samples'
-                                : 'Conservative bound over the complete scalar curve')
+                              noiseForRow(r)
+                                ? `Blender Noise modifier · fit error ${noiseForRow(r)!.maxError.toPrecision(3)} · validation error ${noiseForRow(r)!.validationError.toPrecision(3)}`
+                                : (r.reason ??
+                                  (baked
+                                    ? 'Maximum deviation at source-frame samples'
+                                    : 'Conservative bound over the complete scalar curve'))
                             }
                           >
-                            {r.reason
-                              ? 'Kept original'
-                              : r.bound.toPrecision(3) + ' ' + channelUnit(r.channel)}
+                            {noiseForRow(r)
+                              ? noiseForRow(r)!.validationError.toPrecision(3) +
+                                ' ' +
+                                channelUnit(r.channel)
+                              : r.reason
+                                ? 'Kept original'
+                                : r.bound.toPrecision(3) + ' ' + channelUnit(r.channel)}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  {options.detectNoise && options.fit !== 'linear' && (
+                    <p className="reducer-note" role="status">
+                      <Check size={13} />
+                      {inferredNoise
+                        ? `${inferredNoise} Blender Noise modifier${inferredNoise === 1 ? '' : 's'} inferred from baked samples; validation errors are shown per axis.`
+                        : 'No sampled channel met the Noise modifier validation threshold.'}
+                    </p>
+                  )}
                   <p className="reducer-note">
                     <Check size={13} />
                     {baked ? (
@@ -555,7 +606,7 @@ export function CurveReducer({
                         subframes.{' '}
                       </>
                     )}
-                    Fitted handles remain editable.
+                    Keys, handles and modifiers remain editable.
                   </p>
                 </>
               )}
