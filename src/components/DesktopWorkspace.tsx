@@ -171,19 +171,18 @@ export function DesktopWorkspace({
     '--editors-height': sizes.timeline + 'px',
   } as CSSProperties;
   const showEditors = !retarget && layout.editors,
-    // A contextual inspector has no useful empty state. Retarget keeps its
-    // setup inspector available independently of pose-control selection.
-    showProperties = retarget || (layout.properties && s.selection.length > 0);
+    // Selection changes the inspector's contents, never the reserved dock.
+    // Only the user's explicit collapse preference changes the scene bounds.
+    showProperties = retarget || layout.properties;
   const editorsPresence = usePresence(showEditors ? true : null),
-    // Retain the last useful inspector while selection-clear closes it. This
-    // avoids flashing the empty selection state during the exit transition.
+    // Retain content during an explicit collapse transition.
     propertiesPresence = usePresence(showProperties ? { inspector, retarget } : null);
   const finePointer = window.matchMedia?.('(pointer: fine)').matches ?? true;
-  const showControllerRail =
-    finePointer && !retarget && controllerTools != null && s.selection.length > 0;
+  const hasControllerTools = controllerTools != null && s.selection.length > 0;
+  const showControllerRail = finePointer && !retarget && (hasControllerTools || !showProperties);
   const controllerRail = showControllerRail ? (
     <PropertiesControllerRail
-      tools={controllerTools}
+      tools={hasControllerTools ? controllerTools : null}
       expanded={showProperties && !propertiesPresence.exiting}
     />
   ) : null;
@@ -293,7 +292,7 @@ function PropertiesControllerRail({ tools, expanded }: { tools: ReactNode; expan
   const toggle = () => window.dispatchEvent(new Event('pose-toggle-properties'));
   return (
     <div className="properties-controller-rail" data-expanded={expanded}>
-      <div className="properties-controller-tools">{tools}</div>
+      {tools && <div className="properties-controller-tools">{tools}</div>}
       {!expanded && (
         <button
           type="button"

@@ -1,3 +1,7 @@
+## 0.8.26 — stable Properties dock
+
+The desktop Properties dock keeps its width when controls are selected or deselected, so selection no longer resizes the 3D scene. With no control selected it shows animation-wide layer, preview and source settings plus Select all and Box select actions. Explicit collapse stays persistent and keeps a compact restore handle available without a selection.
+
 ## 0.8.25 — audit remediation and resilient workspace UI
 
 Audit remediation keeps fractional current-frame edits editable, adds a visible WebGL fallback with retry/download routes, gives failed recovery explicit Retry/Continue/Cancel choices, validates dynamic properties transactionally with a 256-item global cap, and hardens keyboard and modal focus. Phone errors remain visible, compact windows no longer inherit a minimum width, Tools menus support keyboard navigation, GLB imports reject files above 32 MiB across browser and Android provider/stream paths, and browser zoom no longer applies a `maximum-scale` restriction.

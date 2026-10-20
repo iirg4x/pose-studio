@@ -77,6 +77,9 @@ export function Inspector({
     return () => window.removeEventListener('pose-open-properties', openControl);
   }, []);
   useEffect(() => setControlTab('transform'), [s.selected]);
+  // Empty selection exposes animation-wide work without changing the user's
+  // control/animation preference for the next selected controller.
+  const displayedContext = s.selection.length ? context : 'animation';
   const p = studio.currentPose();
   if (!p || !s.project) return <aside className="inspector loading-panel">Preparing Manny…</aside>;
   const labels = controlLabels(s.project),
@@ -114,44 +117,46 @@ export function Inspector({
   return (
     <aside
       className="inspector properties-editor"
-      data-context={context}
+      data-context={displayedContext}
       data-layout={compact ? 'compact' : 'full'}
     >
       <header className="properties-heading">
         <div className="properties-heading-title">
-          <h2>{context === 'control' ? 'Control properties' : 'Animation properties'}</h2>
+          <h2>{displayedContext === 'control' ? 'Control properties' : 'Animation properties'}</h2>
           <div
             className="property-context-heading"
             style={
               {
-                '--control-tint': context === 'control' ? controlTint(id) : 'var(--cyan)',
+                '--control-tint': displayedContext === 'control' ? controlTint(id) : 'var(--cyan)',
               } as CSSProperties
             }
           >
             <i />
-            <strong aria-label={context === 'control' ? 'Active control' : 'Active animation'}>
-              {context === 'control'
-                ? s.selection.length
-                  ? labels[id]
-                  : 'No control selected'
-                : s.project.name}
+            <strong
+              aria-label={displayedContext === 'control' ? 'Active control' : 'Active animation'}
+            >
+              {displayedContext === 'control' ? labels[id] : s.project.name}
             </strong>
-            {context === 'control' && s.selection.length > 1 && (
+            {displayedContext === 'control' && s.selection.length > 1 && (
               <small>{s.selection.length} selected</small>
             )}
           </div>
         </div>
-        <button
-          className="property-context-switch"
-          type="button"
-          title={context === 'control' ? 'Animation properties' : 'Control properties'}
-          aria-label={
-            context === 'control' ? 'Show animation properties' : 'Show control properties'
-          }
-          onClick={() => choose(context === 'control' ? 'animation' : 'control')}
-        >
-          {context === 'control' ? <Layers size={18} /> : <Bone size={18} />}
-        </button>
+        {s.selection.length > 0 && (
+          <button
+            className="property-context-switch"
+            type="button"
+            title={displayedContext === 'control' ? 'Animation properties' : 'Control properties'}
+            aria-label={
+              displayedContext === 'control'
+                ? 'Show animation properties'
+                : 'Show control properties'
+            }
+            onClick={() => choose(displayedContext === 'control' ? 'animation' : 'control')}
+          >
+            {displayedContext === 'control' ? <Layers size={18} /> : <Bone size={18} />}
+          </button>
+        )}
         <button
           className="properties-close"
           aria-label="Collapse properties"
@@ -161,7 +166,7 @@ export function Inspector({
           <ChevronRight size={20} />
         </button>
       </header>
-      {compact && context === 'control' && s.selection.length > 0 && (
+      {compact && displayedContext === 'control' && (
         <div className="property-control-tabs" role="tablist" aria-label="Control properties">
           {(
             [
@@ -201,16 +206,34 @@ export function Inspector({
       <div
         className="inspector-scroll properties-content"
         id="control-properties-content"
-        role={compact && context === 'control' && s.selection.length > 0 ? 'tabpanel' : 'region'}
+        role={compact && displayedContext === 'control' ? 'tabpanel' : 'region'}
         aria-labelledby={
-          compact && context === 'control' && s.selection.length > 0
+          compact && displayedContext === 'control'
             ? 'control-properties-tab-' + controlTab
             : undefined
         }
-        aria-label={context === 'control' ? 'Control properties' : 'Animation properties'}
+        aria-label={displayedContext === 'control' ? 'Control properties' : 'Animation properties'}
       >
-        {context === 'animation' ? (
+        {displayedContext === 'animation' ? (
           <>
+            {!s.selection.length && (
+              <PropertySection id="selection" title="Controls">
+                <p className="property-note">
+                  Select a control in the scene or timeline to edit its pose.
+                </p>
+                <div className="property-mask-actions">
+                  <button type="button" onClick={() => studio.selectAll()}>
+                    Select all controls
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new Event('pose-box-select'))}
+                  >
+                    Box select
+                  </button>
+                </div>
+              </PropertySection>
+            )}
             {s.project.editing === 'firstPerson' && (
               <PropertySection id="animation-camera" title="Player camera">
                 <CameraMotion project={s.project} />
@@ -238,12 +261,6 @@ export function Inspector({
             <PreviewLink />
             <BodyBasePanel />
           </>
-        ) : !s.selection.length ? (
-          <p className="property-empty-selection">
-            {isTouch
-              ? 'Select a control in the scene or Rig panel to edit its pose.'
-              : 'Click a control in the viewport or a track in the dope sheet to pose it. A selects every control; B box-selects.'}
-          </p>
         ) : (
           <>
             {showControlTab('transform') && (

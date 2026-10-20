@@ -335,6 +335,10 @@ export function LayerPanel() {
           />
           <div className="property-mask-actions">
             <button
+              disabled={!s.selection.length}
+              title={
+                !s.selection.length ? 'Select controls to include them in this layer' : undefined
+              }
               onClick={() =>
                 studio.configureLayer(active.id, {
                   excluded: active.excluded.filter((id) => !s.selection.includes(id)),
@@ -344,6 +348,10 @@ export function LayerPanel() {
               Include selected
             </button>
             <button
+              disabled={!s.selection.length}
+              title={
+                !s.selection.length ? 'Select controls to exclude them from this layer' : undefined
+              }
               onClick={() =>
                 studio.configureLayer(active.id, {
                   excluded: [...new Set([...active.excluded, ...s.selection])],
