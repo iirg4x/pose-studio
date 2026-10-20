@@ -1,3 +1,7 @@
+## 0.8.32 — sparse reduction of existing baked curves
+
+Reduce keyframes fits coupled Bézier handle lengths, splits at the largest failed interval, and merges redundant fit boundaries without crossing protected keys. Small local jitter no longer becomes a protected peak solely because it borders a large motion. A selected Euler or position axis receives its full displayed error budget; multiple selected axes still share the combined transform limit. The supplied reload-empty Rotation X regression reduces 38 keys to 18 at the existing 0.1° setting, with a certified scalar bound below 0.1°.
+
 ## 0.8.31 — independent imported-motion curve fitting
 
 Imported motion fits each position and quaternion channel independently, choosing linear spans for steady motion and editable Bézier handles for easing. Unrelated axis or rotation detail no longer forces duplicate keys into a simple channel. The importer retains meaningful holds/corners and exact endpoints, removes sub-tolerance flat-channel noise, and validates reconstructed positions and rotations between frames against the existing error limits. Non-transform pose values retain their fallback keys.

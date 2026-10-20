@@ -1,0 +1,4820 @@
+{
+  "end": 103,
+  "protectedFrames": [
+    0
+  ],
+  "track": {
+    "spaces": [],
+    "interpolation": "smooth",
+    "rotationMode": "euler",
+    "rotationOrder": "YZX",
+    "basis": {
+      "pre": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "post": [
+        1,
+        0.0000011112,
+        -1.929e-7,
+        0,
+        -0.0000011112,
+        1,
+        -0.0000035397,
+        0,
+        1.929e-7,
+        0.0000035397,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "curves": {
+      "px": {
+        "keys": [
+          {
+            "frame": 0,
+            "value": -0.0005183474,
+            "interpolation": "bezier",
+            "handle": "free",
+            "right": [
+              1,
+              0.0409705971
+            ]
+          },
+          {
+            "frame": 3,
+            "value": 0.0089454265,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              -0.0183506845
+            ],
+            "right": [
+              0.3333333333,
+              -0.011810771
+            ]
+          },
+          {
+            "frame": 4,
+            "value": 0.0219428186,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.0212424273
+            ],
+            "right": [
+              1,
+              -0.1066349884
+            ]
+          },
+          {
+            "frame": 7,
+            "value": -0.0160982414,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              -0.0124363236
+            ],
+            "right": [
+              1,
+              -0.0710877168
+            ]
+          },
+          {
+            "frame": 10,
+            "value": -0.0172085091,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              -0.0457358076
+            ],
+            "right": [
+              0.6666666667,
+              -0.0048720013
+            ]
+          },
+          {
+            "frame": 12,
+            "value": -0.0003323847,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              0.0028309617
+            ],
+            "right": [
+              0.3333333333,
+              0.0308884916
+            ]
+          },
+          {
+            "frame": 13,
+            "value": 0.0853400388,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.0262212126
+            ],
+            "right": [
+              2,
+              -0.0942021792
+            ]
+          },
+          {
+            "frame": 19,
+            "value": -0.0028047828,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2,
+              -0.0158909475
+            ],
+            "right": [
+              2.3333333333,
+              -0.0067699029
+            ]
+          },
+          {
+            "frame": 26,
+            "value": 0.0307866943,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2.3333333333,
+              -0.0452933777
+            ],
+            "right": [
+              1.6666666667,
+              -0.0210888676
+            ]
+          },
+          {
+            "frame": 31,
+            "value": -0.0461204835,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.6666666667,
+              0.03804449
+            ],
+            "right": [
+              1.3333333333,
+              0.0130900311
+            ]
+          },
+          {
+            "frame": 35,
+            "value": 0.0179725056,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.3333333333,
+              -0.0486080528
+            ],
+            "right": [
+              2.6666666667,
+              -0.0313743929
+            ]
+          },
+          {
+            "frame": 43,
+            "value": 0.0233467832,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2.6666666667,
+              0.0743972815
+            ],
+            "right": [
+              1,
+              -0.0386449492
+            ]
+          },
+          {
+            "frame": 46,
+            "value": -0.011269952,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              0.0559564533
+            ],
+            "right": [
+              1.6666666667,
+              0.0617733174
+            ]
+          },
+          {
+            "frame": 51,
+            "value": 0.0330368822,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.6666666667,
+              0.0074940503
+            ],
+            "right": [
+              0.6666666667,
+              -0.0245799102
+            ]
+          },
+          {
+            "frame": 53,
+            "value": -0.0256141243,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              0.0116755337
+            ],
+            "right": [
+              0.3333333333,
+              -0.1766129722
+            ]
+          },
+          {
+            "frame": 54,
+            "value": -0.5241246706,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.155482178
+            ],
+            "right": [
+              0.3333333333,
+              -0.500223649
+            ]
+          },
+          {
+            "frame": 55,
+            "value": -1.8929296885,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.4068950666
+            ],
+            "right": [
+              0.3333333333,
+              -0.772073029
+            ]
+          },
+          {
+            "frame": 56,
+            "value": -4.0134811334,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.6331036625
+            ],
+            "right": [
+              0.3333333333,
+              -0.9760444227
+            ]
+          },
+          {
+            "frame": 57,
+            "value": -6.7502333948,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.8429028677
+            ],
+            "right": [
+              0.3333333333,
+              -1.1191105877
+            ]
+          },
+          {
+            "frame": 58,
+            "value": -9.9661061871,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              1.0534374207
+            ],
+            "right": [
+              0.3333333333,
+              -1.12385701
+            ]
+          },
+          {
+            "frame": 59,
+            "value": -13.2933426122,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              1.0295383257
+            ],
+            "right": [
+              0.3333333333,
+              -1.0533680417
+            ]
+          },
+          {
+            "frame": 60,
+            "value": -16.2030706003,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.9084524156
+            ],
+            "right": [
+              0.3333333333,
+              -0.7358325473
+            ]
+          },
+          {
+            "frame": 61,
+            "value": -18.2746919159,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.6470131656
+            ],
+            "right": [
+              0.3333333333,
+              -0.2942744673
+            ]
+          },
+          {
+            "frame": 62,
+            "value": -19.1261323278,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.2732169519
+            ],
+            "right": [
+              0.3333333333,
+              1.1964588301
+            ]
+          },
+          {
+            "frame": 63,
+            "value": -15.1067097451,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -1.4671529336
+            ],
+            "right": [
+              0.3333333333,
+              1.2703407579
+            ]
+          },
+          {
+            "frame": 64,
+            "value": -11.0367298453,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -1.4364879114
+            ],
+            "right": [
+              1.3333333333,
+              -0.0088418354
+            ]
+          },
+          {
+            "frame": 68,
+            "value": -11.0327003887,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.3333333333,
+              -0.0334699277
+            ],
+            "right": [
+              0.3333333333,
+              0.4412809492
+            ]
+          },
+          {
+            "frame": 69,
+            "value": -9.339113982,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.6947934686
+            ],
+            "right": [
+              0.3333333333,
+              0.6579513907
+            ]
+          },
+          {
+            "frame": 70,
+            "value": -6.9400278265,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.9488057125
+            ],
+            "right": [
+              0.3333333333,
+              0.4290657317
+            ]
+          },
+          {
+            "frame": 71,
+            "value": -5.640244183,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              -0.4073483353
+            ],
+            "right": [
+              0.3333333333,
+              0.4073483353
+            ]
+          },
+          {
+            "frame": 72,
+            "value": -4.4895997681,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.3894465668
+            ],
+            "right": [
+              0.3333333333,
+              0.3155315924
+            ]
+          },
+          {
+            "frame": 73,
+            "value": -3.5241330343,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              -0.3023543958
+            ],
+            "right": [
+              0.3333333333,
+              0.3023543958
+            ]
+          },
+          {
+            "frame": 74,
+            "value": -2.6722983836,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.29083368
+            ],
+            "right": [
+              0.3333333333,
+              0.2238245296
+            ]
+          },
+          {
+            "frame": 75,
+            "value": -1.9783667998,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              -0.2117776621
+            ],
+            "right": [
+              0.3333333333,
+              0.2117776621
+            ]
+          },
+          {
+            "frame": 76,
+            "value": -1.3971349779,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.2025942335
+            ],
+            "right": [
+              0.3333333333,
+              0.1278153917
+            ]
+          },
+          {
+            "frame": 77,
+            "value": -0.9733246587,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              -0.1254822673
+            ],
+            "right": [
+              0.3333333333,
+              0.1254822673
+            ]
+          },
+          {
+            "frame": 78,
+            "value": -0.6389746851,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.1267181905
+            ],
+            "right": [
+              0.3333333333,
+              0.0832570407
+            ]
+          },
+          {
+            "frame": 79,
+            "value": -0.3495062959,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.1097264319
+            ],
+            "right": [
+              0.6666666667,
+              0.1328195716
+            ]
+          },
+          {
+            "frame": 81,
+            "value": -0.074353776,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              -0.0633786025
+            ],
+            "right": [
+              1,
+              0.0420432538
+            ]
+          },
+          {
+            "frame": 84,
+            "value": 0.0505429884,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              -0.0341113684
+            ],
+            "right": [
+              0.3333333333,
+              -0.00907338
+            ]
+          },
+          {
+            "frame": 85,
+            "value": 0.0219453603,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.0100190265
+            ],
+            "right": [
+              2,
+              0.0054566995
+            ]
+          },
+          {
+            "frame": 91,
+            "value": -0.0240934023,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2,
+              -0.0282889272
+            ],
+            "right": [
+              1.3333333333,
+              0.1901979188
+            ]
+          },
+          {
+            "frame": 95,
+            "value": -0.0017007816,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.3333333333,
+              0.042680312
+            ],
+            "right": [
+              2.6666666667,
+              0.0112398633
+            ]
+          },
+          {
+            "frame": 103,
+            "value": -0.0005071369,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2.6666666667,
+              -0.0074469715
+            ]
+          }
+        ],
+        "modifiers": []
+      },
+      "py": {
+        "keys": [
+          {
+            "frame": 0,
+            "value": -0.0002998249,
+            "interpolation": "bezier",
+            "handle": "free",
+            "right": [
+              1,
+              0.0134153858
+            ]
+          },
+          {
+            "frame": 3,
+            "value": -0.0004215842,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              0.0099580964
+            ],
+            "right": [
+              1,
+              -0.2144448141
+            ]
+          },
+          {
+            "frame": 6,
+            "value": -0.1298025599,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              0.0074240397
+            ],
+            "right": [
+              1.3333333333,
+              0.1164561568
+            ]
+          },
+          {
+            "frame": 10,
+            "value": 0.0785625938,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.3333333333,
+              -0.0169500925
+            ],
+            "right": [
+              1,
+              -0.1132855971
+            ]
+          },
+          {
+            "frame": 13,
+            "value": -0.0572633199,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              0.0925864197
+            ],
+            "right": [
+              2.3333333333,
+              -0.0207363428
+            ]
+          },
+          {
+            "frame": 20,
+            "value": -0.0318441499,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2.3333333333,
+              0.036667615
+            ],
+            "right": [
+              2,
+              0.1282832937
+            ]
+          },
+          {
+            "frame": 26,
+            "value": -0.0154620377,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2,
+              -0.003444946
+            ],
+            "right": [
+              1,
+              0.0303311684
+            ]
+          },
+          {
+            "frame": 29,
+            "value": -0.0517735092,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              0.0133088872
+            ],
+            "right": [
+              1,
+              0.0496568337
+            ]
+          },
+          {
+            "frame": 32,
+            "value": 0.0463925604,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              -0.013559156
+            ],
+            "right": [
+              3.6666666667,
+              -0.0723677887
+            ]
+          },
+          {
+            "frame": 43,
+            "value": -0.0013746548,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -3.6666666667,
+              0.0136081408
+            ],
+            "right": [
+              0.3333333333,
+              0.0019369896
+            ]
+          },
+          {
+            "frame": 44,
+            "value": 0.0090816081,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              0.0059130229
+            ],
+            "right": [
+              0.3333333333,
+              -0.0059130229
+            ]
+          },
+          {
+            "frame": 45,
+            "value": -0.0326771484,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.0109497607
+            ],
+            "right": [
+              1.3333333333,
+              0.0482024897
+            ]
+          },
+          {
+            "frame": 49,
+            "value": -0.0580041705,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -1.3333333333,
+              -0.0327477187
+            ],
+            "right": [
+              1.3333333333,
+              0.0327477187
+            ]
+          },
+          {
+            "frame": 53,
+            "value": 0.0042542316,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.3333333333,
+              0.026056921
+            ],
+            "right": [
+              0.3333333333,
+              0.3473164377
+            ]
+          },
+          {
+            "frame": 54,
+            "value": 1.0734236083,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.3652233761
+            ],
+            "right": [
+              0.3333333333,
+              0.8087418027
+            ]
+          },
+          {
+            "frame": 55,
+            "value": 3.612617269,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.8944602232
+            ],
+            "right": [
+              0.3333333333,
+              0.9386253251
+            ]
+          },
+          {
+            "frame": 56,
+            "value": 6.6333003027,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -1.0851947356
+            ],
+            "right": [
+              0.3333333333,
+              0.7607169105
+            ]
+          },
+          {
+            "frame": 57,
+            "value": 9.1297597038,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.899876553
+            ],
+            "right": [
+              0.3333333333,
+              0.320982977
+            ]
+          },
+          {
+            "frame": 58,
+            "value": 10.1504275938,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.3622107643
+            ],
+            "right": [
+              0.3333333333,
+              -0.2466531574
+            ]
+          },
+          {
+            "frame": 59,
+            "value": 9.3243227635,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.3098840264
+            ],
+            "right": [
+              0.3333333333,
+              -0.5534024314
+            ]
+          },
+          {
+            "frame": 60,
+            "value": 7.5235086699,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.6061653417
+            ],
+            "right": [
+              0.3333333333,
+              -0.6386960638
+            ]
+          },
+          {
+            "frame": 61,
+            "value": 5.6286277659,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.657247766
+            ],
+            "right": [
+              0.3333333333,
+              -0.3680306112
+            ]
+          },
+          {
+            "frame": 62,
+            "value": 4.5053414476,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.380587625
+            ],
+            "right": [
+              0.3333333333,
+              -0.2791218629
+            ]
+          },
+          {
+            "frame": 63,
+            "value": 3.8588764783,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              0.1684576656
+            ],
+            "right": [
+              0.3333333333,
+              -0.1684576656
+            ]
+          },
+          {
+            "frame": 64,
+            "value": 3.4299948532,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.0952822906
+            ],
+            "right": [
+              1.3333333333,
+              -0.0182115648
+            ]
+          },
+          {
+            "frame": 68,
+            "value": 3.434408733,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.3333333333,
+              -0.1084369454
+            ],
+            "right": [
+              0.3333333333,
+              0.3559386932
+            ]
+          },
+          {
+            "frame": 69,
+            "value": 4.4370541991,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.3094956836
+            ],
+            "right": [
+              0.3333333333,
+              0.3856548819
+            ]
+          },
+          {
+            "frame": 70,
+            "value": 5.4803443766,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.3064237743
+            ],
+            "right": [
+              0.3333333333,
+              -0.0024881992
+            ]
+          },
+          {
+            "frame": 71,
+            "value": 5.475171406,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.0029476631
+            ],
+            "right": [
+              0.3333333333,
+              -0.0728119646
+            ]
+          },
+          {
+            "frame": 72,
+            "value": 5.2825123162,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.0595588379
+            ],
+            "right": [
+              0.3333333333,
+              -0.1284072177
+            ]
+          },
+          {
+            "frame": 73,
+            "value": 4.915712453,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              0.1402841736
+            ],
+            "right": [
+              0.3333333333,
+              -0.1402841736
+            ]
+          },
+          {
+            "frame": 74,
+            "value": 4.4430420618,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.1506936505
+            ],
+            "right": [
+              0.3333333333,
+              -0.1777855041
+            ]
+          },
+          {
+            "frame": 75,
+            "value": 3.8579569153,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.2061778543
+            ],
+            "right": [
+              1,
+              -0.584901099
+            ]
+          },
+          {
+            "frame": 78,
+            "value": 1.9225626252,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              0.623149599
+            ],
+            "right": [
+              1,
+              -0.5946052873
+            ]
+          },
+          {
+            "frame": 81,
+            "value": 0.3854421895,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              0.352004808
+            ],
+            "right": [
+              0.3333333333,
+              -0.0931565648
+            ]
+          },
+          {
+            "frame": 82,
+            "value": 0.1055032577,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.0936300211
+            ],
+            "right": [
+              1,
+              -0.1213472476
+            ]
+          },
+          {
+            "frame": 85,
+            "value": 0.0117292391,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              -0.0386905868
+            ],
+            "right": [
+              2.3333333333,
+              -0.2160670636
+            ]
+          },
+          {
+            "frame": 92,
+            "value": -0.0514722969,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2.3333333333,
+              0.1975132343
+            ],
+            "right": [
+              3.6666666667,
+              0.0730519371
+            ]
+          },
+          {
+            "frame": 103,
+            "value": -0.0002967373,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -3.6666666667,
+              -0.0098807828
+            ]
+          }
+        ],
+        "modifiers": []
+      },
+      "pz": {
+        "keys": [
+          {
+            "frame": 0,
+            "value": 0.0003338211,
+            "interpolation": "bezier",
+            "handle": "free",
+            "right": [
+              1,
+              0.1338722734
+            ]
+          },
+          {
+            "frame": 3,
+            "value": -0.0014487326,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              0.0785223026
+            ],
+            "right": [
+              1,
+              -0.2568718518
+            ]
+          },
+          {
+            "frame": 6,
+            "value": -0.2257747004,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              -0.0587755877
+            ],
+            "right": [
+              1.3333333333,
+              0.2050061821
+            ]
+          },
+          {
+            "frame": 10,
+            "value": 0.0937810426,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.3333333333,
+              -0.0957349059
+            ],
+            "right": [
+              0.3333333333,
+              -0.0292402665
+            ]
+          },
+          {
+            "frame": 11,
+            "value": 0.0014334054,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.0317079074
+            ],
+            "right": [
+              1.3333333333,
+              0.0450794217
+            ]
+          },
+          {
+            "frame": 15,
+            "value": -0.2791549134,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.3333333333,
+              0.1117778176
+            ],
+            "right": [
+              2,
+              -0.1128143512
+            ]
+          },
+          {
+            "frame": 21,
+            "value": 0.1723590995,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2,
+              -0.091610001
+            ],
+            "right": [
+              1,
+              -0.0036367352
+            ]
+          },
+          {
+            "frame": 24,
+            "value": 0.0000481145,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              0.0887945469
+            ],
+            "right": [
+              0.6666666667,
+              -0.0112824122
+            ]
+          },
+          {
+            "frame": 26,
+            "value": -0.0029300743,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              -0.0090711589
+            ],
+            "right": [
+              1.3333333333,
+              -0.2023757122
+            ]
+          },
+          {
+            "frame": 30,
+            "value": -0.2474149534,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -1.3333333333,
+              -0.0421974365
+            ],
+            "right": [
+              1,
+              0.0316480774
+            ]
+          },
+          {
+            "frame": 33,
+            "value": -0.138134156,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              0.0076636994
+            ],
+            "right": [
+              1,
+              0.0366383885
+            ]
+          },
+          {
+            "frame": 36,
+            "value": 0.0303312225,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              -0.0519377795
+            ],
+            "right": [
+              2.3333333333,
+              0.0517345649
+            ]
+          },
+          {
+            "frame": 43,
+            "value": -0.0436953596,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2.3333333333,
+              0.1140475128
+            ],
+            "right": [
+              0.6666666667,
+              0.0089241176
+            ]
+          },
+          {
+            "frame": 45,
+            "value": 0.1406175969,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              -0.113140299
+            ],
+            "right": [
+              1.6666666667,
+              -0.1067307905
+            ]
+          },
+          {
+            "frame": 50,
+            "value": 0.1704618814,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.6666666667,
+              -0.1219571582
+            ],
+            "right": [
+              0.3333333333,
+              -0.0000389176
+            ]
+          },
+          {
+            "frame": 51,
+            "value": 0.1699735479,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.0003214872
+            ],
+            "right": [
+              0.6666666667,
+              -0.1090081848
+            ]
+          },
+          {
+            "frame": 53,
+            "value": -0.1911242656,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              0.131644632
+            ],
+            "right": [
+              0.3333333333,
+              0.0049270555
+            ]
+          },
+          {
+            "frame": 54,
+            "value": -0.174634635,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.0059970012
+            ],
+            "right": [
+              0.3333333333,
+              0.0971988169
+            ]
+          },
+          {
+            "frame": 55,
+            "value": 0.1237242727,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.1061271971
+            ],
+            "right": [
+              0.6666666667,
+              0.3417823225
+            ]
+          },
+          {
+            "frame": 57,
+            "value": 1.3959552815,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              -0.5416177694
+            ],
+            "right": [
+              0.3333333333,
+              0.2275647463
+            ]
+          },
+          {
+            "frame": 58,
+            "value": 2.1634152798,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              -0.2989908742
+            ],
+            "right": [
+              0.3333333333,
+              0.2989908742
+            ]
+          },
+          {
+            "frame": 59,
+            "value": 3.1686449356,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.3491483124
+            ],
+            "right": [
+              0.3333333333,
+              0.3803005582
+            ]
+          },
+          {
+            "frame": 60,
+            "value": 4.3463459625,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.4034313832
+            ],
+            "right": [
+              0.3333333333,
+              0.2811820519
+            ]
+          },
+          {
+            "frame": 61,
+            "value": 5.2166171134,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.3028750148
+            ],
+            "right": [
+              0.3333333333,
+              0.0452732733
+            ]
+          },
+          {
+            "frame": 62,
+            "value": 5.3558477866,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.0475179468
+            ],
+            "right": [
+              0.3333333333,
+              -0.3791244358
+            ]
+          },
+          {
+            "frame": 63,
+            "value": 4.3295350033,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              0.3152573322
+            ],
+            "right": [
+              0.3333333333,
+              -0.3152573322
+            ]
+          },
+          {
+            "frame": 64,
+            "value": 3.4104397488,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.2951758027
+            ],
+            "right": [
+              1,
+              -0.0772857648
+            ]
+          },
+          {
+            "frame": 67,
+            "value": 3.4393096034,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              0.0516899833
+            ],
+            "right": [
+              0.3333333333,
+              0.0104370806
+            ]
+          },
+          {
+            "frame": 68,
+            "value": 3.4659886163,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.007122314
+            ],
+            "right": [
+              0.3333333333,
+              -1.8322197429
+            ]
+          },
+          {
+            "frame": 69,
+            "value": -1.8496428246,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              1.7022639506
+            ],
+            "right": [
+              0.3333333333,
+              -1.9575074495
+            ]
+          },
+          {
+            "frame": 70,
+            "value": -7.4857406146,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              1.7883844096
+            ],
+            "right": [
+              0.3333333333,
+              -0.0900079204
+            ]
+          },
+          {
+            "frame": 71,
+            "value": -7.7366820654,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.0715403252
+            ],
+            "right": [
+              0.6666666667,
+              0.008139603
+            ]
+          },
+          {
+            "frame": 73,
+            "value": -7.4316797881,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              -0.195433098
+            ],
+            "right": [
+              0.6666666667,
+              0.4213344153
+            ]
+          },
+          {
+            "frame": 75,
+            "value": -5.9813159918,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              -0.539457627
+            ],
+            "right": [
+              0.3333333333,
+              0.3372484549
+            ]
+          },
+          {
+            "frame": 76,
+            "value": -4.9640604809,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.3344484247
+            ],
+            "right": [
+              0.6666666667,
+              0.5479288851
+            ]
+          },
+          {
+            "frame": 78,
+            "value": -3.1558901298,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              -0.6556362505
+            ],
+            "right": [
+              0.3333333333,
+              0.3786277431
+            ]
+          },
+          {
+            "frame": 79,
+            "value": -2.0390505366,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.3654215206
+            ],
+            "right": [
+              0.6666666667,
+              0.569588436
+            ]
+          },
+          {
+            "frame": 81,
+            "value": -0.5251938229,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              -0.4409224355
+            ],
+            "right": [
+              0.6666666667,
+              0.2564367114
+            ]
+          },
+          {
+            "frame": 83,
+            "value": 0.1102612184,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              -0.1597697992
+            ],
+            "right": [
+              2.6666666667,
+              0.1387281315
+            ]
+          },
+          {
+            "frame": 91,
+            "value": -0.1226710968,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2.6666666667,
+              -0.0985651839
+            ],
+            "right": [
+              0.6666666667,
+              0.0375565091
+            ]
+          },
+          {
+            "frame": 93,
+            "value": -0.0214125561,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              -0.0248185291
+            ],
+            "right": [
+              3.3333333333,
+              0.1513356352
+            ]
+          },
+          {
+            "frame": 103,
+            "value": 0.0003495892,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -3.3333333333,
+              -0.032835055
+            ]
+          }
+        ],
+        "modifiers": []
+      },
+      "rx": {
+        "keys": [
+          {
+            "frame": 0,
+            "value": 0,
+            "interpolation": "bezier",
+            "handle": "free",
+            "right": [
+              0.3333333333,
+              -0.0145776048
+            ]
+          },
+          {
+            "frame": 1,
+            "value": -0.0534881413,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.0199787822
+            ],
+            "right": [
+              2,
+              0.1218909791
+            ]
+          },
+          {
+            "frame": 7,
+            "value": -0.0111414977,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2,
+              0.0771135585
+            ],
+            "right": [
+              0.6666666667,
+              -0.0083643873
+            ]
+          },
+          {
+            "frame": 9,
+            "value": 0.0388278428,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              -0.0498167433
+            ],
+            "right": [
+              3.3333333333,
+              -0.0224510178
+            ]
+          },
+          {
+            "frame": 19,
+            "value": 0.1900802597,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -3.3333333333,
+              -0.22363466
+            ],
+            "right": [
+              2,
+              -0.1557042588
+            ]
+          },
+          {
+            "frame": 25,
+            "value": -0.1003981187,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2,
+              0.0401619874
+            ],
+            "right": [
+              1.3333333333,
+              0.0435057371
+            ]
+          },
+          {
+            "frame": 29,
+            "value": 0.013335096,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.3333333333,
+              -0.0361828374
+            ],
+            "right": [
+              4.3333333333,
+              -0.0252274141
+            ]
+          },
+          {
+            "frame": 42,
+            "value": 0.0065953449,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -4.3333333333,
+              0.1100987427
+            ],
+            "right": [
+              3,
+              -0.0762222065
+            ]
+          },
+          {
+            "frame": 51,
+            "value": -0.4327270109,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -3,
+              0.185321827
+            ],
+            "right": [
+              0.6666666667,
+              -0.0853973677
+            ]
+          },
+          {
+            "frame": 53,
+            "value": -0.7256209044,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              0.1106473046
+            ],
+            "right": [
+              0.3333333333,
+              -0.8945176256
+            ]
+          },
+          {
+            "frame": 54,
+            "value": -3.3964095354,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.8852824036
+            ],
+            "right": [
+              0.3333333333,
+              -2.4138222689
+            ]
+          },
+          {
+            "frame": 55,
+            "value": -10.5405842303,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              2.3570546782
+            ],
+            "right": [
+              0.3333333333,
+              -3.5624727731
+            ]
+          },
+          {
+            "frame": 56,
+            "value": -21.1406334295,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              3.4367338419
+            ],
+            "right": [
+              0.3333333333,
+              -4.3367712055
+            ]
+          },
+          {
+            "frame": 57,
+            "value": -33.9539857619,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              4.2991729956
+            ],
+            "right": [
+              0.3333333333,
+              -4.4431751193
+            ]
+          },
+          {
+            "frame": 58,
+            "value": -47.5182922342,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              4.4160762056
+            ],
+            "right": [
+              0.3333333333,
+              -4.2457128774
+            ]
+          },
+          {
+            "frame": 59,
+            "value": -60.1805694067,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              4.1586054522
+            ],
+            "right": [
+              0.3333333333,
+              -3.4283430269
+            ]
+          },
+          {
+            "frame": 60,
+            "value": -70.4549030804,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              3.4181333853
+            ],
+            "right": [
+              0.3333333333,
+              -2.2495583695
+            ]
+          },
+          {
+            "frame": 61,
+            "value": -77.2579598219,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              2.2601032597
+            ],
+            "right": [
+              0.3333333333,
+              -0.8363087255
+            ]
+          },
+          {
+            "frame": 62,
+            "value": -79.7681563023,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.8367087364
+            ],
+            "right": [
+              1.6666666667,
+              -0.2239038137
+            ]
+          },
+          {
+            "frame": 67,
+            "value": -79.9873935606,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.6666666667,
+              0.3499829491
+            ],
+            "right": [
+              0.3333333333,
+              0.010782797
+            ]
+          },
+          {
+            "frame": 68,
+            "value": -79.9467757094,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.0165458388
+            ],
+            "right": [
+              0.3333333333,
+              4.0222876771
+            ]
+          },
+          {
+            "frame": 69,
+            "value": -67.7072761884,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -4.1233143593
+            ],
+            "right": [
+              0.3333333333,
+              5.4576597348
+            ]
+          },
+          {
+            "frame": 70,
+            "value": -51.3136035583,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -5.3906696764
+            ],
+            "right": [
+              0.3333333333,
+              2.5921566901
+            ]
+          },
+          {
+            "frame": 71,
+            "value": -43.4000443139,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -2.6713345408
+            ],
+            "right": [
+              0.3333333333,
+              2.3357950625
+            ]
+          },
+          {
+            "frame": 72,
+            "value": -36.2589336633,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -2.415431523
+            ],
+            "right": [
+              0.3333333333,
+              2.0698923224
+            ]
+          },
+          {
+            "frame": 73,
+            "value": -29.9107362495,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -2.155689342
+            ],
+            "right": [
+              0.3333333333,
+              1.8172301654
+            ]
+          },
+          {
+            "frame": 74,
+            "value": -24.3074716852,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -1.9143008564
+            ],
+            "right": [
+              0.3333333333,
+              1.5908240764
+            ]
+          },
+          {
+            "frame": 75,
+            "value": -19.3758502453,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -1.6932577458
+            ],
+            "right": [
+              0.3333333333,
+              1.3716443261
+            ]
+          },
+          {
+            "frame": 76,
+            "value": -15.102957311,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -1.4741693893
+            ],
+            "right": [
+              0.3333333333,
+              1.1789087243
+            ]
+          },
+          {
+            "frame": 77,
+            "value": -11.4034628482,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -1.2820177852
+            ],
+            "right": [
+              0.3333333333,
+              0.9968494821
+            ]
+          },
+          {
+            "frame": 78,
+            "value": -8.2709775295,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              -0.9541966076
+            ],
+            "right": [
+              0.3333333333,
+              0.9541966076
+            ]
+          },
+          {
+            "frame": 79,
+            "value": -5.6904566376,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.8932512643
+            ],
+            "right": [
+              0.3333333333,
+              0.6518991614
+            ]
+          },
+          {
+            "frame": 80,
+            "value": -3.6560857958,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              -0.592293525
+            ],
+            "right": [
+              0.3333333333,
+              0.592293525
+            ]
+          },
+          {
+            "frame": 81,
+            "value": -2.1736664913,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.4987865291
+            ],
+            "right": [
+              0.3333333333,
+              0.309553972
+            ]
+          },
+          {
+            "frame": 82,
+            "value": -1.2625106593,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.2941033463
+            ],
+            "right": [
+              1.6666666667,
+              0.7149493346
+            ]
+          },
+          {
+            "frame": 87,
+            "value": -0.6272983669,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.6666666667,
+              -0.149882452
+            ],
+            "right": [
+              1.6666666667,
+              0.0953257141
+            ]
+          },
+          {
+            "frame": 92,
+            "value": -0.1465416382,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.6666666667,
+              -0.0269535424
+            ],
+            "right": [
+              3.6666666667,
+              -0.0699932463
+            ]
+          },
+          {
+            "frame": 103,
+            "value": 0.0000184185,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -3.6666666667,
+              0.0628592499
+            ]
+          }
+        ],
+        "modifiers": []
+      },
+      "ry": {
+        "keys": [
+          {
+            "frame": 0,
+            "value": 0,
+            "interpolation": "bezier",
+            "handle": "free",
+            "right": [
+              3,
+              -0.0132958655
+            ]
+          },
+          {
+            "frame": 9,
+            "value": -0.2494990658,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -3,
+              0.4513924951
+            ],
+            "right": [
+              1.3333333333,
+              0.2519252395
+            ]
+          },
+          {
+            "frame": 13,
+            "value": 0.2735112503,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.3333333333,
+              -0.4127291342
+            ],
+            "right": [
+              2.3333333333,
+              0.0060875937
+            ]
+          },
+          {
+            "frame": 20,
+            "value": -0.1113729951,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2.3333333333,
+              0.1494909075
+            ],
+            "right": [
+              3.6666666667,
+              0.161662045
+            ]
+          },
+          {
+            "frame": 31,
+            "value": 0.0650026862,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -3.6666666667,
+              -0.0851818206
+            ],
+            "right": [
+              0.6666666667,
+              -0.0306868663
+            ]
+          },
+          {
+            "frame": 33,
+            "value": -0.1358740151,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              0.1036521965
+            ],
+            "right": [
+              3,
+              0.1149332082
+            ]
+          },
+          {
+            "frame": 42,
+            "value": 0.0373952702,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -3,
+              -0.0043833522
+            ],
+            "right": [
+              1,
+              -0.090204189
+            ]
+          },
+          {
+            "frame": 45,
+            "value": -0.4984905464,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              0.0887275253
+            ],
+            "right": [
+              2.6666666667,
+              -1.0818189041
+            ]
+          },
+          {
+            "frame": 53,
+            "value": -2.8104137266,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2.6666666667,
+              1.0130997507
+            ],
+            "right": [
+              0.3333333333,
+              0.3700220638
+            ]
+          },
+          {
+            "frame": 54,
+            "value": -1.6682792958,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.3912028805
+            ],
+            "right": [
+              0.3333333333,
+              1.0881504424
+            ]
+          },
+          {
+            "frame": 55,
+            "value": 1.8011616279,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -1.1855606484
+            ],
+            "right": [
+              0.3333333333,
+              1.5836303307
+            ]
+          },
+          {
+            "frame": 56,
+            "value": 6.5641181271,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              -1.6672279641
+            ],
+            "right": [
+              0.3333333333,
+              1.6672279641
+            ]
+          },
+          {
+            "frame": 57,
+            "value": 11.7919075314,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -1.7531011392
+            ],
+            "right": [
+              0.6666666667,
+              3.4123174724
+            ]
+          },
+          {
+            "frame": 59,
+            "value": 22.0538927699,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              -3.4925513438
+            ],
+            "right": [
+              0.3333333333,
+              1.5644353056
+            ]
+          },
+          {
+            "frame": 60,
+            "value": 26.8586176976,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -1.573205005
+            ],
+            "right": [
+              0.3333333333,
+              1.2509238609
+            ]
+          },
+          {
+            "frame": 61,
+            "value": 30.5233734239,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -1.2102079835
+            ],
+            "right": [
+              0.3333333333,
+              0.4804527744
+            ]
+          },
+          {
+            "frame": 62,
+            "value": 31.9581469323,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.4756618659
+            ],
+            "right": [
+              2,
+              -0.0866737228
+            ]
+          },
+          {
+            "frame": 68,
+            "value": 31.7976319973,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2,
+              -0.1302422783
+            ],
+            "right": [
+              0.3333333333,
+              0.6564315429
+            ]
+          },
+          {
+            "frame": 69,
+            "value": 33.8614248618,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.7247192106
+            ],
+            "right": [
+              0.3333333333,
+              -0.3238646486
+            ]
+          },
+          {
+            "frame": 70,
+            "value": 32.7081521918,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.5150386242
+            ],
+            "right": [
+              0.3333333333,
+              -2.1898059721
+            ]
+          },
+          {
+            "frame": 71,
+            "value": 26.0505321608,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              2.2212926618
+            ],
+            "right": [
+              0.3333333333,
+              -1.9209608279
+            ]
+          },
+          {
+            "frame": 72,
+            "value": 20.272636156,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              1.9067213958
+            ],
+            "right": [
+              0.3333333333,
+              -1.6762691397
+            ]
+          },
+          {
+            "frame": 73,
+            "value": 15.3011852848,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              1.6163660009
+            ],
+            "right": [
+              0.3333333333,
+              -1.4540385741
+            ]
+          },
+          {
+            "frame": 74,
+            "value": 11.0797460227,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              1.3392623368
+            ],
+            "right": [
+              0.6666666667,
+              -2.4833421937
+            ]
+          },
+          {
+            "frame": 76,
+            "value": 4.5952317698,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              1.8338058815
+            ],
+            "right": [
+              2,
+              -5.3134352709
+            ]
+          },
+          {
+            "frame": 82,
+            "value": -3.5786145934,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2,
+              0.4519360957
+            ],
+            "right": [
+              2.6666666667,
+              0.3780524284
+            ]
+          },
+          {
+            "frame": 90,
+            "value": -1.8146285529,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2.6666666667,
+              -0.4668468867
+            ],
+            "right": [
+              0.6666666667,
+              0.1476443712
+            ]
+          },
+          {
+            "frame": 92,
+            "value": -1.1584460305,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              -0.3120902811
+            ],
+            "right": [
+              3.6666666667,
+              0.593859772
+            ]
+          },
+          {
+            "frame": 103,
+            "value": 0.0000532521,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -3.6666666667,
+              0.103420589
+            ]
+          }
+        ],
+        "modifiers": []
+      },
+      "rz": {
+        "keys": [
+          {
+            "frame": 0,
+            "value": 0,
+            "interpolation": "bezier",
+            "handle": "free",
+            "right": [
+              1.3333333333,
+              0.1087981752
+            ]
+          },
+          {
+            "frame": 4,
+            "value": 0.2466102378,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.3333333333,
+              -0.4642430119
+            ],
+            "right": [
+              1.6666666667,
+              0.0326690174
+            ]
+          },
+          {
+            "frame": 9,
+            "value": -0.1230334687,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.6666666667,
+              0.0528455222
+            ],
+            "right": [
+              1,
+              -0.0898651663
+            ]
+          },
+          {
+            "frame": 12,
+            "value": 0.0423738303,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1,
+              0.0175481251
+            ],
+            "right": [
+              2.6666666667,
+              0.0532924448
+            ]
+          },
+          {
+            "frame": 20,
+            "value": 0.0515370653,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2.6666666667,
+              -0.1141291366
+            ],
+            "right": [
+              0.3333333333,
+              -0.0410624865
+            ]
+          },
+          {
+            "frame": 21,
+            "value": -0.0717664201,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.0411723368
+            ],
+            "right": [
+              2.6666666667,
+              0.1037787258
+            ]
+          },
+          {
+            "frame": 29,
+            "value": 0.0958151531,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2.6666666667,
+              -0.1170216557
+            ],
+            "right": [
+              5,
+              -0.4552118222
+            ]
+          },
+          {
+            "frame": 44,
+            "value": -0.04602298,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -5,
+              0.3710390425
+            ],
+            "right": [
+              3,
+              0.2018738028
+            ]
+          },
+          {
+            "frame": 53,
+            "value": -0.3208796233,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -3,
+              0.1320265519
+            ],
+            "right": [
+              0.3333333333,
+              -0.3764946257
+            ]
+          },
+          {
+            "frame": 54,
+            "value": -1.4835829221,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.3988916644
+            ],
+            "right": [
+              0.3333333333,
+              -0.9017702351
+            ]
+          },
+          {
+            "frame": 55,
+            "value": -4.4505110191,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              1.1533917957
+            ],
+            "right": [
+              0.3333333333,
+              -1.1533917957
+            ]
+          },
+          {
+            "frame": 56,
+            "value": -8.6657397213,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              1.4559868293
+            ],
+            "right": [
+              0.3333333333,
+              -1.4014317554
+            ]
+          },
+          {
+            "frame": 57,
+            "value": -13.3054372287,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              1.8182353712
+            ],
+            "right": [
+              0.3333333333,
+              -0.8354158963
+            ]
+          },
+          {
+            "frame": 58,
+            "value": -16.8161291651,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              1.4885974955
+            ],
+            "right": [
+              0.3333333333,
+              -0.1270504279
+            ]
+          },
+          {
+            "frame": 59,
+            "value": -17.993829857,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.6647063858
+            ],
+            "right": [
+              0.3333333333,
+              0.2685110195
+            ]
+          },
+          {
+            "frame": 60,
+            "value": -17.764713367,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.0156700861
+            ],
+            "right": [
+              0.6666666667,
+              0.5720587049
+            ]
+          },
+          {
+            "frame": 62,
+            "value": -16.5660967169,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.6666666667,
+              -0.2876102185
+            ],
+            "right": [
+              0.3333333333,
+              0.1438051093
+            ]
+          },
+          {
+            "frame": 63,
+            "value": -16.3941397147,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              -0.0110479278
+            ],
+            "right": [
+              0.3333333333,
+              0.0110479278
+            ]
+          },
+          {
+            "frame": 64,
+            "value": -16.2369988673,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              -0.0600640248
+            ],
+            "right": [
+              1.3333333333,
+              0.2402560993
+            ]
+          },
+          {
+            "frame": 68,
+            "value": -16.0627678228,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.3333333333,
+              0.1443861114
+            ],
+            "right": [
+              0.3333333333,
+              -0.7450492363
+            ]
+          },
+          {
+            "frame": 69,
+            "value": -17.5096655026,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              0.3336053892
+            ],
+            "right": [
+              0.3333333333,
+              -0.0532566725
+            ]
+          },
+          {
+            "frame": 70,
+            "value": -17.1442604354,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.4002739842
+            ],
+            "right": [
+              0.3333333333,
+              0.8848384749
+            ]
+          },
+          {
+            "frame": 71,
+            "value": -14.9863230948,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.5379374128
+            ],
+            "right": [
+              0.3333333333,
+              0.7119555042
+            ]
+          },
+          {
+            "frame": 72,
+            "value": -13.2791525799,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.4145080621
+            ],
+            "right": [
+              0.3333333333,
+              0.6217910739
+            ]
+          },
+          {
+            "frame": 73,
+            "value": -11.7952917646,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.3597756713
+            ],
+            "right": [
+              0.3333333333,
+              0.5726073154
+            ]
+          },
+          {
+            "frame": 74,
+            "value": -10.4334060363,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.3333333333,
+              -0.3308440785
+            ],
+            "right": [
+              0.6666666667,
+              1.0075943978
+            ]
+          },
+          {
+            "frame": 76,
+            "value": -7.7212312089,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              -0.8339827475
+            ],
+            "right": [
+              0.3333333333,
+              0.5006579192
+            ]
+          },
+          {
+            "frame": 77,
+            "value": -6.3061545765,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.3333333333,
+              -0.4481164591
+            ],
+            "right": [
+              1.3333333333,
+              1.7924658366
+            ]
+          },
+          {
+            "frame": 81,
+            "value": -1.4032425086,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -1.3333333333,
+              -1.2116227755
+            ],
+            "right": [
+              0.6666666667,
+              0.6849058648
+            ]
+          },
+          {
+            "frame": 83,
+            "value": -0.4170447521,
+            "interpolation": "bezier",
+            "handle": "aligned",
+            "left": [
+              -0.6666666667,
+              -0.098309511
+            ],
+            "right": [
+              0.6666666667,
+              0.098309511
+            ]
+          },
+          {
+            "frame": 85,
+            "value": -0.349008096,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -0.6666666667,
+              0.0226148789
+            ],
+            "right": [
+              2.3333333333,
+              0.5053882472
+            ]
+          },
+          {
+            "frame": 92,
+            "value": -0.0817782593,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -2.3333333333,
+              -0.5113053941
+            ],
+            "right": [
+              3.6666666667,
+              -0.0710818199
+            ]
+          },
+          {
+            "frame": 103,
+            "value": 0.0000046237,
+            "interpolation": "bezier",
+            "handle": "free",
+            "left": [
+              -3.6666666667,
+              -0.0170484283
+            ]
+          }
+        ],
+        "modifiers": []
+      }
+    },
+    "keys": [
+      {
+        "p": [
+          -0.0000051835,
+          -0.0000029982,
+          0.0000033382
+        ],
+        "q": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 0,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0001606645,
+          0.0000784391,
+          0.0007681987
+        ],
+        "q": [
+          -0.0004667562,
+          0.0000804099,
+          0.0001967387,
+          0.9999998685
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 1,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0000894543,
+          -0.0000042158,
+          -0.0000144873
+        ],
+        "q": [
+          0.0001863209,
+          0.0001811277,
+          0.0002478764,
+          0.9999999355
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 3,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0002194282,
+          -0.0012988347,
+          -0.00190205
+        ],
+        "q": [
+          0.0005218566,
+          0.0004358411,
+          0.0021518517,
+          0.9999974536
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 4,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0003842793,
+          -0.0012980256,
+          -0.002257747
+        ],
+        "q": [
+          0.0000972471,
+          0.0001222415,
+          0.0012724471,
+          0.9999991782
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 6,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0001609824,
+          -0.0005206669,
+          -0.0010515843
+        ],
+        "q": [
+          -0.0000973546,
+          -0.0003694718,
+          0.0003428809,
+          0.9999998682
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 7,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0005304496,
+          0.0005459779,
+          0.0003134606
+        ],
+        "q": [
+          0.0003411735,
+          -0.0021776508,
+          -0.001072929,
+          0.9999969951
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 9,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0001720851,
+          0.0007856259,
+          0.0009378104
+        ],
+        "q": [
+          0.0001653886,
+          -0.0010534163,
+          -0.0010411572,
+          0.9999988895
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 10,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0001210742,
+          0.0001171902,
+          0.0000143341
+        ],
+        "q": [
+          0.0001745301,
+          -0.0003974858,
+          0.0000095841,
+          0.9999999057
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 11,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0000033238,
+          -0.0000435753,
+          -0.0000398465
+        ],
+        "q": [
+          0.0001520057,
+          0.0004546494,
+          0.0003697124,
+          0.9999998168
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 12,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0008534004,
+          -0.0005726332,
+          -0.0008408886
+        ],
+        "q": [
+          0.0002736003,
+          0.0023869299,
+          0.0003531514,
+          0.9999970515
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 13,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0001460604,
+          -0.0005574396,
+          -0.0027915491
+        ],
+        "q": [
+          0.00030652,
+          0.0019641683,
+          0.0003661792,
+          0.999997957
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 15,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0000280478,
+          -0.0002106942,
+          -0.0001112694
+        ],
+        "q": [
+          0.001658733,
+          -0.0004204598,
+          0.0000704138,
+          0.9999985334
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 19,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0000535209,
+          -0.0003184415,
+          0.0010171178
+        ],
+        "q": [
+          0.001096591,
+          -0.0009714185,
+          0.0004508115,
+          0.9999988253
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 20,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0001164886,
+          0.000154582,
+          0.001723591
+        ],
+        "q": [
+          0.0004042123,
+          -0.0007085315,
+          -0.0006259939,
+          0.9999994714
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 21,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0000049592,
+          0.0000538749,
+          4.811e-7
+        ],
+        "q": [
+          -0.0006525835,
+          -0.0000453849,
+          -0.0000285049,
+          0.9999997856
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 24,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0001469919,
+          -0.0000716628,
+          -0.0000907357
+        ],
+        "q": [
+          -0.0008761337,
+          0.0000509517,
+          0.000098938,
+          0.99999961
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 25,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0003078669,
+          -0.0001546204,
+          -0.0000293007
+        ],
+        "q": [
+          -0.000605277,
+          0.0000731109,
+          0.0001635873,
+          0.9999998008
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 26,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0001076727,
+          -0.0005177351,
+          -0.0025217243
+        ],
+        "q": [
+          0.0001166257,
+          0.0003051256,
+          0.0008361093,
+          0.9999995971
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 29,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0002394666,
+          -0.0000741264,
+          -0.0024741495
+        ],
+        "q": [
+          0.0001205719,
+          0.0003798885,
+          0.0000825972,
+          0.9999999172
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 30,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0004612048,
+          0.0002646802,
+          -0.0020059826
+        ],
+        "q": [
+          0.0001560843,
+          0.0005671896,
+          -0.0004205163,
+          0.9999997385
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 31,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0003616148,
+          0.0004639256,
+          -0.0015577043
+        ],
+        "q": [
+          0.0001251829,
+          -0.00007053,
+          -0.0005936246,
+          0.9999998135
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 32,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0002940583,
+          0.0002619538,
+          -0.0013813416
+        ],
+        "q": [
+          0.0000561869,
+          -0.001185753,
+          -0.00052145,
+          0.9999991595
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 33,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0001797251,
+          0.0000666136,
+          -0.0002911163
+        ],
+        "q": [
+          0.0002013156,
+          -0.0005948579,
+          -0.0003455506,
+          0.9999997431
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 35,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0001454697,
+          0.0000636497,
+          0.0003033122
+        ],
+        "q": [
+          0.0002594676,
+          -0.0003564655,
+          -0.0001347095,
+          0.9999998937
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 36,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0004392056,
+          -0.0000060429,
+          -0.0000096982
+        ],
+        "q": [
+          0.0000576562,
+          0.0003263531,
+          0.0003094821,
+          0.9999998972
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 42,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0002334678,
+          -0.0000137465,
+          -0.0004369536
+        ],
+        "q": [
+          -0.0002547878,
+          -0.0010611628,
+          0.0000475299,
+          0.9999994034
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 43,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0000495022,
+          0.0000908161,
+          0.0000931641
+        ],
+        "q": [
+          -0.0006742649,
+          -0.0029812288,
+          -0.0004036383,
+          0.9999952473
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 44,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0001870044,
+          -0.0003267715,
+          0.001406176
+        ],
+        "q": [
+          -0.0009018839,
+          -0.0043500082,
+          -0.0001445132,
+          0.9999901215
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 45,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0001126995,
+          -0.0001899485,
+          0.0009370302
+        ],
+        "q": [
+          -0.0013639954,
+          -0.0075739943,
+          0.0000920394,
+          0.9999703824
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 46,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0003677708,
+          -0.0005800417,
+          0.001111421
+        ],
+        "q": [
+          -0.002736318,
+          -0.0146502939,
+          -0.0007358115,
+          0.9998886638
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 49,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0004058145,
+          -0.0002977804,
+          0.0017046188
+        ],
+        "q": [
+          -0.0032223416,
+          -0.0167363821,
+          -0.001328669,
+          0.9998538617
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 50,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0003303688,
+          9.224e-7,
+          0.0016997355
+        ],
+        "q": [
+          -0.0037392762,
+          -0.0189822774,
+          -0.0019820118,
+          0.9998108634
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 51,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0002561412,
+          0.0000425423,
+          -0.0019112427
+        ],
+        "q": [
+          -0.0062615975,
+          -0.024504714,
+          -0.002954585,
+          0.9996757383
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 53,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0052412467,
+          0.0107342361,
+          -0.0017463463
+        ],
+        "q": [
+          -0.0294409116,
+          -0.0141667322,
+          -0.0133706723,
+          0.9993766865
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 54,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0189292969,
+          0.0361261727,
+          0.0012372427
+        ],
+        "q": [
+          -0.0923813876,
+          0.0192053074,
+          -0.0372167212,
+          0.994842576
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 55,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0401348113,
+          0.066333003,
+          0.0068360213
+        ],
+        "q": [
+          -0.1868697765,
+          0.0699555003,
+          -0.0636746096,
+          0.9778197475
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 56,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0675023339,
+          0.091297597,
+          0.0139595528
+        ],
+        "q": [
+          -0.2998693048,
+          0.1312324929,
+          -0.0804247458,
+          0.9414819664
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 57,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0996610619,
+          0.1015042759,
+          0.0216341528
+        ],
+        "q": [
+          -0.4138904033,
+          0.1911850621,
+          -0.0738719676,
+          0.8869531772
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 58,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.1329334261,
+          0.0932432276,
+          0.0316864494
+        ],
+        "q": [
+          -0.5119332155,
+          0.2404146147,
+          -0.0380922785,
+          0.8238168329
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 59,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.162030706,
+          0.0752350867,
+          0.0434634596
+        ],
+        "q": [
+          -0.5836163656,
+          0.2740687424,
+          0.0096773285,
+          0.7643197051
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 60,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.1827469192,
+          0.0562862777,
+          0.0521661711
+        ],
+        "q": [
+          -0.6261097246,
+          0.2927488622,
+          0.0506435415,
+          0.7209160479
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 61,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.1912613233,
+          0.0450534145,
+          0.0535584779
+        ],
+        "q": [
+          -0.640461714,
+          0.2978449477,
+          0.0684072831,
+          0.7045691049
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 62,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.1510670975,
+          0.0385887648,
+          0.04329535
+        ],
+        "q": [
+          -0.6407751974,
+          0.2965812264,
+          0.069418132,
+          0.7047182738
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 63,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.1103672985,
+          0.0342999485,
+          0.0341043975
+        ],
+        "q": [
+          -0.64061919,
+          0.2954648068,
+          0.070151589,
+          0.7052562342
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 64,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.1105162347,
+          0.03383762,
+          0.034393096
+        ],
+        "q": [
+          -0.6413501191,
+          0.2935642244,
+          0.0714697763,
+          0.7052532467
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 67,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.1103270039,
+          0.0343440873,
+          0.0346598862
+        ],
+        "q": [
+          -0.6411273253,
+          0.2941965721,
+          0.0712869561,
+          0.7052108192
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 68,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0933911398,
+          0.044370542,
+          -0.0184964282
+        ],
+        "q": [
+          -0.5635293018,
+          0.3201409143,
+          0.0394143948,
+          0.7605202341
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 69,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0694002783,
+          0.0548034438,
+          -0.0748574061
+        ],
+        "q": [
+          -0.4486516682,
+          0.3129014552,
+          -0.0083688206,
+          0.8370987533
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 70,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0564024418,
+          0.0547517141,
+          -0.0773668207
+        ],
+        "q": [
+          -0.3844660851,
+          0.2545975848,
+          -0.0354264273,
+          0.8866289345
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 71,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0448959977,
+          0.0528251232,
+          -0.0765899532
+        ],
+        "q": [
+          -0.323592577,
+          0.2015484701,
+          -0.053773266,
+          0.9229162986
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 72,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0352413303,
+          0.0491571245,
+          -0.0743167979
+        ],
+        "q": [
+          -0.2676316761,
+          0.1542219762,
+          -0.0642125407,
+          0.9489286683
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 73,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0267229838,
+          0.0444304206,
+          -0.0675353499
+        ],
+        "q": [
+          -0.2172649824,
+          0.1130368312,
+          -0.0682292313,
+          0.9671418584
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 74,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.019783668,
+          0.0385795692,
+          -0.0598131599
+        ],
+        "q": [
+          -0.1725262177,
+          0.0783085511,
+          -0.0661999002,
+          0.9796530244
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 75,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0139713498,
+          0.0323610352,
+          -0.0496406048
+        ],
+        "q": [
+          -0.1336891452,
+          0.0484934562,
+          -0.0614353065,
+          0.9879277809
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 76,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0097332466,
+          0.0256992468,
+          -0.0410184556
+        ],
+        "q": [
+          -0.1002189523,
+          0.0242947558,
+          -0.052841678,
+          0.993264156
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 77,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0063897469,
+          0.0192256263,
+          -0.0315589013
+        ],
+        "q": [
+          -0.0721290097,
+          0.0049876768,
+          -0.0428920124,
+          0.9964601368
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 78,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.003495063,
+          0.0134004943,
+          -0.0203905054
+        ],
+        "q": [
+          -0.0492467435,
+          -0.0098670249,
+          -0.0322549264,
+          0.9982169202
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 79,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0018588966,
+          0.0080782525,
+          -0.0123387246
+        ],
+        "q": [
+          -0.0314343101,
+          -0.0206224158,
+          -0.0218465065,
+          0.9990542179
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 80,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0007435378,
+          0.0038544219,
+          -0.0052519382
+        ],
+        "q": [
+          -0.0186180229,
+          -0.0276036118,
+          -0.0127664208,
+          0.9993640119
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 81,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0003343154,
+          0.0010550326,
+          -0.001692106
+        ],
+        "q": [
+          -0.0108274394,
+          -0.0311568026,
+          -0.0062422421,
+          0.9994363685
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 82,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0001689879,
+          0.0002126235,
+          0.0011026122
+        ],
+        "q": [
+          -0.0080007285,
+          -0.0297960507,
+          -0.003879636,
+          0.9995164492
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 83,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0005054299,
+          -0.0000965664,
+          0.0013240442
+        ],
+        "q": [
+          -0.0066722796,
+          -0.0280101369,
+          -0.0031144726,
+          0.9995805185
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 84,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0002194536,
+          0.0001172924,
+          0.0011602602
+        ],
+        "q": [
+          -0.006248854,
+          -0.025977132,
+          -0.0032091408,
+          0.9996378554
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 85,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0000614816,
+          -0.0006034191,
+          0.0001112003
+        ],
+        "q": [
+          -0.0054424264,
+          -0.0217486387,
+          -0.0015186222,
+          0.9997475034
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 87,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0003012673,
+          0.0000943011,
+          -0.0013743812
+        ],
+        "q": [
+          -0.0026093682,
+          -0.0158286303,
+          -0.0023955419,
+          0.9998684449
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 90,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.000240934,
+          0.0000550661,
+          -0.001226711
+        ],
+        "q": [
+          -0.0015740121,
+          -0.0135179495,
+          -0.0020609881,
+          0.9999052654
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 91,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.000645447,
+          -0.000514723,
+          -0.0006601229
+        ],
+        "q": [
+          -0.0012715366,
+          -0.0101082531,
+          -0.0007265406,
+          0.9999478379
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 92,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          0.0007471912,
+          -0.0003752484,
+          -0.0002141256
+        ],
+        "q": [
+          -0.0013682344,
+          -0.0086841733,
+          -0.0008503001,
+          0.9999609943
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 93,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0000170078,
+          -0.0000962671,
+          0.0003894122
+        ],
+        "q": [
+          -0.0012157402,
+          -0.0058733742,
+          -0.0008827266,
+          0.999981623
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 95,
+        "interpolation": "smooth"
+      },
+      {
+        "p": [
+          -0.0000050714,
+          -0.0000029674,
+          0.0000034959
+        ],
+        "q": [
+          1.607e-7,
+          4.647e-7,
+          4.03e-8,
+          1
+        ],
+        "grip": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fov": 70,
+        "frame": 103,
+        "interpolation": "smooth"
+      }
+    ],
+    "additive": true
+  }
+}

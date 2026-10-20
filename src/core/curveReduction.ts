@@ -243,26 +243,32 @@ function fitSpan(
   const check = (p: Cubic) => {
     let error = 0,
       bound = 0,
-      worst = a + 1;
+      worst = a + 1,
+      failureScore = 0,
+      passed = true;
     for (let i = a; i < b; i++) {
       const v = certify(points(source, i), p, tolerance);
-      if (v.peak > error) {
-        error = v.peak;
-        worst = Math.max(
-          a + 1,
-          Math.min(
-            b - 1,
-            Math.abs(v.worstFrame - source.keys[i].frame) <
-              Math.abs(v.worstFrame - source.keys[i + 1].frame)
-              ? i
-              : i + 1,
-          ),
-        );
-      }
+      error = Math.max(error, v.peak);
       bound = Math.max(bound, v.bound);
-      if (!v.passed) return { passed: false, error, bound, split: worst };
+      if (!v.passed) {
+        passed = false;
+        const score = v.peak > tolerance ? v.peak : v.bound;
+        if (score > failureScore) {
+          failureScore = score;
+          worst = Math.max(
+            a + 1,
+            Math.min(
+              b - 1,
+              Math.abs(v.worstFrame - source.keys[i].frame) <
+                Math.abs(v.worstFrame - source.keys[i + 1].frame)
+                ? i
+                : i + 1,
+            ),
+          );
+        }
+      }
     }
-    return { passed: true, error, bound, split: worst };
+    return { passed, error, bound, split: worst };
   };
   const finish = (p: Cubic, mode: 'linear' | 'bezier', v: ReturnType<typeof check>) => ({
     ...v,
@@ -295,22 +301,82 @@ function fitSpan(
     l = 1 / 3,
     best = make(r, l),
     bestScore = score(best);
-  if (options.skimHandles)
-    for (const step of [0.2, 0.1, 0.05, 0.025])
-      for (const axis of [0, 1])
-        for (const direction of [-1, 1]) {
-          const nr = axis === 0 ? Math.max(0.01, Math.min(0.95, r + step * direction)) : r,
-            nl = axis === 1 ? Math.max(0.01, Math.min(0.95, l + step * direction)) : l;
-          if (nr + nl > 0.99) continue;
-          const p = make(nr, nl),
-            s = score(p);
-          if (s < bestScore) {
-            r = nr;
-            l = nl;
-            best = p;
-            bestScore = s;
-          }
+  const initial = check(best);
+  if (initial.passed || !options.skimHandles) return finish(best, 'bezier', initial);
+  const residuals = (p: Cubic) =>
+    fitSamples.map(([f, value]) => cubic(p, parameter(p, f))[1] - value);
+  // Solve the two horizontal handle lengths together. A one-pass coordinate
+  // search can stall along a narrow valley even when an accurate sparse fit
+  // exists. Vertical handle values remain the least-squares solution in make().
+  for (let iteration = 0; iteration < 16; iteration++) {
+    const errors = residuals(best),
+      hR = r + l + 0.0001 < 0.99 && r + 0.0001 < 0.95 ? 0.0001 : -0.0001,
+      hL = r + l + 0.0001 < 0.99 && l + 0.0001 < 0.95 ? 0.0001 : -0.0001,
+      right = residuals(make(r + hR, l)),
+      left = residuals(make(r, l + hL));
+    let aa = 0,
+      ab = 0,
+      bb = 0,
+      ar = 0,
+      br = 0;
+    for (let i = 0; i < errors.length; i++) {
+      const dr = (right[i] - errors[i]) / hR,
+        dl = (left[i] - errors[i]) / hL;
+      aa += dr * dr;
+      ab += dr * dl;
+      bb += dl * dl;
+      ar += dr * errors[i];
+      br += dl * errors[i];
+    }
+    const ridge = Math.max(aa, bb, 1) * 1e-8;
+    aa += ridge;
+    bb += ridge;
+    const determinant = aa * bb - ab * ab;
+    if (determinant <= 1e-20) break;
+    const dr = Math.max(-0.25, Math.min(0.25, (ab * br - bb * ar) / determinant)),
+      dl = Math.max(-0.25, Math.min(0.25, (ab * ar - aa * br) / determinant));
+    let improved = false;
+    for (let scale = 1; scale >= 1 / 128; scale /= 2) {
+      const nr = Math.max(0.01, Math.min(0.95, r + dr * scale)),
+        nl = Math.max(0.01, Math.min(0.95, l + dl * scale));
+      if (nr + nl > 0.99) continue;
+      const p = make(nr, nl),
+        s = score(p);
+      if (s < bestScore - Math.max(1e-20, bestScore * 1e-10)) {
+        r = nr;
+        l = nl;
+        best = p;
+        bestScore = s;
+        improved = true;
+        break;
+      }
+    }
+    if (!improved) break;
+    const certified = check(best);
+    if (certified.passed) return finish(best, 'bezier', certified);
+  }
+  // A bounded pattern search also covers constrained solutions near a handle
+  // limit, where a local derivative can point outside the feasible region.
+  for (const step of [
+    0.2, 0.1, 0.05, 0.025, 0.0125, 0.00625, 0.003125, 0.0015625, 0.00078125, 0.000390625, 0.0001,
+  ]) {
+    for (const axis of [0, 1])
+      for (const direction of [-1, 1]) {
+        const nr = axis === 0 ? Math.max(0.01, Math.min(0.95, r + step * direction)) : r,
+          nl = axis === 1 ? Math.max(0.01, Math.min(0.95, l + step * direction)) : l;
+        if (nr + nl > 0.99) continue;
+        const p = make(nr, nl),
+          s = score(p);
+        if (s < bestScore) {
+          r = nr;
+          l = nl;
+          best = p;
+          bestScore = s;
         }
+      }
+    const certified = check(best);
+    if (certified.passed) return finish(best, 'bezier', certified);
+  }
   return finish(best, 'bezier', check(best));
 }
 
@@ -370,7 +436,11 @@ export function reduceCurve(
           }
           return Math.abs(keys[j].value - keys[i].value);
         };
-        if (Math.max(excursion(-1), excursion(1)) > baseTolerance * 2) pinned.add(i);
+        const prominence =
+          left * right < 0
+            ? Math.min(excursion(-1), excursion(1))
+            : Math.max(excursion(-1), excursion(1));
+        if (prominence > baseTolerance * 2) pinned.add(i);
       }
     }
   }
@@ -408,6 +478,22 @@ export function reduceCurve(
     }
   }
   segments.sort((a, b) => a.a - b.a);
+  // A split chosen for a failed long fit need not remain a boundary once its
+  // neighbors are fitted. Reconsider adjacent spans without crossing protected
+  // keys; each accepted merge still passes the original continuous certificate.
+  const merged: Span[] = [];
+  for (const segment of segments) {
+    merged.push(segment);
+    while (merged.length > 1) {
+      const right = merged.at(-1)!,
+        left = merged.at(-2)!;
+      if (pinned.has(right.a)) break;
+      const result = fitSpan(curve, left.a, right.b, options, baseTolerance);
+      if (!result.span) break;
+      merged.splice(-2, 2, result.span);
+    }
+  }
+  segments.splice(0, segments.length, ...merged);
   if (segments.length + 1 >= n) return { curve: cp(curve), error: 0, bound: 0 };
   const reduced: CurveKey[] = [cp(keys[0])];
   for (const segment of segments) {
@@ -522,14 +608,16 @@ export function reduceTrack(
       ...(original.following ?? []).map((k) => k.frame),
     ];
   const frames = times(original, end);
+  const eulerRotationChannels = input.channels.filter((c) => ['rx', 'ry', 'rz'].includes(c)).length;
+  const positionChannels = input.channels.filter((c) => ['px', 'py', 'pz'].includes(c)).length;
   for (const channel of input.channels) {
     const source = readCurve(original, channel),
       tolerance = position(channel)
-        ? options.position / Math.sqrt(3)
+        ? options.position / Math.sqrt(Math.max(1, positionChannels))
         : channel.startsWith('q')
           ? Math.sin((options.rotation * Math.PI) / 180 / 4) / 2
           : rotation(channel)
-            ? options.rotation / 3
+            ? options.rotation / Math.max(1, eulerRotationChannels)
             : options.scalar;
     const result = reduceCurve(source, tolerance, options, protectedFrames),
       candidate = result.curve;
