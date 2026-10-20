@@ -313,9 +313,10 @@ export function AnimationImport({
                   ))}
               </details>
               <p className="help-text">
-                Motion becomes sparse, editable Bézier curves. Key detail sets the maximum sampled
-                rotation error: High accuracy 0.1°, Balanced 0.25°, Fewer keys 0.5°. Static channels
-                keep one key. The target retains its bone lengths; unmapped bones remain at rest.
+                Each channel is fitted independently with linear segments or editable Bézier
+                handles. Key detail sets the maximum sampled rotation error: High accuracy 0.1°,
+                Balanced 0.25°, Fewer keys 0.5°. Static channels keep one key. The target retains
+                its bone lengths; unmapped bones remain at rest.
               </p>
             </>
           )}

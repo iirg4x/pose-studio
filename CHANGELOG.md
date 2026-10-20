@@ -1,3 +1,7 @@
+## 0.8.31 — independent imported-motion curve fitting
+
+Imported motion fits each position and quaternion channel independently, choosing linear spans for steady motion and editable Bézier handles for easing. Unrelated axis or rotation detail no longer forces duplicate keys into a simple channel. The importer retains meaningful holds/corners and exact endpoints, removes sub-tolerance flat-channel noise, and validates reconstructed positions and rotations between frames against the existing error limits. Non-transform pose values retain their fallback keys.
+
 ## 0.8.30 — smooth Properties docking
 
 T and the Properties collapse/restore controls slide the desktop dock horizontally with the same 200 ms easing as the timeline. The scene width reflows alongside it while the inspector keeps its full internal width. Interrupted toggles reverse smoothly; manual resizing and reduced motion remain immediate.

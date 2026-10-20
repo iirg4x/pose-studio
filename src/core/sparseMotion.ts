@@ -1,23 +1,32 @@
 import { Quaternion, Vector3 } from 'three';
-import type { Key, Track } from './model';
-import type { Channel, CurveKey } from './curves';
+import { reduceTrack } from './curveReduction';
+import { sample } from './model';
+import type { ControlId, Key, Track } from './model';
+import type { Channel, Curve } from './curves';
+
 export interface MotionTolerance {
+  /** Position error in metres. */
   position: number;
+  /** Rotation error in radians. */
   rotation: number;
 }
+
 const IMPORT_TOLERANCE: MotionTolerance = {
   position: 0.0002,
   rotation: (Math.PI / 180) * 0.25,
 };
 const channels: Channel[] = ['px', 'py', 'pz', 'qx', 'qy', 'qz', 'qw'];
-const values = (k: Key) => [...k.p, ...k.q];
-const cubic = (a: number, b: number, c: number, d: number, u: number) => {
-  const v = 1 - u;
-  return v * v * v * a + 3 * v * v * u * b + 3 * v * u * u * c + u * u * u * d;
-};
-/** Fit editable cubic segments, keeping endpoints and splitting at motion error.
- * Quaternions stay on one hemisphere and are normalized by the curve evaluator.
- * Position and angular tolerances also cover quarter-frame interpolation. */
+
+const copyKey = (key: Key): Key => ({
+  ...key,
+  p: [...key.p] as Key['p'],
+  q: [...key.q] as Key['q'],
+  grip: [...key.grip],
+});
+
+/** Keep imported bakes editable without making every channel share one set of
+ * split times. Position and quaternion channels are reduced independently by
+ * the same continuous curve fitter used by the in-app curve reducer. */
 export function sparseMotion(
   keys: Key[],
   tolerance: MotionTolerance = IMPORT_TOLERANCE,
@@ -32,111 +41,172 @@ export function sparseMotion(
     )
   )
     throw Error('Invalid key reduction tolerance.');
-  const samples = keys.map((k) => ({
-    ...k,
-    p: [...k.p] as Key['p'],
-    q: new Quaternion(...k.q).normalize().toArray() as Key['q'],
-  }));
-  for (let i = 1; i < samples.length; i++)
+
+  const samples = keys.map(copyKey);
+  for (const key of samples) {
+    const q = new Quaternion(...key.q).normalize();
+    key.q = q.toArray() as Key['q'];
+  }
+  // Quaternion channels represent one hemisphere. Unwrapping before creating
+  // scalar curves prevents alternating signs from looking like giant turns.
+  for (let i = 1; i < samples.length; i++) {
     if (new Quaternion(...samples[i - 1].q).dot(new Quaternion(...samples[i].q)) < 0)
       samples[i].q = samples[i].q.map((v) => -v) as Key['q'];
-  const v = samples.map(values),
-    kept = new Set([0, samples.length - 1]),
-    segments = new Map<number, { end: number; c1: number[]; c2: number[] }>();
-  const pending: [number, number][] = [[0, samples.length - 1]];
-  while (pending.length) {
-    const [a, b] = pending.pop()!;
-    if (a === b) continue;
-    const span = samples[b].frame - samples[a].frame;
-    if (span <= 0) throw Error('Motion samples must be ordered.');
-    let aa = 0,
-      ab = 0,
-      bb = 0;
-    const av = Array(7).fill(0),
-      bv = Array(7).fill(0);
-    for (let i = a; i < b; i++)
-      for (let part = 0; part < 4; part++) {
-        if (i === a && part === 0) continue;
-        const frame = samples[i].frame + ((samples[i + 1].frame - samples[i].frame) * part) / 4,
-          u = (frame - samples[a].frame) / span,
-          w1 = 3 * (1 - u) ** 2 * u,
-          w2 = 3 * (1 - u) * u * u;
-        const point = [
-          ...new Vector3(...samples[i].p)
-            .lerp(new Vector3(...samples[i + 1].p), part / 4)
-            .toArray(),
-          ...new Quaternion(...samples[i].q)
-            .slerp(new Quaternion(...samples[i + 1].q), part / 4)
-            .toArray(),
-        ];
-        aa += w1 * w1;
-        ab += w1 * w2;
-        bb += w2 * w2;
-        for (let c = 0; c < 7; c++) {
-          const y = point[c] - (1 - u) ** 3 * v[a][c] - u ** 3 * v[b][c];
-          av[c] += w1 * y;
-          bv[c] += w2 * y;
-        }
-      }
-    const det = aa * bb - ab * ab,
-      c1 = v[a].map((x, c) =>
-        det > 1e-12 ? (av[c] * bb - bv[c] * ab) / det : x + (v[b][c] - x) / 3,
+  }
+  for (let i = 1; i < samples.length; i++)
+    if (samples[i].frame <= samples[i - 1].frame) throw Error('Motion samples must be ordered.');
+
+  const first = samples[0];
+  const fallbackFlat = samples.every(
+    (key) =>
+      key.layerPosition === first.layerPosition &&
+      key.fov === first.fov &&
+      key.grip.every((value, index) => value === first.grip[index]),
+  );
+
+  // Imported skeletons contain many unchanged bones. Exact static transforms
+  // need no curve fitting or repeated subframe scans; preserve any animated
+  // fallback fields independently.
+  if (
+    samples.every(
+      (key) =>
+        key.p.every((value, index) => value === first.p[index]) &&
+        key.q.every((value, index) => value === first.q[index]),
+    )
+  )
+    return {
+      keys: fallbackFlat ? [copyKey(first)] : samples,
+      curves: Object.fromEntries(
+        channels.map((channel, index) => [
+          channel,
+          {
+            keys: [
+              {
+                frame: first.frame,
+                value: index < 3 ? first.p[index] * 100 : first.q[index - 3],
+                interpolation: 'linear',
+                handle: 'free',
+              },
+            ],
+            modifiers: [],
+          },
+        ]),
       ),
-      c2 = v[a].map((x, c) =>
-        det > 1e-12 ? (bv[c] * aa - av[c] * ab) / det : x + (2 * (v[b][c] - x)) / 3,
-      );
-    let worst = 1,
-      split = -1;
-    for (let i = a; i < b; i++)
-      for (let part = 0; part < 4; part++) {
-        const f = samples[i].frame + ((samples[i + 1].frame - samples[i].frame) * part) / 4,
-          u = (f - samples[a].frame) / span;
-        const value = v[a].map((x, c) => cubic(x, c1[c], c2[c], v[b][c], u));
-        const p = new Vector3(...samples[i].p).lerp(new Vector3(...samples[i + 1].p), part / 4),
-          q = new Quaternion(...samples[i].q).slerp(new Quaternion(...samples[i + 1].q), part / 4);
-        const error = Math.max(
-          p.distanceTo(new Vector3(...value.slice(0, 3))) / tolerance.position,
-          q.angleTo(new Quaternion(...value.slice(3)).normalize()) / tolerance.rotation,
-        );
-        if (error > worst) {
-          worst = error;
-          split = Math.max(a + 1, Math.min(b - 1, part < 2 ? i : i + 1));
-        }
-      }
-    if (split > a && split < b) {
-      kept.add(split);
-      pending.push([a, split], [split, b]);
-    } else segments.set(a, { end: b, c1, c2 });
-  }
-  const indexes = [...kept].sort((a, b) => a - b),
-    curves: NonNullable<Track['curves']> = {};
-  for (let c = 0; c < 7; c++) {
-    const factor = c < 3 ? 100 : 1,
-      flat = v.every((row) => Math.abs(row[c] - v[0][c]) < 1e-8);
-    const curveKeys: CurveKey[] = (flat ? [0] : indexes).map((i) => ({
-      frame: samples[i].frame,
-      value: v[i][c] * factor,
-      interpolation: 'bezier',
-      handle: 'free',
-    }));
-    if (!flat)
-      for (let n = 0; n < indexes.length - 1; n++) {
-        const a = indexes[n],
-          segment = segments.get(a)!,
-          b = segment.end,
-          span = samples[b].frame - samples[a].frame;
-        curveKeys[n].right = [span / 3, (segment.c1[c] - v[a][c]) * factor];
-        curveKeys[n + 1].left = [-span / 3, (segment.c2[c] - v[b][c]) * factor];
-      }
-    curves[channels[c]] = { keys: curveKeys, modifiers: [] };
-  }
-  const allFlat = Object.values(curves).every((c) => c!.keys.length === 1);
-  return {
-    keys: (allFlat ? [samples[0]] : indexes.map((i) => samples[i])).map((k) => ({
-      ...k,
+      rotationMode: 'quaternion',
       interpolation: 'linear',
-    })),
-    curves,
+    };
+
+  const source: Track = {
+    keys: samples,
+    spaces: [],
+    interpolation: 'linear',
+    rotationMode: 'quaternion',
+  };
+  const end = samples.at(-1)!.frame;
+  const positionTolerance = tolerance.position * 100;
+  // Leave half the angular budget for quaternion normalization and the
+  // assembled-transform validation. reduceTrack maps this to a conservative
+  // per-component sin(theta / 4) bound.
+  const rotationTolerance = (tolerance.rotation * 180 * 0.5) / Math.PI;
+  const reduced = reduceTrack(
+    {
+      id: 'root' as ControlId,
+      label: 'Imported motion',
+      track: source,
+      channels,
+    },
+    {
+      position: positionTolerance,
+      rotation: rotationTolerance,
+      scalar: positionTolerance,
+      fit: 'auto',
+      skimHandles: true,
+      preserveExtrema: true,
+    },
+    end,
+  ).track;
+
+  // Keep a snapshot of the reduced result so any cleanup remains immutable to
+  // the caller's source keys and to the reduction implementation.
+  const candidate: Track = {
+    ...reduced,
+    keys: reduced.keys.map(copyKey),
+    curves: reduced.curves ? { ...reduced.curves } : undefined,
+  };
+  for (const channel of channels) {
+    const curve = candidate.curves?.[channel];
+    if (!curve || curve.keys.length <= 1) continue;
+    const values = samples.map((key) =>
+      channel.startsWith('q')
+        ? key.q[['qx', 'qy', 'qz', 'qw'].indexOf(channel)]
+        : key.p[['px', 'py', 'pz'].indexOf(channel)] * 100,
+    );
+    const limit = channel.startsWith('q')
+      ? Math.sin((rotationTolerance * Math.PI) / 180 / 4) / 2
+      : positionTolerance / Math.sqrt(3);
+    // A tiny channel can still leave two endpoint keys after curve reduction.
+    // Collapse only when its excursion is inside the per-channel budget and
+    // the final value is exactly the authored start. A one-key curve replaces
+    // the fallback at every frame, so never use it to erase a real endpoint.
+    const firstValue = values[0],
+      lastValue = values.at(-1)!;
+    if (
+      lastValue === firstValue &&
+      Math.max(...values.map((value) => Math.abs(value - firstValue))) <= limit
+    ) {
+      const first = curve.keys[0];
+      candidate.curves![channel] = {
+        ...curve,
+        keys: [{ ...first }],
+      } as Curve;
+    }
+  }
+
+  // Use the reduced track only when its complete transform remains within the
+  // requested tolerance. This catches cross-channel quaternion normalization
+  // effects and protects against an over-aggressive scalar flattening pass.
+  const check = (track: Track) => {
+    let position = 0;
+    let rotation = 0;
+    for (let frame = samples[0].frame; frame <= end; frame += 0.25) {
+      const a = sample(source, frame);
+      const b = sample(track, frame);
+      position = Math.max(position, new Vector3(...a.p).distanceTo(new Vector3(...b.p)));
+      rotation = Math.max(rotation, new Quaternion(...a.q).angleTo(new Quaternion(...b.q)));
+      if (position > tolerance.position || rotation > tolerance.rotation) return false;
+    }
+    const a = sample(source, end);
+    const b = sample(track, end);
+    return (
+      new Vector3(...a.p).distanceTo(new Vector3(...b.p)) <= tolerance.position &&
+      new Quaternion(...a.q).angleTo(new Quaternion(...b.q)) <= tolerance.rotation
+    );
+  };
+  if (!check(candidate)) {
+    // A failed cleanup should not discard the independent fits that already
+    // passed reduceTrack's transform check. If the unflattened reduction is
+    // also invalid, retaining the original dense keys is safer than silently
+    // changing imported motion.
+    if (check(reduced))
+      return {
+        keys: reduced.keys,
+        curves: reduced.curves,
+        rotationMode: 'quaternion',
+        interpolation: 'linear',
+      };
+    return {
+      keys: samples,
+      rotationMode: 'quaternion',
+      interpolation: 'linear',
+    };
+  }
+
+  const allFlat =
+    fallbackFlat && channels.every((channel) => candidate.curves?.[channel]?.keys.length === 1);
+  if (allFlat) candidate.keys = [copyKey(samples[0])];
+  return {
+    keys: candidate.keys,
+    curves: candidate.curves,
     rotationMode: 'quaternion',
     interpolation: 'linear',
   };
