@@ -1,3 +1,11 @@
+## 0.8.37 — infer recoil motion and cull redundant phase keys
+
+Full-curve cleanup and dense animation imports can now infer editable Spring or Bounce interpolation from evaluated samples. Detection fits the existing runtime model, requires visible damped overshoot or repeated decreasing rebounds, and validates observations and between-sample motion before accepting a span. Immediate recoil onsets and all easing directions are supported. Ordinary fitted keys remain outside the detected span, and curves that fail validation keep the normal reduction path. The cleanup preview exposes a Detect spring / bounce option, inferred modes, and measured deviation per axis.
+
+Baked easing reconstruction now refits neighboring spans to remove redundant clustered keys and hold boundaries, preserves significant turns and exact clip endpoints, and validates the complete curve before accepting additional key culling. An unsuccessful cull keeps the prior sparse reconstruction. The supplied Inspect weapon Position Y curve reduces from 39 to eight keys; dense measured deviation improves from 0.507 cm to 0.358 cm, within its 0.438 cm drift band.
+
+Noise eligibility now checks curvature-bearing sample windows instead of treating long flat holds as evidence of a noise field. This avoids expensive false searches on ordinary piecewise baked motion while retaining the existing modern/legacy Blender model and envelope validation.
+
 ## 0.8.36 — detect noise in baked curves
 
 Reduce keyframes now detects Blender-style Noise motion from baked samples in the full-curve modes, while leaving Linear and range-limited modes deterministic. An accepted fit keeps an editable Noise modifier over two base keys instead of expanding the noise into a key on nearly every frame. Detection searches negative phases and different octave counts, then uses a conservative finite model of a linear base plus one additive Noise modifier. It reserves samples for validation and checks between-sample motion and combined transform error before accepting a fit; if validation fails, ordinary key reduction remains the fallback. Existing modifiers, loops, attachment/space switches and locked curves are excluded from detection.

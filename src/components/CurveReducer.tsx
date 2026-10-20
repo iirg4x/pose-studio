@@ -13,6 +13,7 @@ import type { ReductionInput, ReductionOptions, ReductionResult } from '../core/
 import type { ReductionReply, ReductionRequest } from '../core/curveReduction.worker';
 
 const noiseForRow = (row: ReductionResult['rows'][number]) => row.noise;
+const motionForRow = (row: ReductionResult['rows'][number]) => row.motion;
 
 export function CurveReducer({
   channel,
@@ -37,6 +38,7 @@ export function CurveReducer({
       drift: 2,
       preserveExtrema: false,
       detectNoise: true,
+      detectMotion: true,
     });
   const [range, setRange] = useState(selectedFrames.length > 1),
     [from, setFrom] = useState(selectedFrames.length ? Math.min(...selectedFrames) : 0),
@@ -60,6 +62,13 @@ export function CurveReducer({
       (count, result) => count + result.rows.filter((row) => noiseForRow(row)).length,
       0,
     ) ?? 0;
+  const inferredMotion = results?.reduce(
+    (count, result) => ({
+      spring: count.spring + result.rows.reduce((n, row) => n + (row.motion?.spring ?? 0), 0),
+      bounce: count.bounce + result.rows.reduce((n, row) => n + (row.motion?.bounce ?? 0), 0),
+    }),
+    { spring: 0, bounce: 0 },
+  ) ?? { spring: 0, bounce: 0 };
   useEffect(() => {
     dialog.current?.focus();
     return () => worker.current?.terminate();
@@ -358,6 +367,23 @@ export function CurveReducer({
                 Detect noise
               </label>
             )}
+            {options.fit !== 'linear' && (
+              <label
+                title={
+                  range
+                    ? 'Spring and bounce detection analyzes the complete curve'
+                    : 'Fit editable Spring or Bounce interpolation only when the sampled motion passes validation'
+                }
+              >
+                <input
+                  type="checkbox"
+                  checked={options.detectMotion ?? true}
+                  disabled={range}
+                  onChange={(e) => configure({ detectMotion: e.target.checked })}
+                />
+                Detect spring / bounce
+              </label>
+            )}
             {!baked && (
               <label>
                 <input
@@ -418,6 +444,9 @@ export function CurveReducer({
               : 'Each axis reduces independently. Modifiers and stepped, spring and bounce segments stay intact.'}{' '}
             {options.detectNoise && options.fit !== 'linear' && !range
               ? 'Validated noise is kept as an editable Blender-compatible Noise modifier; other curves use the current key fitting.'
+              : ''}{' '}
+            {options.detectMotion && options.fit !== 'linear' && !range
+              ? 'Validated oscillations and impacts use editable Spring or Bounce interpolation.'
               : ''}{' '}
             Attachment switches and loop boundaries are protected.
           </p>
@@ -537,7 +566,7 @@ export function CurveReducer({
                         <th>Axis</th>
                         <th>Keys</th>
                         <th>
-                          {active.rows.some((r) => !!r.noise)
+                          {active.rows.some((r) => !!r.noise || !!r.motion)
                             ? 'Max deviation'
                             : baked
                               ? 'Frame deviation'
@@ -559,35 +588,56 @@ export function CurveReducer({
                           <td>
                             {r.before} → {r.after}
                             {noiseForRow(r) && ' · Noise modifier'}
+                            {motionForRow(r) &&
+                              ` · ${[
+                                motionForRow(r)!.spring ? 'Spring' : '',
+                                motionForRow(r)!.bounce ? 'Bounce' : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' / ')}`}
                           </td>
                           <td
                             title={
                               noiseForRow(r)
                                 ? `Blender Noise modifier · fit error ${noiseForRow(r)!.maxError.toPrecision(3)} · validation error ${noiseForRow(r)!.validationError.toPrecision(3)}`
-                                : (r.reason ??
-                                  (baked
-                                    ? 'Maximum deviation at source-frame samples'
-                                    : 'Conservative bound over the complete scalar curve'))
+                                : motionForRow(r)
+                                  ? `Inferred interpolation · fit error ${motionForRow(r)!.maxError.toPrecision(3)} · validation error ${motionForRow(r)!.validationError.toPrecision(3)}`
+                                  : (r.reason ??
+                                    (baked
+                                      ? 'Maximum deviation at source-frame samples'
+                                      : 'Conservative bound over the complete scalar curve'))
                             }
                           >
                             {noiseForRow(r)
                               ? noiseForRow(r)!.validationError.toPrecision(3) +
                                 ' ' +
                                 channelUnit(r.channel)
-                              : r.reason
-                                ? 'Kept original'
-                                : r.bound.toPrecision(3) + ' ' + channelUnit(r.channel)}
+                              : motionForRow(r)
+                                ? motionForRow(r)!.validationError.toPrecision(3) +
+                                  ' ' +
+                                  channelUnit(r.channel)
+                                : r.reason
+                                  ? 'Kept original'
+                                  : r.bound.toPrecision(3) + ' ' + channelUnit(r.channel)}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  {options.detectNoise && options.fit !== 'linear' && (
+                  {options.detectNoise && options.fit !== 'linear' && !range && (
                     <p className="reducer-note" role="status">
                       <Check size={13} />
                       {inferredNoise
                         ? `${inferredNoise} Blender Noise modifier${inferredNoise === 1 ? '' : 's'} inferred from baked samples; validation errors are shown per axis.`
                         : 'No sampled channel met the Noise modifier validation threshold.'}
+                    </p>
+                  )}
+                  {options.detectMotion && options.fit !== 'linear' && !range && (
+                    <p className="reducer-note" role="status">
+                      <Check size={13} />
+                      {inferredMotion.spring || inferredMotion.bounce
+                        ? `${inferredMotion.spring} Spring and ${inferredMotion.bounce} Bounce spans inferred from sampled motion; validation errors are shown per axis.`
+                        : 'No sampled channel met the Spring or Bounce validation threshold.'}
                     </p>
                   )}
                   <p className="reducer-note">
@@ -606,7 +656,7 @@ export function CurveReducer({
                         subframes.{' '}
                       </>
                     )}
-                    Keys, handles and modifiers remain editable.
+                    Keys, handles, interpolation settings and modifiers remain editable.
                   </p>
                 </>
               )}

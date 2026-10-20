@@ -123,6 +123,7 @@ export function sparseMotion(
       skimHandles: true,
       preserveExtrema: true,
       detectNoise: true,
+      detectMotion: true,
     },
     end,
   ).track;

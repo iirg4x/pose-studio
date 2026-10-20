@@ -73,7 +73,7 @@ it('fits the reload fixture as the six-key phase-aware baked curve', () => {
   expect(at(0)?.value).toBeCloseTo(0, 6);
   expect(at(53)?.value).toBeCloseTo(0, 6);
   expect(at(82)?.value).toBeCloseTo(0, 6);
-  expect(at(103)?.value).toBeCloseTo(0, 6);
+  expect(at(103)?.value).toBe(sampleCurve(readCurve(original, 'rx'), 103));
   expect(at(62)?.value).toBeCloseTo(at(68)?.value ?? Number.NaN, 6);
   expect(at(53)?.interpolation).toBe('bezier');
   expect(at(53)?.right?.[1]).toBeCloseTo(0, 6);

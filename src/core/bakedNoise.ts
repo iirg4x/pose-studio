@@ -570,15 +570,42 @@ function hasPolynomialNoiseStructure(points: Point[]) {
   // linearly faded); the legacy field has an even lower polynomial degree.
   // Away from lattice joins, eighth differences should be roundoff-sized.
   // This rejects analytic harmonic motion before the expensive inverse search.
+  //
+  // Score only stencils that overlap meaningful curvature. Long linear holds
+  // have zero eighth differences too, but that is not evidence of a noise
+  // field. Counting those holds let sparse, piecewise-linear weapon motion
+  // overwhelm the few non-polynomial joins and enter the inverse search.
   let differences = points.map((p) => p.value);
   for (let order = 0; order < 8; order++)
     differences = differences.slice(1).map((v, i) => v - differences[i]);
   const values = points.map((p) => p.value);
+  const curvature = values.slice(1, -1).map((value, i) => values[i + 2] - 2 * value + values[i]);
+  const peakCurvature = Math.max(...curvature.map(Math.abs), 0);
+  if (!(peakCurvature > EPS)) return false;
+  const curvatureFloor = Math.max(
+    EPS,
+    peakCurvature * 1e-3,
+    Math.max(...values.map(Math.abs)) * 1e-10,
+  );
+  const curved = curvature.map((value) => Math.abs(value) > curvatureFloor);
+  const activeDifferences = differences.filter((_, index) => {
+    // An eighth difference spans nine values and therefore the seven second
+    // differences beginning at the same sample.
+    for (let offset = 0; offset < 7; offset++) if (curved[index + offset]) return true;
+    return false;
+  });
+  // Fewer than sixteen active stencils cannot distinguish a continuous field
+  // from a handful of slope joins with enough confidence to justify a search.
+  if (activeDifferences.length < 16) return false;
   const roundoff = Math.max(
     EPS,
     Math.max(...values.map(Math.abs)) * 1e-5 + (Math.max(...values) - Math.min(...values)) * 1e-5,
   );
-  return differences.filter((v) => Math.abs(v) <= roundoff).length / differences.length >= 0.65;
+  return (
+    activeDifferences.filter((value) => Math.abs(value) <= roundoff).length /
+      activeDifferences.length >=
+    0.65
+  );
 }
 
 function validate(

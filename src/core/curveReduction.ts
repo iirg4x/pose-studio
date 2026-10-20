@@ -5,6 +5,8 @@ import { sample } from './model';
 import type { ControlId, Track } from './model';
 import { detectNoise } from './bakedNoise';
 import type { BlenderNoiseSettings } from './blenderNoise';
+import { detectMotion } from './bakedMotion';
+import type { MotionDetection } from './bakedMotion';
 
 export interface NoiseReduction {
   algorithm: 'blender';
@@ -24,6 +26,8 @@ export interface ReductionOptions {
   range?: [number, number];
   /** Infer a Blender-compatible Noise modifier from baked samples when safe. */
   detectNoise?: boolean;
+  /** Infer editable spring/bounce spans from dense baked samples when safe. */
+  detectMotion?: boolean;
 }
 export const DEFAULT_REDUCTION: ReductionOptions = {
   position: 0.02,
@@ -33,6 +37,7 @@ export const DEFAULT_REDUCTION: ReductionOptions = {
   skimHandles: true,
   preserveExtrema: true,
   detectNoise: false,
+  detectMotion: false,
 };
 export interface ReductionInput {
   id: ControlId;
@@ -52,6 +57,7 @@ interface ReductionRow {
   linear: number;
   reason?: string;
   noise?: NoiseReduction;
+  motion?: MotionDetection['motion'];
 }
 export interface ReductionResult {
   id: ControlId;
@@ -157,6 +163,63 @@ function observationError(source: Curve, target: Curve) {
   for (const frame of observationFrames(source, source.keys[0].frame, source.keys.at(-1)!.frame))
     error = Math.max(error, Math.abs(baseCurve(source, frame) - baseCurve(target, frame)));
   return error;
+}
+
+/** Build the detector's input from evaluated source values only. The first
+ * and last observations carry the original source bounds; every other point
+ * is uniformly spaced so the detector never sees authored handle metadata or
+ * interpolation modes. Keep the input bounded for very long bakes. */
+function motionObservations(curve: Curve, tolerance: number): Curve | undefined {
+  const first = curve.keys[0]?.frame,
+    last = curve.keys.at(-1)?.frame;
+  if (first === undefined || last === undefined || !(last > first)) return;
+  const span = last - first,
+    count = Math.min(5000, Math.max(2, Math.ceil(span * 8) + 1));
+  if (count < 12) return;
+  const keys: CurveKey[] = [];
+  for (let i = 0; i < count; i++) {
+    const frame = i === 0 ? first : i === count - 1 ? last : first + (span * i) / (count - 1);
+    keys.push({
+      frame,
+      value: baseCurve(curve, frame),
+      interpolation: 'linear',
+      handle: 'free',
+    });
+  }
+  let low = Infinity,
+    high = -Infinity;
+  for (const key of keys) {
+    low = Math.min(low, key.value);
+    high = Math.max(high, key.value);
+  }
+  // A flat source cannot contain a meaningful normalized motion response. It
+  // is common for short imported channels, and skipping it avoids a costly
+  // detector search before the ordinary constant-curve path runs.
+  if (high - low <= Math.max(Number.EPSILON, tolerance * 1e-6)) return;
+  return { keys, modifiers: [] };
+}
+
+function motionValidationFrames(source: Curve, observations: Curve) {
+  const frames = new Set<number>(observations.keys.map((key) => key.frame));
+  for (let i = 0; i < observations.keys.length - 1; i++)
+    frames.add((observations.keys[i].frame + observations.keys[i + 1].frame) / 2);
+  for (const key of source.keys) frames.add(key.frame);
+  for (let i = 0; i < source.keys.length - 1; i++)
+    frames.add((source.keys[i].frame + source.keys[i + 1].frame) / 2);
+  return [...frames].sort((a, b) => a - b);
+}
+
+function motionValidationError(source: Curve, candidate: Curve, frames: number[]) {
+  let error = 0;
+  for (const frame of frames)
+    error = Math.max(error, Math.abs(baseCurve(source, frame) - baseCurve(candidate, frame)));
+  return error;
+}
+
+function hasMotionSpan(curve: Curve) {
+  return curve.keys
+    .slice(0, -1)
+    .some((key) => key.interpolation === 'spring' || key.interpolation === 'bounce');
 }
 
 function extrema(p: Cubic) {
@@ -656,6 +719,10 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
     insert(observations[hold.b].frame, value);
   }
   insert(last, observations.at(-1)!.value);
+  // The bake endpoints define the clip boundary exactly, even when a stable
+  // window reaches that boundary and uses a robust median for its interior.
+  phaseKeys[0].value = observations[0].value;
+  phaseKeys.at(-1)!.value = observations.at(-1)!.value;
   // Holds alone are not a motion skeleton: a moving interval can contain
   // distinct lifts, dips or rebounds. Keep turning points whose excursion on
   // both sides exceeds the drift band, while ignoring small bake chatter.
@@ -731,95 +798,228 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
       reference.keys[index].value = key.value;
     else reference.keys.splice(index < 0 ? reference.keys.length : index, 0, cp(key));
   }
-  for (let i = 0; i < phaseKeys.length - 1; i++) {
-    const start = phaseKeys[i],
-      finish = phaseKeys[i + 1];
-    if (start.value === finish.value) continue;
-    const duration = finish.frame - start.frame,
-      linearEpsilon = Math.max(1e-8, band * 0.01);
-    let linearError = 0;
-    for (const point of observations)
-      if (point.frame >= start.frame && point.frame <= finish.frame) {
-        const t = (point.frame - start.frame) / duration,
-          value = start.value + (finish.value - start.value) * t;
-        linearError = Math.max(linearError, Math.abs(point.value - value));
+  const phaseFitCache = new Map<
+      string,
+      {
+        interpolation: CurveKey['interpolation'];
+        right?: [number, number];
+        left?: [number, number];
+      } | null
+    >(),
+    ensureReferenceKey = (key: CurveKey) => {
+      const index = reference.keys.findIndex((point) => point.frame >= key.frame);
+      if (index >= 0 && reference.keys[index].frame === key.frame)
+        reference.keys[index].value = key.value;
+      else reference.keys.splice(index < 0 ? reference.keys.length : index, 0, cp(key));
+    },
+    fitPhase = (start: CurveKey, finish: CurveKey) => {
+      const cacheKey = `${start.frame}:${start.value}:${finish.frame}:${finish.value}`,
+        cached = phaseFitCache.get(cacheKey);
+      if (cached === null) return false;
+      if (cached) {
+        start.interpolation = cached.interpolation;
+        start.right = cached.right ? [...cached.right] : undefined;
+        finish.left = cached.left ? [...cached.left] : undefined;
+        return true;
       }
-    // Preserve literal constant-speed motion as linear. A Bezier with
-    // collinear handles evaluates similarly, but presents the wrong authored
-    // interpolation and needless handles to the curve editor.
-    if (linearError <= linearEpsilon) {
-      start.interpolation = 'linear';
       delete start.right;
       delete finish.left;
-      continue;
-    }
-    const a = reference.keys.findIndex((key) => key.frame === start.frame),
-      b = reference.keys.findIndex((key) => key.frame === finish.frame),
-      // A small opening secant followed by a larger one identifies a soft
-      // departure; an immediate large move gets a vertical free handle.
-      next = observations.findIndex((point) => point.frame > start.frame),
-      immediate = observations[next],
-      following = observations[next + 1],
-      openingSpeed = immediate
-        ? Math.abs(immediate.value - baseCurve(curve, start.frame)) /
-          (immediate.frame - start.frame)
-        : 0,
-      nextSpeed =
-        immediate && following
-          ? Math.abs(following.value - immediate.value) / (following.frame - immediate.frame)
+      if (start.value === finish.value) {
+        start.interpolation = 'linear';
+        phaseFitCache.set(cacheKey, { interpolation: 'linear' });
+        return true;
+      }
+      const duration = finish.frame - start.frame,
+        linearEpsilon = Math.max(1e-8, band * 0.01);
+      let linearError = 0;
+      for (const point of observations)
+        if (point.frame >= start.frame && point.frame <= finish.frame) {
+          const t = (point.frame - start.frame) / duration,
+            value = start.value + (finish.value - start.value) * t;
+          linearError = Math.max(linearError, Math.abs(point.value - value));
+        }
+      // A stable hold may preserve slightly different exact endpoint samples.
+      // Keep it linear when both that endpoint delta and every observed drift
+      // from the connecting line remain inside the stable-window band.
+      if (Math.abs(finish.value - start.value) <= band && linearError <= band) {
+        start.interpolation = 'linear';
+        phaseFitCache.set(cacheKey, { interpolation: 'linear' });
+        return true;
+      }
+      // Preserve literal constant-speed motion as linear. A Bezier with
+      // collinear handles evaluates similarly, but presents the wrong authored
+      // interpolation and needless handles to the curve editor.
+      if (linearError <= linearEpsilon) {
+        start.interpolation = 'linear';
+        delete start.right;
+        delete finish.left;
+        phaseFitCache.set(cacheKey, { interpolation: 'linear' });
+        return true;
+      }
+      ensureReferenceKey(start);
+      ensureReferenceKey(finish);
+      const a = reference.keys.findIndex((key) => key.frame === start.frame),
+        b = reference.keys.findIndex((key) => key.frame === finish.frame),
+        // A small opening secant followed by a larger one identifies a soft
+        // departure; an immediate large move gets a vertical free handle.
+        next = observations.findIndex((point) => point.frame > start.frame),
+        immediate = observations[next],
+        following = observations[next + 1],
+        openingSpeed = immediate
+          ? Math.abs(immediate.value - baseCurve(curve, start.frame)) /
+            (immediate.frame - start.frame)
           : 0,
-      sharp =
-        !turns.has(start.frame) &&
-        openingSpeed > band / minimumHold &&
-        openingSpeed >= nextSpeed * 0.6,
-      tangentModels: { constraints: FitConstraints; freedom: number }[] = [
-        {
-          freedom: 0,
-          constraints: {
-            approximate: true,
-            ...(sharp ? { verticalStart: true } : { startSlope: 0 }),
-            endSlope: 0,
+        nextSpeed =
+          immediate && following
+            ? Math.abs(following.value - immediate.value) / (following.frame - immediate.frame)
+            : 0,
+        sharp =
+          !turns.has(start.frame) &&
+          openingSpeed > band / minimumHold &&
+          openingSpeed >= nextSpeed * 0.6,
+        tangentModels: { constraints: FitConstraints; freedom: number }[] = [
+          {
+            freedom: 0,
+            constraints: {
+              approximate: true,
+              ...(sharp ? { verticalStart: true } : { startSlope: 0 }),
+              endSlope: 0,
+            },
           },
-        },
-        {
-          freedom: 1,
-          constraints: {
-            approximate: true,
-            ...(sharp ? { verticalStart: true } : { startSlope: 0 }),
+          {
+            freedom: 1,
+            constraints: {
+              approximate: true,
+              ...(sharp ? { verticalStart: true } : { startSlope: 0 }),
+            },
           },
-        },
-        { freedom: 1, constraints: { approximate: true, endSlope: 0 } },
-        { freedom: 2, constraints: { approximate: true } },
-      ],
-      fits = tangentModels.map(({ constraints, freedom }) => ({
-        ...fitSpan(reference, a, b, options, 0, constraints),
-        freedom,
-      })),
-      // Horizontal (or deliberately vertical) phase tangents are the simplest
-      // explanation for a bake. Free an endpoint only when doing so recovers
-      // more observed motion than the user has declared negligible drift. If
-      // any model meets that declared band, prefer the least-free such model;
-      // otherwise retain the penalized best effort rather than adding handles
-      // that cannot materially improve the reconstruction.
-      withinBand = fits.filter((candidate) => candidate.error <= band),
-      fit = withinBand.length
-        ? withinBand.reduce((best, candidate) =>
-            candidate.freedom < best.freedom ||
-            (candidate.freedom === best.freedom && candidate.error < best.error)
-              ? candidate
-              : best,
-          )
-        : fits.reduce((best, candidate) =>
-            candidate.error + band * candidate.freedom < best.error + band * best.freedom
-              ? candidate
-              : best,
-          );
-    if (!fit.span) return;
-    start.interpolation = 'bezier';
-    start.right = fit.span.right;
-    finish.left = fit.span.left;
+          { freedom: 1, constraints: { approximate: true, endSlope: 0 } },
+          { freedom: 2, constraints: { approximate: true } },
+        ],
+        fits = tangentModels.map(({ constraints, freedom }) => ({
+          ...fitSpan(reference, a, b, options, 0, constraints),
+          freedom,
+        })),
+        // Horizontal (or deliberately vertical) phase tangents are the simplest
+        // explanation for a bake. Free an endpoint only when doing so recovers
+        // more observed motion than the user has declared negligible drift. If
+        // any model meets that declared band, prefer the least-free such model;
+        // otherwise retain the penalized best effort rather than adding handles
+        // that cannot materially improve the reconstruction.
+        withinBand = fits.filter((candidate) => candidate.error <= band),
+        fit = withinBand.length
+          ? withinBand.reduce((best, candidate) =>
+              candidate.freedom < best.freedom ||
+              (candidate.freedom === best.freedom && candidate.error < best.error)
+                ? candidate
+                : best,
+            )
+          : fits.reduce((best, candidate) =>
+              candidate.error + band * candidate.freedom < best.error + band * best.freedom
+                ? candidate
+                : best,
+            );
+      if (!fit.span) {
+        phaseFitCache.set(cacheKey, null);
+        return false;
+      }
+      start.interpolation = 'bezier';
+      start.right = fit.span.right;
+      finish.left = fit.span.left;
+      phaseFitCache.set(cacheKey, {
+        interpolation: 'bezier',
+        right: [...fit.span.right],
+        left: [...fit.span.left],
+      });
+      return true;
+    };
+  for (let i = 0; i < phaseKeys.length - 1; i++)
+    if (!fitPhase(phaseKeys[i], phaseKeys[i + 1])) return;
+
+  const denseSpanError = (target: Curve, from: number, to: number) => {
+      let error = 0,
+        worstFrame = from;
+      const frames = new Set<number>([from, (from + to) / 2, to]);
+      for (let index = Math.ceil(from * 32); index <= Math.floor(to * 32); index++)
+        frames.add(index / 32);
+      for (const key of curve.keys) if (key.frame >= from && key.frame <= to) frames.add(key.frame);
+      for (const frame of frames) {
+        const difference = Math.abs(baseCurve(curve, frame) - baseCurve(target, frame));
+        if (difference > error) {
+          error = difference;
+          worstFrame = frame;
+        }
+      }
+      return { error, worstFrame };
+    },
+    curveFor = (fitted: CurveKey[]): Curve => ({ ...cp(curve), keys: fitted });
+  const initialCandidate = curveFor(cp(phaseKeys)),
+    initialResult = {
+      curve: initialCandidate,
+      error: observationError(curve, initialCandidate),
+    };
+
+  // Stable-window skeletons can retain boundaries that a single fitted
+  // span already explains. Greedily merge those boundaries, accepting each
+  // removal only inside the declared drift budget. Detected turns remain
+  // locked so key-count improvements preserve the significant motion phases.
+  let culled = false;
+  for (;;) {
+    let merged = false;
+    for (let i = phaseKeys.length - 2; i > 0; i--) {
+      if (turns.has(phaseKeys[i].frame)) continue;
+      const key = phaseKeys[i],
+        previous = phaseKeys[i - 1],
+        next = phaseKeys[i + 1],
+        clustered = Math.min(key.frame - previous.frame, next.frame - key.frame) <= 1.001,
+        holdBoundary = key.value === previous.value || key.value === next.value;
+      if (!clustered && !holdBoundary) continue;
+      const trial = cp(phaseKeys);
+      trial.splice(i, 1);
+      if (
+        Math.max(
+          Math.abs(baseCurve(curve, trial[i - 1].frame) - trial[i - 1].value),
+          Math.abs(baseCurve(curve, trial[i].frame) - trial[i].value),
+        ) >
+        band + 1e-9
+      )
+        continue;
+      if (!fitPhase(trial[i - 1], trial[i])) continue;
+      const error = denseSpanError(curveFor(trial), trial[i - 1].frame, trial[i].frame).error;
+      if (error > band + 1e-9) continue;
+      phaseKeys.splice(0, phaseKeys.length, ...trial);
+      merged = true;
+      culled = true;
+      break;
+    }
+    if (!merged) break;
   }
-  const candidate: Curve = { ...cp(curve), keys: phaseKeys };
+
+  // Optional culling must stay inside the drift budget. If its least-squares
+  // refit concentrates too much error, add a bounded number of corrective
+  // anchors; if that cannot recover the budget, keep the original sparse
+  // phase reconstruction rather than falling through to a noisy fallback.
+  let candidate = curveFor(phaseKeys);
+  if (!culled) return initialResult;
+  let dense = denseSpanError(candidate, first, last);
+  for (let repairs = 0; dense.error > band + 1e-9 && repairs < 6; repairs++) {
+    const frame = Math.max(first, Math.min(last, Math.round(dense.worstFrame)));
+    if (phaseKeys.some((key) => key.frame === frame)) break;
+    const key: CurveKey = {
+        frame,
+        value: baseCurve(curve, frame),
+        interpolation: 'linear',
+        handle: 'free',
+      },
+      index = phaseKeys.findIndex((point) => point.frame > frame);
+    if (index <= 0) break;
+    phaseKeys.splice(index, 0, key);
+    if (!fitPhase(phaseKeys[index - 1], key) || !fitPhase(key, phaseKeys[index + 1]))
+      return initialResult;
+    candidate = curveFor(phaseKeys);
+    dense = denseSpanError(candidate, first, last);
+  }
+  if (dense.error > band + 1e-9) return initialResult;
   return { curve: candidate, error: observationError(curve, candidate) };
 }
 
@@ -831,7 +1031,13 @@ export function reduceCurve(
   options: ReductionOptions,
   protectedFrames: number[] = [],
   noiseHints: readonly BlenderNoiseSettings[] = [],
-): { curve: Curve; error: number; bound: number; noise?: NoiseReduction } {
+): {
+  curve: Curve;
+  error: number;
+  bound: number;
+  noise?: NoiseReduction;
+  motion?: MotionDetection['motion'];
+} {
   if (!Number.isFinite(tolerance) || tolerance <= 0)
     throw Error('Choose a positive error tolerance.');
   if (
@@ -859,9 +1065,64 @@ export function reduceCurve(
   const hasInteriorProtectedFrame = protectedFrames.some(
     (frame) => frame > keys[0].frame && frame < keys[n - 1].frame,
   );
-  // Noise inference is deliberately opt-in and only runs on a plain source
-  // curve. Existing modifiers, loops, protected attachment boundaries, and
-  // locked source curves must remain procedural/source-authored data.
+  // Motion inference receives evaluated samples from a plain source curve.
+  // Run this bounded preflight before Noise: a validated spring/bounce fit is
+  // already a complete explanation for a periodic-looking bake, and avoids
+  // the much more expensive Noise search. Any accepted hybrid is passed
+  // through this reducer once more with both detectors disabled; primitive
+  // pinning then preserves fitted spans while ordinary fitting removes the
+  // sampled keys outside those spans.
+  if (
+    options.detectMotion &&
+    options.fit !== 'linear' &&
+    !options.range &&
+    !hasInteriorProtectedFrame &&
+    !curve.keyLock &&
+    !curve.loop &&
+    curve.modifiers.length === 0 &&
+    !curve.keys.some((key) => key.interpolation === 'loop') &&
+    !curve.keys.some(primitive)
+  ) {
+    const observations = motionObservations(curve, tolerance);
+    if (observations) {
+      const motion = detectMotion(observations, tolerance);
+      if (motion) {
+        const reduced = reduceCurve(
+          motion.curve,
+          tolerance,
+          { ...options, detectMotion: false, detectNoise: false },
+          protectedFrames,
+          noiseHints,
+        );
+        const frames = motionValidationFrames(curve, observations),
+          maxError = motionValidationError(
+            curve,
+            reduced.curve,
+            observations.keys.map((key) => key.frame),
+          ),
+          validationError = motionValidationError(curve, reduced.curve, frames),
+          procedural = hasMotionSpan(reduced.curve),
+          sparser =
+            reduced.curve.keys.length < curve.keys.length ||
+            (reduced.curve.keys.length === curve.keys.length && procedural);
+        // A detector result is useful only when it contributes a real
+        // spring/bounce segment and is no larger than the authored source.
+        // Equal key counts are accepted for the semantic upgrade from an
+        // authored Bezier to a new procedural span.
+        if (procedural && sparser && validationError <= tolerance) {
+          return {
+            curve: reduced.curve,
+            error: maxError,
+            bound: validationError,
+            motion: { ...motion.motion, maxError, validationError },
+          };
+        }
+      }
+    }
+  }
+  // Noise inference remains the fallback for plain curves that fail the
+  // strict motion signature, and retains its existing eligibility guards.
+  // When motion detection is disabled this is the original first detector.
   if (
     options.detectNoise &&
     options.fit !== 'linear' &&
@@ -1174,15 +1435,17 @@ export function reduceTrack(
       bezier: candidate.keys.filter((k) => k.interpolation === 'bezier').length,
       linear: candidate.keys.filter((k) => k.interpolation === 'linear').length,
       ...(result.noise ? { noise: result.noise } : {}),
+      ...(result.motion ? { motion: result.motion } : {}),
     };
-    if (candidate.keys.length < source.keys.length || result.noise) {
+    if (candidate.keys.length < source.keys.length || result.noise || result.motion) {
       next.curves ??= {};
       next.curves[channel] = candidate;
       const transformChannel = rotation(channel) || position(channel);
-      const noiseNeedsTransformCheck = !!result.noise && transformChannel;
-      if ((options.fit !== 'baked' || noiseNeedsTransformCheck) && transformChannel) {
+      const proceduralNeedsTransformCheck = !!(result.noise || result.motion) && transformChannel;
+      if ((options.fit !== 'baked' || proceduralNeedsTransformCheck) && transformChannel) {
         const error = poseErrors(original, next, frames);
-        const subframeError = result.noise ? poseErrors(original, next, subframes) : error;
+        const subframeError =
+          result.noise || result.motion ? poseErrors(original, next, subframes) : error;
         if (
           error.position > options.position ||
           error.rotation > options.rotation ||
@@ -1198,6 +1461,7 @@ export function reduceTrack(
             reason: 'Kept original: combined transform error exceeds tolerance',
           });
           delete row.noise;
+          delete row.motion;
         }
       }
     }
