@@ -624,6 +624,63 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
     insert(observations[hold.b].frame, value);
   }
   insert(last, observations.at(-1)!.value);
+  // Holds alone are not a motion skeleton: a moving interval can contain
+  // distinct lifts, dips or rebounds. Keep turning points whose excursion on
+  // both sides exceeds the drift band, while ignoring small bake chatter.
+  const turns = new Set<number>(),
+    held = new Uint8Array(observations.length),
+    epsilon = Math.max(1e-8, band * 0.05);
+  for (const hold of holds) held.fill(1, hold.a, hold.b + 1);
+  for (let i = 1; i < observations.length - 1; i++) {
+    const point = observations[i],
+      left = point.value - observations[i - 1].value;
+    if (Math.abs(left) <= epsilon || held[i]) continue;
+    let plateau = i;
+    while (
+      plateau + 1 < observations.length &&
+      Math.abs(observations[plateau + 1].value - point.value) <= epsilon
+    )
+      plateau++;
+    if (plateau === observations.length - 1) continue;
+    const right = observations[plateau + 1].value - point.value;
+    if (left * right >= 0) continue;
+    const excursion = (direction: number) => {
+      let index = i,
+        sign = 0;
+      while (index + direction >= 0 && index + direction < observations.length) {
+        const raw = observations[index + direction].value - observations[index].value,
+          delta = Math.abs(raw) > epsilon ? raw : 0;
+        if (delta && sign && Math.sign(delta) !== sign) break;
+        if (delta) sign = Math.sign(delta);
+        index += direction;
+      }
+      return Math.abs(observations[index].value - point.value);
+    };
+    if (Math.min(excursion(-1), excursion(1)) <= band) continue;
+    const flatTop = observations
+      .slice(i, plateau + 1)
+      .every((value) => value.value === point.value);
+    for (const index of new Set(flatTop ? [i, plateau] : [i])) {
+      const turn = observations[index];
+      turns.add(turn.frame);
+      if (!phaseKeys.some((key) => key.frame === turn.frame))
+        phaseKeys.push({
+          frame: turn.frame,
+          value: turn.value,
+          interpolation: 'linear',
+          handle: 'free',
+        });
+    }
+  }
+  phaseKeys.sort((a, b) => a.frame - b.frame);
+  // Overlapping stable windows can leave an interior key in an already-flat
+  // run. Its neighbors carry the hold boundaries without that redundant key.
+  for (let i = phaseKeys.length - 2; i > 0; i--)
+    if (
+      phaseKeys[i - 1].value === phaseKeys[i].value &&
+      phaseKeys[i].value === phaseKeys[i + 1].value
+    )
+      phaseKeys.splice(i, 1);
   if (phaseKeys.length >= keys.length) return;
   if (phaseKeys.some((key, index) => index > 0 && key.frame - phaseKeys[index - 1].frame < 0.002))
     return;
@@ -653,7 +710,10 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
         immediate && following
           ? Math.abs(following.value - immediate.value) / (following.frame - immediate.frame)
           : 0,
-      sharp = openingSpeed > band / minimumHold && openingSpeed >= nextSpeed * 0.6,
+      sharp =
+        !turns.has(start.frame) &&
+        openingSpeed > band / minimumHold &&
+        openingSpeed >= nextSpeed * 0.6,
       fit = fitSpan(reference, a, b, options, 0, {
         approximate: true,
         ...(sharp ? { verticalStart: true } : { startSlope: 0 }),

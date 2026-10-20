@@ -1,3 +1,7 @@
+## 0.8.34 — preserve peaks in baked motion reconstruction
+
+Rebuild baked easing now keeps prominent peaks and troughs between holds, with horizontal handles at direction changes. A drift-scaled noise floor ignores tiny derivative chatter; short flat-topped extrema retain both plateau edges. The supplied Position Y curve now keeps the two lifts at frames 58 and 70: 39 source keys reduce to 9, with 0.205 cm frame deviation instead of 7.25 cm. The approved six-key Rotation X reconstruction remains unchanged.
+
 ## 0.8.33 — reconstruct baked motion phases
 
 Reduce keyframes now defaults to Rebuild baked easing: it detects stable holds, flattens drift using a visible percentage of the channel range, and rebuilds motion between those boundaries with editable Bézier handles. Soft moves use horizontal departure/arrival handles; sharp departures use a vertical free handle. The supplied reload curve produces the six marked keys at frames 0, 53, 62, 68, 82 and 103, with exactly flat start, bottom and finish holds. The preview reports measured frame and between-frame deviation separately from the continuous bounds available in Preserve curve modes. Near-constant bakes can collapse to one key, endpoint state no longer pins a redundant neighboring frame, and rank-deficient handle fits remain stable.

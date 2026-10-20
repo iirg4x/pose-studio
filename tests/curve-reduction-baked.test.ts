@@ -96,6 +96,82 @@ it('fits the reload fixture as the six-key phase-aware baked curve', () => {
   expect(fixture.track).toEqual(original);
 });
 
+it('retains both Position Y peaks and the valley hold while dropping flat noise', () => {
+  const original = structuredClone(fixture.track);
+  const source = readCurve(original, 'py');
+  const result = reduceTrack(inputFor(['py']), bakedOptions, fixture.end);
+  const reduced = readCurve(result.track, 'py');
+  const reducedValue = (frame: number) => sampleCurve(reduced, frame);
+  const maxFrameError = Math.max(
+    ...integerFrames(fixture.end).map((frame) =>
+      Math.abs(sampleCurve(source, frame) - reducedValue(frame)),
+    ),
+  );
+  const peak = (from: number, to: number, low: number, high: number) => {
+    const key = reduced.keys.find((candidate) => candidate.frame >= from && candidate.frame <= to);
+    expect(key).toBeDefined();
+    expect(key!.value).toBeGreaterThanOrEqual(low);
+    expect(key!.value).toBeLessThanOrEqual(high);
+  };
+
+  expect(source.keys).toHaveLength(39);
+  expect(result.before).toBe(39);
+  expect(reduced.keys.length).toBeLessThan(source.keys.length);
+  // The two visible peaks need at least two more phase anchors than the prior seven-key fit.
+  expect(reduced.keys.length).toBeGreaterThanOrEqual(9);
+  peak(56, 60, 10.15 - 0.21, 10.15 + 0.21);
+  peak(69, 71, 5.48 - 0.21, 5.48 + 0.21);
+  peak(64, 68, 3.43 - 0.21, 3.43 + 0.21);
+  expect(reducedValue(58)).toBeGreaterThanOrEqual(10.15 - 0.21);
+  expect(reducedValue(58)).toBeLessThanOrEqual(10.15 + 0.21);
+  expect(reducedValue(70)).toBeGreaterThanOrEqual(5.48 - 0.21);
+  expect(reducedValue(70)).toBeLessThanOrEqual(5.48 + 0.21);
+  expect(reducedValue(64)).toBeGreaterThanOrEqual(3.43 - 0.21);
+  expect(reducedValue(68)).toBeLessThanOrEqual(3.43 + 0.21);
+  expect(maxFrameError).toBeLessThan(0.5);
+  expect(result.positionError).toBeLessThan(0.5);
+
+  const noiseKeys = reduced.keys.filter((key) => key.frame > 0 && key.frame < 53);
+  expect(noiseKeys.every((key) => Math.abs(key.value) < 0.5)).toBe(true);
+  for (const channel of ['px', 'pz', 'rx', 'ry', 'rz'] as Channel[])
+    expect(result.track.curves?.[channel]).toEqual(original.curves?.[channel]);
+  expect(fixture.track).toEqual(original);
+});
+
+it('keeps phase-fit flat-topped peaks and troughs bounded', () => {
+  for (const sign of [1, -1]) {
+    const source = linearCurve([
+      ...Array.from({ length: 9 }, (_, frame) => [frame, 0] as [number, number]),
+      [9, sign * 2],
+      [10, sign * 4],
+      [11, sign * 4],
+      [12, sign * 2],
+      ...Array.from({ length: 12 }, (_, index) => [13 + index, 0] as [number, number]),
+    ]);
+    const original = structuredClone(source);
+    const result = reduceCurve(source, 0.1, { ...bakedOptions, preserveExtrema: false });
+    const plateauValues = [10, 11].map((frame) => sampleCurve(result.curve, frame));
+    const motionError = scalarError(source, result.curve, integerFrames(24));
+
+    expect(result.curve.keys.length).toBeLessThan(source.keys.length);
+    if (sign > 0) {
+      expect(Math.min(...plateauValues)).toBeGreaterThanOrEqual(3.5);
+      expect(Math.max(...plateauValues)).toBeLessThanOrEqual(4.5);
+    } else {
+      expect(Math.max(...plateauValues)).toBeLessThanOrEqual(-3.5);
+      expect(Math.min(...plateauValues)).toBeGreaterThanOrEqual(-4.5);
+    }
+    expect(motionError).toBeLessThan(0.5);
+    for (const key of result.curve.keys) {
+      expect(Number.isFinite(key.frame)).toBe(true);
+      expect(Number.isFinite(key.value)).toBe(true);
+      for (const handle of [key.left, key.right])
+        if (handle) expect(handle.every((value) => Number.isFinite(value))).toBe(true);
+    }
+    expect(source).toEqual(original);
+  }
+});
+
 it('collapses near-constant baked curves to one key, including a protected endpoint', () => {
   for (const count of [2, 101]) {
     const source = linearCurve(
