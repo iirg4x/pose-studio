@@ -1,3 +1,7 @@
+## 0.8.27 — labelled controller tools
+
+The desktop Properties rail shows visible tool captions beneath each icon. Reset and paste captions wrap, and long tool stacks scroll inside the dock while the collapsed panel’s restore button remains reachable.
+
 ## 0.8.26 — stable Properties dock
 
 The desktop Properties dock keeps its width when controls are selected or deselected, so selection no longer resizes the 3D scene. With no control selected it shows animation-wide layer, preview and source settings plus Select all and Box select actions. Explicit collapse stays persistent and keeps a compact restore handle available without a selection.

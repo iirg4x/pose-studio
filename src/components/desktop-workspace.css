@@ -121,15 +121,18 @@
   flex-direction: column;
   align-self: flex-start;
   height: max-content;
+  max-height: 100%;
   min-width: var(--controller-rail-width);
   min-height: 0;
+  overflow: hidden;
   border-inline-end: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface-menu) 72%, var(--surface-quick));
 }
 .properties-controller-tools {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   min-height: 0;
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
   scrollbar-width: thin;
 }
 .properties-rail-toggle {
@@ -824,6 +827,7 @@
 
   .app.desktop-workspace > .animate-layout:not(.setup-layout) > .properties-collapsed-rail {
     position: relative;
+    flex-direction: column;
     inset: auto;
     z-index: 42;
     grid-column: 1;
@@ -832,7 +836,7 @@
     justify-self: end;
     width: auto;
     height: max-content;
-    max-height: none;
+    max-height: 100%;
     min-width: var(--controller-rail-width);
     min-height: 0;
     border: 0;
@@ -840,6 +844,7 @@
     border-radius: var(--radius-flush);
     background: transparent;
     box-shadow: none;
+    overflow: hidden;
   }
 
   .app.desktop-workspace
@@ -847,6 +852,8 @@
     > .properties-collapsed-rail
     > .properties-controller-rail {
     position: static;
+    flex: 0 1 auto;
+    align-self: stretch;
     width: var(--controller-rail-width);
     background: var(--surface-dock);
   }
