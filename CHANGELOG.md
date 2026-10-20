@@ -1,3 +1,9 @@
+## 0.8.38 — preserve shoulders in baked motion
+
+Baked easing reconstruction now retains meaningful slowdowns inside a continuous move. When one Bézier span loses that change of speed, cleanup adds a source-valued key with a shared sampled tangent and refits both sides. Redundant-key culling preserves that boundary. Refits use immutable source observations and sample curved motion between frames, avoiding distortion from generated reference keys and underconstrained short transitions.
+
+The supplied Aim Reload Magazine Position X curve now reduces from 16 to six keys, including the missing shoulder at frame 29. Frame deviation improves from 0.547 cm to 0.204 cm; dense between-frame deviation improves from 1.167 cm to 0.315 cm. The earlier six-key Reload Rotation X and eight-key Inspect Position Y regressions remain unchanged.
+
 ## 0.8.37 — infer recoil motion and cull redundant phase keys
 
 Full-curve cleanup and dense animation imports can now infer editable Spring or Bounce interpolation from evaluated samples. Detection fits the existing runtime model, requires visible damped overshoot or repeated decreasing rebounds, and validates observations and between-sample motion before accepting a span. Immediate recoil onsets and all easing directions are supported. Ordinary fitted keys remain outside the detected span, and curves that fail validation keep the normal reduction path. The cleanup preview exposes a Detect spring / bounce option, inferred modes, and measured deviation per axis.

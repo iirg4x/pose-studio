@@ -798,7 +798,23 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
       reference.keys[index].value = key.value;
     else reference.keys.splice(index < 0 ? reference.keys.length : index, 0, cp(key));
   }
-  const phaseFitCache = new Map<
+  const shoulders = new Set<number>(),
+    hasCurvedSpans = keys.slice(0, -1).some((key) => key.interpolation !== 'linear'),
+    shoulderSlope = (frame: number) => {
+      const from = Math.max(first, frame - 0.5),
+        to = Math.min(last, frame + 0.5);
+      return (baseCurve(curve, to) - baseCurve(curve, from)) / (to - from);
+    },
+    // Refit against immutable source values, including curved subframes.
+    // Generated reference keys only locate span endpoints; evaluating that
+    // modified reference would change the very curve we are reconstructing.
+    fitObservations: Point[] = observations.flatMap((point, i) => {
+      const next = observations[i + 1];
+      if (!next || !hasCurvedSpans) return [[point.frame, point.value] as Point];
+      const midpoint = (point.frame + next.frame) / 2;
+      return [[point.frame, point.value] as Point, [midpoint, baseCurve(curve, midpoint)] as Point];
+    }),
+    phaseFitCache = new Map<
       string,
       {
         interpolation: CurveKey['interpolation'];
@@ -813,7 +829,7 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
       else reference.keys.splice(index < 0 ? reference.keys.length : index, 0, cp(key));
     },
     fitPhase = (start: CurveKey, finish: CurveKey) => {
-      const cacheKey = `${start.frame}:${start.value}:${finish.frame}:${finish.value}`,
+      const cacheKey = `${start.frame}:${start.value}:${finish.frame}:${finish.value}:${shoulders.has(start.frame)}:${shoulders.has(finish.frame)}`,
         cached = phaseFitCache.get(cacheKey);
       if (cached === null) return false;
       if (cached) {
@@ -875,6 +891,7 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
             : 0,
         sharp =
           !turns.has(start.frame) &&
+          !shoulders.has(start.frame) &&
           openingSpeed > band / minimumHold &&
           openingSpeed >= nextSpeed * 0.6,
         tangentModels: { constraints: FitConstraints; freedom: number }[] = [
@@ -897,7 +914,19 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
           { freedom: 2, constraints: { approximate: true } },
         ],
         fits = tangentModels.map(({ constraints, freedom }) => ({
-          ...fitSpan(reference, a, b, options, 0, constraints),
+          ...fitSpan(
+            reference,
+            a,
+            b,
+            options,
+            0,
+            {
+              ...constraints,
+              ...(shoulders.has(start.frame) ? { startSlope: shoulderSlope(start.frame) } : {}),
+              ...(shoulders.has(finish.frame) ? { endSlope: shoulderSlope(finish.frame) } : {}),
+            },
+            fitObservations,
+          ),
           freedom,
         })),
         // Horizontal (or deliberately vertical) phase tangents are the simplest
@@ -936,6 +965,77 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
   for (let i = 0; i < phaseKeys.length - 1; i++)
     if (!fitPhase(phaseKeys[i], phaseKeys[i + 1])) return;
 
+  // Monotone motion can slow down and accelerate again without changing
+  // direction. A hold/turn skeleton misses that shoulder. Add an editable
+  // boundary only when the speed trough is prominent on both sides and the
+  // existing span loses more motion than the drift band allows.
+  const spans = phaseKeys.slice(1).map((end, i) => [phaseKeys[i].frame, end.frame] as const);
+  for (const [from, to] of spans) {
+    if (phaseKeys.length + 1 >= keys.length) break;
+    const points = observations.filter((point) => point.frame >= from && point.frame <= to);
+    if (points.length < 7) continue;
+    const direction = Math.sign(points.at(-1)!.value - points[0].value);
+    if (!direction) continue;
+    const speeds = points.map((point) => {
+      const a = Math.max(from, point.frame - minimumHold / 2),
+        b = Math.min(to, point.frame + minimumHold / 2);
+      return (direction * (baseCurve(curve, b) - baseCurve(curve, a))) / (b - a);
+    });
+    if (speeds.some((speed) => speed < -band / minimumHold)) continue;
+    const leftPeaks = new Float64Array(points.length),
+      rightPeaks = new Float64Array(points.length);
+    for (let i = 1; i < points.length - 1; i++)
+      leftPeaks[i + 1] = Math.max(leftPeaks[i], speeds[i]);
+    for (let i = points.length - 2; i > 0; i--)
+      rightPeaks[i - 1] = Math.max(rightPeaks[i], speeds[i]);
+    const residual = (target: Curve) => {
+      let peak = 0;
+      for (const [frame, value] of fitObservations)
+        if (frame >= from && frame <= to)
+          peak = Math.max(peak, Math.abs(value - baseCurve(target, frame)));
+      return peak;
+    };
+    const before = residual({ ...curve, keys: phaseKeys });
+    if (before <= band + 1e-9) continue;
+    let best = -1,
+      prominence = 0;
+    for (let i = 2; i < points.length - 2; i++) {
+      const point = points[i],
+        speed = speeds[i];
+      if (point.frame - from < minimumHold || to - point.frame < minimumHold) continue;
+      if (speed >= speeds[i - 1] || speed > speeds[i + 1]) continue;
+      const peak = Math.min(leftPeaks[i], rightPeaks[i]),
+        change = peak - speed;
+      if (speed > peak * 0.6 || change < band / minimumHold) continue;
+      if (
+        Math.min(
+          Math.abs(point.value - points[0].value),
+          Math.abs(points.at(-1)!.value - point.value),
+        ) <=
+        band * 2
+      )
+        continue;
+      if (change > prominence) {
+        best = i;
+        prominence = change;
+      }
+    }
+    if (best < 0) continue;
+    const point = points[best],
+      previousKeys = cp(phaseKeys),
+      previousReferenceKeys = cp(reference.keys),
+      key: CurveKey = { ...point, interpolation: 'linear', handle: 'free' },
+      index = phaseKeys.findIndex((candidate) => candidate.frame > point.frame);
+    shoulders.add(point.frame);
+    phaseKeys.splice(index, 0, key);
+    const fitted = fitPhase(phaseKeys[index - 1], key) && fitPhase(key, phaseKeys[index + 1]);
+    if (!fitted || residual({ ...curve, keys: phaseKeys }) > before * 0.9) {
+      phaseKeys.splice(0, phaseKeys.length, ...previousKeys);
+      reference.keys = previousReferenceKeys;
+      shoulders.delete(point.frame);
+    }
+  }
+
   const denseSpanError = (target: Curve, from: number, to: number) => {
       let error = 0,
         worstFrame = from;
@@ -961,13 +1061,13 @@ function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames:
 
   // Stable-window skeletons can retain boundaries that a single fitted
   // span already explains. Greedily merge those boundaries, accepting each
-  // removal only inside the declared drift budget. Detected turns remain
-  // locked so key-count improvements preserve the significant motion phases.
+  // removal only inside the declared drift budget. Detected turns and
+  // shoulders stay locked so culling preserves the significant motion phases.
   let culled = false;
   for (;;) {
     let merged = false;
     for (let i = phaseKeys.length - 2; i > 0; i--) {
-      if (turns.has(phaseKeys[i].frame)) continue;
+      if (turns.has(phaseKeys[i].frame) || shoulders.has(phaseKeys[i].frame)) continue;
       const key = phaseKeys[i],
         previous = phaseKeys[i - 1],
         next = phaseKeys[i + 1],
