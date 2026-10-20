@@ -29,7 +29,12 @@ export function CurveReducer({
   const [scope, setScope] = useState<'axis' | 'selection' | 'layer'>(
       channel ? 'axis' : 'selection',
     ),
-    [options, setOptions] = useState<ReductionOptions>({ ...DEFAULT_REDUCTION });
+    [options, setOptions] = useState<ReductionOptions>({
+      ...DEFAULT_REDUCTION,
+      fit: 'baked',
+      drift: 2,
+      preserveExtrema: false,
+    });
   const [range, setRange] = useState(selectedFrames.length > 1),
     [from, setFrom] = useState(selectedFrames.length ? Math.min(...selectedFrames) : 0),
     [to, setTo] = useState(selectedFrames.length ? Math.max(...selectedFrames) : p.end);
@@ -147,7 +152,8 @@ export function CurveReducer({
     } satisfies ReductionRequest);
   }
   const active = results?.[shown],
-    row = active?.rows.find((r) => r.channel === previewChannel) ?? active?.rows[0];
+    row = active?.rows.find((r) => r.channel === previewChannel) ?? active?.rows[0],
+    baked = options.fit === 'baked';
   const preview = useMemo(() => {
     if (!active || !row || !source.current) return null;
     const original = readCurve(source.current.tracks[active.id], row.channel),
@@ -258,46 +264,64 @@ export function CurveReducer({
                 value={options.fit}
                 onChange={(e) => configure({ fit: e.target.value as ReductionOptions['fit'] })}
               >
-                <option value="auto">Adaptive · linear or Bézier</option>
+                <option value="baked">Rebuild baked easing</option>
+                <option value="auto">Preserve curve · adaptive</option>
                 <option value="bezier">Bézier handles</option>
                 <option value="linear">Linear segments</option>
               </select>
             </label>
           </div>
           <div className="reducer-tolerances">
-            <label>
-              Position <small>cm</small>
-              <input
-                aria-label="Position error tolerance"
-                type="number"
-                min="0.0001"
-                step="0.01"
-                value={options.position}
-                onChange={(e) => configure({ position: Number(e.target.value) })}
-              />
-            </label>
-            <label>
-              Rotation <small>°</small>
-              <input
-                aria-label="Rotation error tolerance"
-                type="number"
-                min="0.0001"
-                step="0.05"
-                value={options.rotation}
-                onChange={(e) => configure({ rotation: Number(e.target.value) })}
-              />
-            </label>
-            <label>
-              Other channels <small>%, °</small>
-              <input
-                aria-label="Other channel error tolerance"
-                type="number"
-                min="0.0001"
-                step="0.1"
-                value={options.scalar}
-                onChange={(e) => configure({ scalar: Number(e.target.value) })}
-              />
-            </label>
+            {baked ? (
+              <label title="Maximum variation within a hold, as a percentage of the channel range">
+                Ignore drift <small>%</small>
+                <input
+                  aria-label="Baked drift threshold"
+                  type="number"
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  value={options.drift ?? 2}
+                  onChange={(e) => configure({ drift: Number(e.target.value) })}
+                />
+              </label>
+            ) : (
+              <>
+                <label>
+                  Position <small>cm</small>
+                  <input
+                    aria-label="Position error tolerance"
+                    type="number"
+                    min="0.0001"
+                    step="0.01"
+                    value={options.position}
+                    onChange={(e) => configure({ position: Number(e.target.value) })}
+                  />
+                </label>
+                <label>
+                  Rotation <small>°</small>
+                  <input
+                    aria-label="Rotation error tolerance"
+                    type="number"
+                    min="0.0001"
+                    step="0.05"
+                    value={options.rotation}
+                    onChange={(e) => configure({ rotation: Number(e.target.value) })}
+                  />
+                </label>
+                <label>
+                  Other channels <small>%, °</small>
+                  <input
+                    aria-label="Other channel error tolerance"
+                    type="number"
+                    min="0.0001"
+                    step="0.1"
+                    value={options.scalar}
+                    onChange={(e) => configure({ scalar: Number(e.target.value) })}
+                  />
+                </label>
+              </>
+            )}
           </div>
           <div className="reducer-options">
             <label>
@@ -309,14 +333,16 @@ export function CurveReducer({
               />
               Fit handle lengths
             </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={options.preserveExtrema}
-                onChange={(e) => configure({ preserveExtrema: e.target.checked })}
-              />
-              Keep peaks and holds
-            </label>
+            {!baked && (
+              <label>
+                <input
+                  type="checkbox"
+                  checked={options.preserveExtrema}
+                  onChange={(e) => configure({ preserveExtrema: e.target.checked })}
+                />
+                Keep peaks and holds
+              </label>
+            )}
             <label>
               <input
                 type="checkbox"
@@ -362,8 +388,10 @@ export function CurveReducer({
             </div>
           )}
           <p className="reducer-note">
-            Each axis reduces independently. Modifiers and stepped, spring and bounce segments stay
-            intact. Attachment switches and loop boundaries are protected.
+            {baked
+              ? 'Rebuilds flat holds and eased motion. Drift is measured as a percentage of the channel range; measured changes are shown below.'
+              : 'Each axis reduces independently. Modifiers and stepped, spring and bounce segments stay intact.'}{' '}
+            Attachment switches and loop boundaries are protected.
           </p>
           {!eligible.length && (
             <p className="reducer-note">
@@ -478,7 +506,7 @@ export function CurveReducer({
                       <tr>
                         <th>Axis</th>
                         <th>Keys</th>
-                        <th>Error bound</th>
+                        <th>{baked ? 'Frame deviation' : 'Error bound'}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -496,7 +524,12 @@ export function CurveReducer({
                             {r.before} → {r.after}
                           </td>
                           <td
-                            title={r.reason ?? 'Conservative bound over the complete scalar curve'}
+                            title={
+                              r.reason ??
+                              (baked
+                                ? 'Maximum deviation at source-frame samples'
+                                : 'Conservative bound over the complete scalar curve')
+                            }
                           >
                             {r.reason
                               ? 'Kept original'
@@ -508,8 +541,20 @@ export function CurveReducer({
                   </table>
                   <p className="reducer-note">
                     <Check size={13} />
-                    Combined transform check: {active.positionError.toPrecision(3)} cm ·{' '}
-                    {active.rotationError.toPrecision(3)}°. Checked at original keys and subframes.
+                    {baked ? (
+                      <>
+                        Frame deviation: {active.positionError.toPrecision(3)} cm ·{' '}
+                        {active.rotationError.toPrecision(3)}°. Sampled between-frame deviation:{' '}
+                        {active.subframePositionError?.toPrecision(3) ?? '—'} cm ·{' '}
+                        {active.subframeRotationError?.toPrecision(3) ?? '—'}°.{' '}
+                      </>
+                    ) : (
+                      <>
+                        Combined transform check: {active.positionError.toPrecision(3)} cm ·{' '}
+                        {active.rotationError.toPrecision(3)}°. Checked at original keys and
+                        subframes.{' '}
+                      </>
+                    )}
                     Fitted handles remain editable.
                   </p>
                 </>

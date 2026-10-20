@@ -1,3 +1,7 @@
+## 0.8.33 — reconstruct baked motion phases
+
+Reduce keyframes now defaults to Rebuild baked easing: it detects stable holds, flattens drift using a visible percentage of the channel range, and rebuilds motion between those boundaries with editable Bézier handles. Soft moves use horizontal departure/arrival handles; sharp departures use a vertical free handle. The supplied reload curve produces the six marked keys at frames 0, 53, 62, 68, 82 and 103, with exactly flat start, bottom and finish holds. The preview reports measured frame and between-frame deviation separately from the continuous bounds available in Preserve curve modes. Near-constant bakes can collapse to one key, endpoint state no longer pins a redundant neighboring frame, and rank-deficient handle fits remain stable.
+
 ## 0.8.32 — sparse reduction of existing baked curves
 
 Reduce keyframes fits coupled Bézier handle lengths, splits at the largest failed interval, and merges redundant fit boundaries without crossing protected keys. Small local jitter no longer becomes a protected peak solely because it borders a large motion. A selected Euler or position axis receives its full displayed error budget; multiple selected axes still share the combined transform limit. The supplied reload-empty Rotation X regression reduces 38 keys to 18 at the existing 0.1° setting, with a certified scalar bound below 0.1°.

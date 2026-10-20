@@ -1,5 +1,5 @@
 import { Quaternion } from 'three';
-import { handles, readCurve, channelsFor } from './curves';
+import { baseCurve, handles, readCurve, channelsFor } from './curves';
 import type { Channel, Curve, CurveKey } from './curves';
 import { sample } from './model';
 import type { ControlId, Track } from './model';
@@ -8,9 +8,11 @@ export interface ReductionOptions {
   position: number;
   rotation: number;
   scalar: number;
-  fit: 'auto' | 'bezier' | 'linear';
+  fit: 'auto' | 'bezier' | 'linear' | 'baked';
   skimHandles: boolean;
   preserveExtrema: boolean;
+  /** Baked phase reconstruction: negligible drift as a percentage of range. */
+  drift?: number;
   range?: [number, number];
 }
 export const DEFAULT_REDUCTION: ReductionOptions = {
@@ -48,11 +50,19 @@ export interface ReductionResult {
   after: number;
   positionError: number;
   rotationError: number;
+  subframePositionError?: number;
+  subframeRotationError?: number;
   changed: boolean;
 }
 type Point = [number, number];
 type Cubic = [Point, Point, Point, Point];
 type Span = { a: number; b: number; mode: 'linear' | 'bezier'; right: Point; left: Point };
+type FitConstraints = {
+  startSlope?: number;
+  endSlope?: number;
+  verticalStart?: boolean;
+  approximate?: boolean;
+};
 const cp = <T>(v: T): T => structuredClone(v);
 const lerp = (a: Point, b: Point, t: number): Point => [
   a[0] + (b[0] - a[0]) * t,
@@ -121,6 +131,39 @@ function explicit(curve: Curve): Curve {
 const primitive = (k: CurveKey) =>
   k.interpolation === 'step' || k.interpolation === 'spring' || k.interpolation === 'bounce';
 
+/** Baked motion describes samples, not the corners of an earlier interpolation.
+ * Fractional authored keys remain observations alongside each integer frame. */
+function observationFrames(curve: Curve, from: number, to: number) {
+  const frames = new Set([from, to]);
+  for (const key of curve.keys) if (key.frame > from && key.frame < to) frames.add(key.frame);
+  for (let frame = Math.ceil(from); frame < to; frame++) frames.add(frame);
+  return [...frames].sort((a, b) => a - b);
+}
+
+function observationError(source: Curve, target: Curve) {
+  let error = 0;
+  for (const frame of observationFrames(source, source.keys[0].frame, source.keys.at(-1)!.frame))
+    error = Math.max(error, Math.abs(baseCurve(source, frame) - baseCurve(target, frame)));
+  return error;
+}
+
+function extrema(p: Cubic) {
+  const d = p.slice(1).map((point, i) => point[1] - p[i][1]),
+    a = d[0] - 2 * d[1] + d[2],
+    b = 2 * (d[1] - d[0]),
+    c = d[0],
+    discriminant = b * b - 4 * a * c;
+  const roots =
+    Math.abs(a) < 1e-12
+      ? Math.abs(b) < 1e-12
+        ? []
+        : [-c / b]
+      : discriminant < 0
+        ? []
+        : [(-b - Math.sqrt(discriminant)) / (2 * a), (-b + Math.sqrt(discriminant)) / (2 * a)];
+  return roots.filter((t) => t > 0 && t < 1).map((t) => cubic(p, t));
+}
+
 /** The convex hull bounds the entire difference, not just the fit samples.
  * Subtracting a common line tightens the hull for fast, nearly linear motion.
  * Both cubics are restricted to the same time interval before subdivision. */
@@ -184,23 +227,46 @@ function fitSpan(
   b: number,
   options: ReductionOptions,
   tolerance: number,
+  constraints: FitConstraints = {},
+  cachedObservations?: Point[],
 ): { span?: Span; error: number; bound: number; split: number } {
   const ka = source.keys[a],
     kb = source.keys[b],
     length = kb.frame - ka.frame;
   const fitSamples: Point[] = [];
+  const observations =
+    options.fit === 'baked'
+      ? (cachedObservations?.filter(([frame]) => frame >= ka.frame && frame <= kb.frame) ??
+        observationFrames(source, ka.frame, kb.frame).map(
+          (frame) => [frame, baseCurve(source, frame)] as Point,
+        ))
+      : undefined;
+  let observedLow = Infinity,
+    observedHigh = -Infinity;
+  for (const point of observations ?? []) {
+    observedLow = Math.min(observedLow, point[1]);
+    observedHigh = Math.max(observedHigh, point[1]);
+  }
   const stride = Math.max(1, Math.ceil((b - a) / 48));
-  for (let i = a; i < b; i += stride) {
-    const p = points(source, i);
-    for (const t of [0.0, 0.2113248654, 0.5, 0.7886751346]) fitSamples.push(cubic(p, t));
+  if (observations) {
+    const observationStride = Math.max(1, Math.ceil(observations.length / 192));
+    for (let i = 0; i < observations.length - 1; i += observationStride)
+      fitSamples.push(observations[i]);
+  } else {
+    for (let i = a; i < b; i += stride) {
+      const p = points(source, i);
+      for (const t of [0.0, 0.2113248654, 0.5, 0.7886751346]) fitSamples.push(cubic(p, t));
+    }
   }
   fitSamples.push([kb.frame, kb.value]);
   const cycles = !!source.loop || source.modifiers.some((m) => m.enabled && m.type === 'cycles');
-  const lockStart = cycles && a === 0,
-    lockEnd = cycles && b === source.keys.length - 1;
-  const startSlope = handles(source, a).right[1] / handles(source, a).right[0],
-    endSlope = handles(source, b).left[1] / handles(source, b).left[0];
+  const lockStart = (cycles && a === 0) || constraints.startSlope !== undefined,
+    lockEnd = (cycles && b === source.keys.length - 1) || constraints.endSlope !== undefined;
+  const startSlope =
+      constraints.startSlope ?? handles(source, a).right[1] / handles(source, a).right[0],
+    endSlope = constraints.endSlope ?? handles(source, b).left[1] / handles(source, b).left[0];
   const make = (r: number, l: number): Cubic => {
+    if (constraints.verticalStart) r = 0.001 / length;
     const p: Cubic = [
       [ka.frame, ka.value],
       [ka.frame + length * r, ka.value + length * r * startSlope],
@@ -228,6 +294,16 @@ function fitSpan(
       ay += w1 * y;
       by += w2 * y;
     }
+    // Three frame observations give only one independent interior value for
+    // two vertical handles. Regularize toward the endpoint tangents instead
+    // of solving both handles independently and counting that value twice.
+    if (!lockStart && !lockEnd && aa * bb - ab * ab <= 1e-14) {
+      const ridge = Math.max(aa, bb, 1) * 1e-8;
+      aa += ridge;
+      bb += ridge;
+      ay += ridge * p[1][1];
+      by += ridge * p[2][1];
+    }
     const det = aa * bb - ab * ab;
     if (!lockStart && !lockEnd && det > 1e-14) {
       p[1][1] = (ay * bb - by * ab) / det;
@@ -235,6 +311,12 @@ function fitSpan(
     } else {
       if (!lockStart && aa > 1e-14) p[1][1] = ay / aa;
       if (!lockEnd && bb > 1e-14) p[2][1] = by / bb;
+    }
+    if (constraints.approximate) {
+      const lo = Math.min(ka.value, kb.value),
+        hi = Math.max(ka.value, kb.value);
+      p[1][1] = Math.max(lo, Math.min(hi, p[1][1]));
+      p[2][1] = Math.max(lo, Math.min(hi, p[2][1]));
     }
     return p;
   };
@@ -246,6 +328,29 @@ function fitSpan(
       worst = a + 1,
       failureScore = 0,
       passed = true;
+    if (observations) {
+      let frame = ka.frame;
+      for (const [f, value] of observations) {
+        const difference = Math.abs(cubic(p, parameter(p, f))[1] - value);
+        if (difference > error) {
+          error = difference;
+          frame = f;
+        }
+      }
+      // Sample reconstruction may smooth old corners, but must not invent a
+      // spike outside the observed motion's range between those samples.
+      for (const [f, value] of extrema(p)) {
+        const difference = Math.max(observedLow - value, value - observedHigh, 0);
+        if (difference > error) {
+          error = difference;
+          frame = f;
+        }
+      }
+      for (let i = a + 1; i < b; i++)
+        if (Math.abs(source.keys[i].frame - frame) < Math.abs(source.keys[worst].frame - frame))
+          worst = i;
+      return { passed: error <= tolerance, error, bound: error, split: worst };
+    }
     for (let i = a; i < b; i++) {
       const v = certify(points(source, i), p, tolerance);
       error = Math.max(error, v.peak);
@@ -288,7 +393,11 @@ function fitSpan(
     lerp([ka.frame, ka.value], [kb.frame, kb.value], 2 / 3),
     [kb.frame, kb.value],
   ];
-  if (options.fit !== 'bezier' && ((!lockStart && !lockEnd) || options.fit === 'linear')) {
+  if (
+    !constraints.approximate &&
+    options.fit !== 'bezier' &&
+    ((!lockStart && !lockEnd) || options.fit === 'linear')
+  ) {
     const v = check(line);
     if (
       (lockStart && Math.abs(startSlope - (kb.value - ka.value) / length) > 1e-9) ||
@@ -302,7 +411,8 @@ function fitSpan(
     best = make(r, l),
     bestScore = score(best);
   const initial = check(best);
-  if (initial.passed || !options.skimHandles) return finish(best, 'bezier', initial);
+  if (!options.skimHandles || (initial.passed && !constraints.approximate))
+    return finish(best, 'bezier', constraints.approximate ? { ...initial, passed: true } : initial);
   const residuals = (p: Cubic) =>
     fitSamples.map(([f, value]) => cubic(p, parameter(p, f))[1] - value);
   // Solve the two horizontal handle lengths together. A one-pass coordinate
@@ -353,7 +463,7 @@ function fitSpan(
     }
     if (!improved) break;
     const certified = check(best);
-    if (certified.passed) return finish(best, 'bezier', certified);
+    if (certified.passed && !constraints.approximate) return finish(best, 'bezier', certified);
   }
   // A bounded pattern search also covers constrained solutions near a handle
   // limit, where a local derivative can point outside the feasible region.
@@ -375,9 +485,187 @@ function fitSpan(
         }
       }
     const certified = check(best);
-    if (certified.passed) return finish(best, 'bezier', certified);
+    if (certified.passed && !constraints.approximate) return finish(best, 'bezier', certified);
   }
-  return finish(best, 'bezier', check(best));
+  if (constraints.approximate && constraints.verticalStart) {
+    // A sharp departure can concentrate least-squares error in the first
+    // frame. Refine its free height and the arriving handle for worst-frame
+    // error, keeping the departure vertical and the arrival horizontal.
+    const lo = Math.min(ka.value, kb.value),
+      height = Math.abs(kb.value - ka.value),
+      peak = (p: Cubic) => {
+        let error = 0;
+        for (const [frame, value] of fitSamples)
+          error = Math.max(error, Math.abs(cubic(p, parameter(p, frame))[1] - value));
+        return error;
+      };
+    let bestPeak = peak(best);
+    for (const length of [0.05, 0.2, 0.4, 0.6, 0.8, 0.95]) {
+      const candidate = make(r, length),
+        error = peak(candidate);
+      if (error < bestPeak) {
+        best = candidate;
+        bestPeak = error;
+      }
+    }
+    for (const step of [0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0002]) {
+      for (let iteration = 0; iteration < 12; iteration++) {
+        let improved = false;
+        const incoming = (kb.frame - best[2][0]) / length,
+          freeHeight = height ? (best[1][1] - lo) / height : 0;
+        for (const dx of [-1, 0, 1])
+          for (const dy of [-1, 0, 1]) {
+            if (!dx && !dy) continue;
+            const candidate = cp(best);
+            candidate[1][1] = lo + height * Math.max(0, Math.min(1, freeHeight + dy * step));
+            candidate[2][0] =
+              kb.frame - length * Math.max(0.001 / length, Math.min(0.99, incoming + dx * step));
+            const error = peak(candidate);
+            if (error < bestPeak - 1e-9) {
+              best = candidate;
+              bestPeak = error;
+              improved = true;
+            }
+          }
+        if (!improved) break;
+      }
+    }
+  }
+  const final = check(best);
+  return finish(best, 'bezier', constraints.approximate ? { ...final, passed: true } : final);
+}
+
+/** Distill a bake into holds and moves rather than preserving frame-local
+ * interpolation artifacts. Long stable windows define the phase boundaries. */
+function rebuildPhases(curve: Curve, options: ReductionOptions, protectedFrames: number[]) {
+  const keys = curve.keys,
+    first = keys[0].frame,
+    last = keys.at(-1)!.frame;
+  if (
+    options.range ||
+    curve.loop ||
+    curve.modifiers.some((m) => m.enabled) ||
+    keys.some((key) => primitive(key) || key.interpolation === 'loop') ||
+    protectedFrames.some((frame) => frame > first && frame < last)
+  )
+    return;
+  const observations = observationFrames(curve, first, last).map((frame) => ({
+    frame,
+    value: baseCurve(curve, frame),
+  }));
+  let low = Infinity,
+    high = -Infinity;
+  for (const point of observations) {
+    low = Math.min(low, point.value);
+    high = Math.max(high, point.value);
+  }
+  const band = ((high - low) * (options.drift ?? 2)) / 100,
+    minimumHold = Math.min(4, Math.max(2, (last - first) / 8));
+  if (!band) return;
+  const candidates: { a: number; b: number }[] = [];
+  // Sliding min/max queues find each maximal stable window in linear time.
+  const minima: number[] = [],
+    maxima: number[] = [];
+  let minHead = 0,
+    maxHead = 0,
+    end = 0;
+  for (let start = 0; start < observations.length; start++) {
+    while (end < observations.length) {
+      const value = observations[end].value,
+        min = Math.min(
+          value,
+          minima.length > minHead ? observations[minima[minHead]].value : value,
+        ),
+        max = Math.max(
+          value,
+          maxima.length > maxHead ? observations[maxima[maxHead]].value : value,
+        );
+      if (max - min > band) break;
+      while (minima.length > minHead && observations[minima.at(-1)!].value >= value) minima.pop();
+      while (maxima.length > maxHead && observations[maxima.at(-1)!].value <= value) maxima.pop();
+      minima.push(end);
+      maxima.push(end);
+      end++;
+    }
+    if (end > start && observations[end - 1].frame - observations[start].frame >= minimumHold)
+      candidates.push({ a: start, b: end - 1 });
+    if (minima[minHead] === start) minHead++;
+    if (maxima[maxHead] === start) maxHead++;
+  }
+  candidates.sort(
+    (a, b) =>
+      observations[b.b].frame -
+      observations[b.a].frame -
+      (observations[a.b].frame - observations[a.a].frame),
+  );
+  const holds: typeof candidates = [];
+  for (const candidate of candidates)
+    if (!holds.some((hold) => candidate.a <= hold.b && candidate.b >= hold.a))
+      holds.push(candidate);
+  holds.sort((a, b) => a.a - b.a);
+  if (holds.length < 2) return;
+  const phaseKeys: CurveKey[] = [];
+  const insert = (frame: number, value: number) => {
+    if (phaseKeys.at(-1)?.frame !== frame)
+      phaseKeys.push({ frame, value, interpolation: 'linear', handle: 'free' });
+  };
+  insert(first, observations[0].value);
+  for (const hold of holds) {
+    const values = observations
+        .slice(hold.a, hold.b + 1)
+        .map((point) => point.value)
+        .sort((a, b) => a - b),
+      value =
+        Math.max(Math.abs(values[0]), Math.abs(values.at(-1)!)) <= band
+          ? 0
+          : values[Math.floor(values.length / 2)];
+    if (phaseKeys.at(-1)?.frame === observations[hold.a].frame) phaseKeys.at(-1)!.value = value;
+    else insert(observations[hold.a].frame, value);
+    insert(observations[hold.b].frame, value);
+  }
+  insert(last, observations.at(-1)!.value);
+  if (phaseKeys.length >= keys.length) return;
+  if (phaseKeys.some((key, index) => index > 0 && key.frame - phaseKeys[index - 1].frame < 0.002))
+    return;
+  const reference = cp(curve);
+  for (const key of phaseKeys) {
+    const index = reference.keys.findIndex((point) => point.frame >= key.frame);
+    if (index >= 0 && reference.keys[index].frame === key.frame)
+      reference.keys[index].value = key.value;
+    else reference.keys.splice(index < 0 ? reference.keys.length : index, 0, cp(key));
+  }
+  for (let i = 0; i < phaseKeys.length - 1; i++) {
+    const start = phaseKeys[i],
+      finish = phaseKeys[i + 1];
+    if (start.value === finish.value) continue;
+    const a = reference.keys.findIndex((key) => key.frame === start.frame),
+      b = reference.keys.findIndex((key) => key.frame === finish.frame),
+      // A small opening secant followed by a larger one identifies a soft
+      // departure; an immediate large move gets a vertical free handle.
+      next = observations.findIndex((point) => point.frame > start.frame),
+      immediate = observations[next],
+      following = observations[next + 1],
+      openingSpeed = immediate
+        ? Math.abs(immediate.value - baseCurve(curve, start.frame)) /
+          (immediate.frame - start.frame)
+        : 0,
+      nextSpeed =
+        immediate && following
+          ? Math.abs(following.value - immediate.value) / (following.frame - immediate.frame)
+          : 0,
+      sharp = openingSpeed > band / minimumHold && openingSpeed >= nextSpeed * 0.6,
+      fit = fitSpan(reference, a, b, options, 0, {
+        approximate: true,
+        ...(sharp ? { verticalStart: true } : { startSlope: 0 }),
+        endSlope: 0,
+      });
+    if (!fit.span) return;
+    start.interpolation = 'bezier';
+    start.right = fit.span.right;
+    finish.left = fit.span.left;
+  }
+  const candidate: Curve = { ...cp(curve), keys: phaseKeys };
+  return { curve: candidate, error: observationError(curve, candidate) };
 }
 
 /** Reduce one editable scalar curve. Existing modifiers and non-polynomial
@@ -387,9 +675,15 @@ export function reduceCurve(
   tolerance: number,
   options: ReductionOptions,
   protectedFrames: number[] = [],
-) {
+): { curve: Curve; error: number; bound: number } {
   if (!Number.isFinite(tolerance) || tolerance <= 0)
     throw Error('Choose a positive error tolerance.');
+  if (
+    options.fit === 'baked' &&
+    options.drift !== undefined &&
+    (!Number.isFinite(options.drift) || options.drift < 0 || options.drift > 10)
+  )
+    throw Error('Choose a drift threshold between 0 and 10 percent.');
   const source = explicit(curve),
     keys = source.keys,
     n = keys.length;
@@ -405,13 +699,50 @@ export function reduceCurve(
       .every((k, i) => primitive(k) || points(curve, i).every((p) => p[1] === k.value))
   )
     return { curve: { ...cp(curve), keys: [cp(curve.keys[0])] }, error: 0, bound: 0 };
-  if (n < 3) return { curve: cp(curve), error: 0, bound: 0 };
+  if (n < 2) return { curve: cp(curve), error: 0, bound: 0 };
   const gain = curve.modifiers.reduce(
       (g, m) => (m.enabled && m.type === 'scale' ? g * Math.abs(m.factor) : g),
       1,
     ),
     baseTolerance = tolerance / Math.max(1, gain);
   const pinned = new Set([0, n - 1]);
+  const switches = protectedFrames.filter(
+    (frame) => frame > keys[0].frame && frame < keys[n - 1].frame,
+  );
+  if (
+    options.fit === 'baked' &&
+    !options.range &&
+    !switches.length &&
+    !curve.loop &&
+    !curve.modifiers.some((m) => m.enabled && m.type === 'cycles') &&
+    !keys.some(primitive)
+  ) {
+    const flat: Curve = {
+        ...cp(curve),
+        keys: [
+          {
+            ...cp(keys[0]),
+            interpolation: 'linear',
+            handle: 'free',
+            left: undefined,
+            right: undefined,
+          },
+        ],
+      },
+      error = observationError(curve, flat) * gain;
+    if (error <= tolerance)
+      return {
+        curve: flat,
+        error,
+        bound: error,
+      };
+  }
+  if (n < 3) return { curve: cp(curve), error: 0, bound: 0 };
+  if (options.fit === 'baked') {
+    const phases = rebuildPhases(source, options, switches);
+    if (phases)
+      return { curve: phases.curve, error: phases.error * gain, bound: phases.error * gain };
+  }
   for (let i = 0; i < n; i++) {
     if (options.range && (keys[i].frame <= options.range[0] || keys[i].frame >= options.range[1]))
       pinned.add(i);
@@ -445,7 +776,7 @@ export function reduceCurve(
     }
   }
   // Protect the segments touching a switch, even when it falls between keys.
-  for (const frame of protectedFrames) {
+  for (const frame of switches) {
     const i = keys.findIndex((k) => k.frame >= frame);
     if (i < 0) continue;
     for (const j of [i - 2, i - 1, i, i + 1]) if (j >= 0 && j < n) pinned.add(j);
@@ -453,6 +784,12 @@ export function reduceCurve(
   const indexes = [...pinned].sort((a, b) => a - b),
     pending = indexes.slice(1).map((b, i) => [indexes[i], b] as [number, number]),
     segments: Span[] = [];
+  const cachedObservations =
+    options.fit === 'baked'
+      ? observationFrames(curve, keys[0].frame, keys[n - 1].frame).map(
+          (frame) => [frame, baseCurve(curve, frame)] as Point,
+        )
+      : undefined;
   let error = 0,
     bound = 0;
   while (pending.length) {
@@ -467,7 +804,7 @@ export function reduceCurve(
       });
       continue;
     }
-    const result = fitSpan(curve, a, b, options, baseTolerance);
+    const result = fitSpan(curve, a, b, options, baseTolerance, {}, cachedObservations);
     if (result.span) {
       segments.push(result.span);
       error = Math.max(error, result.error * gain);
@@ -488,7 +825,15 @@ export function reduceCurve(
       const right = merged.at(-1)!,
         left = merged.at(-2)!;
       if (pinned.has(right.a)) break;
-      const result = fitSpan(curve, left.a, right.b, options, baseTolerance);
+      const result = fitSpan(
+        curve,
+        left.a,
+        right.b,
+        options,
+        baseTolerance,
+        {},
+        cachedObservations,
+      );
       if (!result.span) break;
       merged.splice(-2, 2, result.span);
     }
@@ -507,6 +852,12 @@ export function reduceCurve(
     reduced.push(end);
   }
   const candidate = { ...cp(curve), keys: reduced };
+  if (options.fit === 'baked') {
+    error = observationError(curve, candidate) * gain;
+    return error <= tolerance
+      ? { curve: candidate, error, bound: error }
+      : { curve: cp(curve), error: 0, bound: 0 };
+  }
   // Recheck assembled neighbors too: freezing automatic handles, removing a
   // neighbor, or the evaluator's minimum handle width can affect those spans.
   let targetIndex = 0;
@@ -599,6 +950,12 @@ export function reduceTrack(
 ): ReductionResult {
   for (const v of [options.position, options.rotation, options.scalar])
     if (!Number.isFinite(v) || v <= 0) throw Error('Choose positive error tolerances.');
+  if (
+    options.fit === 'baked' &&
+    options.drift !== undefined &&
+    (!Number.isFinite(options.drift) || options.drift < 0 || options.drift > 10)
+  )
+    throw Error('Choose a drift threshold between 0 and 10 percent.');
   const original = input.track,
     next = cp(original),
     rows: ReductionRow[] = [],
@@ -607,7 +964,18 @@ export function reduceTrack(
       ...original.spaces.map((k) => k.frame),
       ...(original.following ?? []).map((k) => k.frame),
     ];
-  const frames = times(original, end);
+  const subframes = times(original, end);
+  const observed = new Set([
+    0,
+    end,
+    ...original.keys.map((key) => key.frame),
+    ...Object.values(original.curves ?? {}).flatMap(
+      (curve) => curve?.keys.map((key) => key.frame) ?? [],
+    ),
+    ...protectedFrames,
+  ]);
+  if (options.fit === 'baked') for (let frame = 0; frame <= end; frame++) observed.add(frame);
+  const frames = options.fit === 'baked' ? [...observed].sort((a, b) => a - b) : subframes;
   const eulerRotationChannels = input.channels.filter((c) => ['rx', 'ry', 'rz'].includes(c)).length;
   const positionChannels = input.channels.filter((c) => ['px', 'py', 'pz'].includes(c)).length;
   for (const channel of input.channels) {
@@ -634,7 +1002,7 @@ export function reduceTrack(
     if (candidate.keys.length < source.keys.length) {
       next.curves ??= {};
       next.curves[channel] = candidate;
-      if (rotation(channel) || position(channel)) {
+      if (options.fit !== 'baked' && (rotation(channel) || position(channel))) {
         const error = poseErrors(original, next, frames);
         if (error.position > options.position || error.rotation > options.rotation) {
           if (original.curves?.[channel]) next.curves[channel] = cp(original.curves[channel]!);
@@ -654,7 +1022,11 @@ export function reduceTrack(
   // Remove redundant fallback keys only when every changing value has a curve.
   if (!options.range) prunePoseKeys(next, protectedFrames);
   const error = poseErrors(original, next, frames);
-  if (error.position > options.position || error.rotation > options.rotation)
+  const subframeError = options.fit === 'baked' ? poseErrors(original, next, subframes) : undefined;
+  if (
+    options.fit !== 'baked' &&
+    (error.position > options.position || error.rotation > options.rotation)
+  )
     throw Error(
       'The reduced track did not pass transform validation. Original keys are unchanged.',
     );
@@ -668,6 +1040,12 @@ export function reduceTrack(
     after: rows.reduce((n, r) => n + r.after, 0),
     positionError: error.position,
     rotationError: error.rotation,
+    ...(subframeError
+      ? {
+          subframePositionError: subframeError.position,
+          subframeRotationError: subframeError.rotation,
+        }
+      : {}),
     changed: JSON.stringify(original) !== JSON.stringify(next),
   };
 }
