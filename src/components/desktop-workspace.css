@@ -730,16 +730,23 @@
   .app.desktop-workspace > .animate-layout:not(.setup-layout) {
     --desktop-editors-height: max(180px, var(--editors-height));
     --desktop-editors-row: 0px;
+    --desktop-properties-column: 0px;
     position: absolute;
     inset: var(--desktop-dock-top) 0 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(280px, var(--side-width), 440px);
+    grid-template-columns: minmax(0, 1fr) var(--desktop-properties-column);
     grid-template-rows: minmax(0, 1fr) minmax(0, var(--desktop-editors-row)) 40px;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
     background: var(--canvas);
-    transition: grid-template-rows var(--motion-surface) var(--motion-ease);
+    transition:
+      grid-template-columns var(--motion-surface) var(--motion-ease),
+      grid-template-rows var(--motion-surface) var(--motion-ease);
+  }
+
+  .app.desktop-workspace > .animate-layout:not(.setup-layout)[data-side='true'] {
+    --desktop-properties-column: clamp(280px, var(--side-width), 440px);
   }
 
   .app.desktop-workspace > .animate-layout:not(.setup-layout)[data-editors='true'] {
@@ -748,14 +755,14 @@
 
   .app.desktop-workspace
     > .animate-layout:not(.setup-layout):not(:has(.area-side)):has(.properties-collapsed-rail) {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 0px;
   }
 
   .app.desktop-workspace
     > .animate-layout:not(.setup-layout):not(:has(.area-side)):not(
       :has(.properties-collapsed-rail)
     ) {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 0px;
   }
 
   .app.desktop-workspace > .animate-layout:not(.setup-layout) > .area-viewport {
@@ -797,6 +804,9 @@
     > .properties-dock-shell {
     position: relative;
     display: block;
+    width: clamp(280px, var(--side-width), 440px);
+    max-width: none;
+    height: 100%;
     overflow: visible;
     background: var(--surface-dock);
     border-radius: var(--radius-flush);
@@ -826,6 +836,34 @@
     min-width: 0;
     min-height: 0;
     background: var(--surface-dock);
+  }
+
+  /* Properties uses the same reserved-space motion as the timeline. Keep the
+     inspector mounted at its full width while the grid column clips it at the
+     viewport edge; the scene and dock edge therefore move together without a
+     fade or a remount flash. */
+  .app.desktop-workspace
+    > .animate-layout:not(.setup-layout)
+    > .area-side[data-motion='desktop-side'] {
+    opacity: 1;
+    translate: none;
+    transition: none;
+  }
+
+  .app.desktop-workspace
+    > .animate-layout:not(.setup-layout)
+    > .area-side[data-motion='desktop-side'][data-state='closing'] {
+    opacity: 1;
+    translate: none;
+  }
+
+  @starting-style {
+    .app.desktop-workspace
+      > .animate-layout:not(.setup-layout)
+      > .area-side[data-motion='desktop-side'] {
+      opacity: 1;
+      translate: none;
+    }
   }
 
   .app.desktop-workspace > .animate-layout:not(.setup-layout) > .properties-collapsed-rail {
@@ -932,6 +970,7 @@
     justify-self: start;
     align-self: stretch;
     width: 8px;
+    min-width: 0;
     height: auto;
     border-radius: var(--radius-flush);
     background: transparent;
@@ -956,6 +995,10 @@
   }
 
   .app.desktop-workspace > .animate-layout:not(.setup-layout):has(> .split-editors:active) {
+    transition: none;
+  }
+
+  .app.desktop-workspace > .animate-layout:not(.setup-layout):has(> .split-side:active) {
     transition: none;
   }
 

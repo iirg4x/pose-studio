@@ -1,3 +1,7 @@
+## 0.8.30 — smooth Properties docking
+
+T and the Properties collapse/restore controls slide the desktop dock horizontally with the same 200 ms easing as the timeline. The scene width reflows alongside it while the inspector keeps its full internal width. Interrupted toggles reverse smoothly; manual resizing and reduced motion remain immediate.
+
 ## 0.8.29 — mirrored controller clipboard shortcut
 
 Ctrl/Cmd+C followed by Ctrl/Cmd+Shift+V pastes the copied controller pose onto its opposite, without selecting the destination. Normal paste and text-field clipboard behavior keep their scope. The pose menu and shortcut reference list mirrored paste. Mirror accepts a selection from one side; an IK/FK mode mismatch now explains the mode issue instead of incorrectly requesting selection on both sides.

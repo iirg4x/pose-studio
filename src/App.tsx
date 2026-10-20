@@ -594,7 +594,7 @@ export default function App() {
           }
           if (k === 't' && !isAndroid) {
             e.preventDefault();
-            window.dispatchEvent(new Event('pose-toggle-properties'));
+            if (!e.repeat) window.dispatchEvent(new Event('pose-toggle-properties'));
             return;
           }
           if (k === 'g' || k === 'r') {

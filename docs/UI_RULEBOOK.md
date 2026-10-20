@@ -60,6 +60,8 @@ Shortcut familiarity, discoverability and input-specific scope follow [Microsoft
 
 Scene **Mirror pose** takes selected source controls from either side and writes their counterparts; the destination does not need to be selected. Selecting both sides swaps their poses from one source snapshot. Ctrl/Cmd+C copies the selected controller pose, Ctrl/Cmd+V pastes normally, and Ctrl/Cmd+Shift+V pastes that copied snapshot onto its mirrored counterpart, independent of the current selection. Preserve text-field clipboard ownership and the timeline’s keyframe clipboard scope.
 
+On fine-pointer desktop, **T** toggles the Properties dock using the same command as its toolbar control. The shortcut is ignored while a text or numeric field owns keyboard input.
+
 Use native buttons, inputs and selects where their semantics fit. A custom widget must implement its full interaction contract, not just its visual appearance. Tab reaches and leaves a toolbar; arrow keys navigate its buttons. Do not put an arrow-key-operated numeric editor into a toolbar that consumes the same arrows without a clear editing mode. Use semantic groups for small button sets rather than assigning `role="toolbar"` everywhere. [WAI-ARIA toolbar pattern](https://www.w3.org/WAI/ARIA/apg/patterns/toolbar/)
 
 A modal dialog traps focus within itself while open, has a visible close/cancel path and returns focus on dismissal. A nonmodal inspector does not trap focus or block the scene. [WAI-ARIA dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)
@@ -283,6 +285,8 @@ One group is expanded initially: Transform. Remember deliberate expansion while 
 
 Keep the inspector stable during numeric edits and preview playback. Its toolbar Properties toggle is a persistent open/collapsed preference across deselection and reselection. Only an explicit manual collapse changes the desktop dock size; selecting or deselecting a controller does not open, close or resize it. With no controller selected, an open dock shows the existing Animation properties and the small **Select all** and **Box select** actions; selecting returns to selected-control context unless the user deliberately chose Animation context. A collapsed no-selection dock keeps its restore handle reachable. Touch/coarse contextual behavior remains unchanged: the quick ribbon auto-hides with controller motion, and closing a quick menu must not unexpectedly close the contextual inspector. Selection changes update the same inspector, not a new overlapping copy.
 
+On fine-pointer desktop, the toolbar toggle and **T** use a horizontal Properties-dock slide over `--motion-surface: 200ms` with `--motion-ease`; the scene column reflows in lockstep. Keep the inspector’s internal geometry fixed while the dock is clipped or revealed. During exit it remains mounted but inert, and rapid toggles reverse from the current position. Reduced motion applies the final state immediately. Manual resizing applies immediately and does not change the stored open/collapsed preference; selection changes never change that preference or dock size.
+
 ### 8.2 Use the correct surface
 
 | Surface           | Use                                                      | Placement and dismissal                                                  |
@@ -346,6 +350,8 @@ Closing elements remain mounted until their exit finishes. For elements in docum
 
 For fine-pointer desktop timeline docking, the shared grid owns the transition: the editor row moves between `0px` and the current user size, while the inner timeline remains at full geometry and is revealed or clipped by the moving row. Scene and Properties resize with the same grid transition. Keep the timeline fully visible while open; do not add a fade, bounce or separate inner-panel animation. Disable the shared transition during manual splitter drags so the drag applies directly. Repeated toggles reverse from the current position. Under reduced motion, apply the final row size immediately. Touch/coarse behavior is unchanged.
 
+For fine-pointer desktop Properties docking, the toolbar toggle and **T** own the matching horizontal transition: the dock moves between its open width and the collapsed rail over the same 200ms easing while the scene column reflows with it. The inspector geometry stays fixed and is clipped or revealed by the dock; a closing dock stays mounted but inert until its exit completes. Repeated toggles reverse from the current position, reduced motion applies the final state immediately, and manual resizing remains immediate. Selection changes do not alter the dock preference or width.
+
 Only explicit playback controls or an actual controller/keyframe edit pause the running animation. Layer selection, pose-layer inspection, menu opening and panel resizing do not pause it. Editing an animated value can establish a stable edit frame; merely focusing its field cannot.
 
 Opening timeline, curves or motion trails must not start full-scene recomputation on every UI event. Hidden panels/trails perform no unnecessary continuous work. Keep scrolling and pointer updates local; measure frame time with representative rigs and keys. Reuse the existing performance baseline and record before/after evidence for expensive UI work.
@@ -397,6 +403,7 @@ Before accepting a UI change, inspect the rendered app, not only source or gener
 - [ ] Curve/effect geometry is measured from committed bounds before first paint; later resize observation does not cause a visible fallback correction.
 - [ ] Exit animations and neighboring layout finish together; reduced-motion behavior is usable.
 - [ ] Fine-pointer timeline docking uses the stable scene/editor/transport rows: the editor row moves between `0px` and the saved size with shared 200ms easing, inner timeline geometry stays full and is clipped/revealed by the row, scene and Properties resize together, splitter drags are immediate, repeated toggles reverse, and reduced motion is instant. Touch/coarse behavior remains contextual and full-screen.
+- [ ] Fine-pointer Properties docking responds identically from its toolbar control and **T**: the fixed inspector slides horizontally between open and collapsed widths over the shared 200ms easing, the scene reflows in lockstep, the closing inspector remains mounted but inert, rapid toggles reverse, reduced motion is instant, manual resizing is immediate, and selection does not change the dock preference or size.
 - [ ] Timeline/curve/trail performance is checked on representative content; simulated screenshots are not reported as physical-device verification.
 
 This review gate lists target checks; this documentation does not claim physical iPhone, browser/PWA or accessibility compliance verification.

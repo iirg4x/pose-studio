@@ -12,6 +12,8 @@ Fine-pointer desktop Properties stays docked when no controller is selected. Its
 
 Fine-pointer desktop timeline docking uses a stable three-row scene/editor/transport grid. The editor row transitions between `0px` and the user's saved height with the shared `--motion-surface: 200ms` and `--motion-ease`; the inner timeline keeps full geometry and is revealed or clipped as the row moves, while scene and Properties resize in lockstep. Do not fade or bounce the timeline. Manual splitter drags apply immediately, interrupted or repeated toggles reverse from the current position, and reduced motion applies the final row size instantly. Touch/coarse docking remains contextual and full-screen.
 
+The fine-pointer Properties dock uses the matching horizontal slide from its toolbar control or **T**: the inspector retains its full width while the grid column clips/reveals it, and the scene width changes in lockstep over the same shared 200ms easing. Closing content remains mounted and inert; rapid toggles reverse, manual resizing and reduced motion are immediate, and selection never changes the stored dock state.
+
 Approved visual references: `../../work/ui-layout-concepts/a-portrait-tablet.png` and `../../work/ui-layout-concepts/dynamic-a-properties.png`. They define the Control properties panel treatment and colors; they do not verify the current implementation or physical-device/browser behavior.
 
 Keep the rule book and visual reference synchronized. These are target requirements; do not describe the existing app as compliant or claim physical iPhone/browser verification from this documentation.
