@@ -1,3 +1,7 @@
+## 0.8.29 — mirrored controller clipboard shortcut
+
+Ctrl/Cmd+C followed by Ctrl/Cmd+Shift+V pastes the copied controller pose onto its opposite, without selecting the destination. Normal paste and text-field clipboard behavior keep their scope. The pose menu and shortcut reference list mirrored paste. Mirror accepts a selection from one side; an IK/FK mode mismatch now explains the mode issue instead of incorrectly requesting selection on both sides.
+
 ## 0.8.28 — smooth timeline docking
 
 The desktop timeline slides up and down with the shared 200 ms motion timing while the 3D scene and Properties dock resize alongside it. The editor keeps its full internal geometry during the transition, preventing curve layout shifts. Rapid toggles reverse the slide, manual splitter drags remain immediate, and reduced-motion mode changes the layout instantly.

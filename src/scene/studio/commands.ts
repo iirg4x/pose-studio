@@ -309,7 +309,12 @@ export abstract class CommandScene extends TransformScene {
       matrix(values.root),
     );
     if (!Object.keys(poses).length) {
-      this.store.patch({ message: 'Select matching IK or FK controls on both sides to mirror.' });
+      const hasCounterpart = this.store.selectedControls().some((id) => !!mirrorDestination(id));
+      this.store.patch({
+        message: hasCounterpart
+          ? 'The opposite limb uses a different IK/FK mode. Match its pose mode, then mirror again.'
+          : 'Select a controller on either side to mirror its pose to the opposite side.',
+      });
       return;
     }
     this.store.pastePose(

@@ -58,6 +58,8 @@ Shortcut familiarity, discoverability and input-specific scope follow [Microsoft
 
 ### 2.3 Keyboard structure
 
+Scene **Mirror pose** takes selected source controls from either side and writes their counterparts; the destination does not need to be selected. Selecting both sides swaps their poses from one source snapshot. Ctrl/Cmd+C copies the selected controller pose, Ctrl/Cmd+V pastes normally, and Ctrl/Cmd+Shift+V pastes that copied snapshot onto its mirrored counterpart, independent of the current selection. Preserve text-field clipboard ownership and the timeline’s keyframe clipboard scope.
+
 Use native buttons, inputs and selects where their semantics fit. A custom widget must implement its full interaction contract, not just its visual appearance. Tab reaches and leaves a toolbar; arrow keys navigate its buttons. Do not put an arrow-key-operated numeric editor into a toolbar that consumes the same arrows without a clear editing mode. Use semantic groups for small button sets rather than assigning `role="toolbar"` everywhere. [WAI-ARIA toolbar pattern](https://www.w3.org/WAI/ARIA/apg/patterns/toolbar/)
 
 A modal dialog traps focus within itself while open, has a visible close/cancel path and returns focus on dismissal. A nonmodal inspector does not trap focus or block the scene. [WAI-ARIA dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)

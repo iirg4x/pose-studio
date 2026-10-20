@@ -633,7 +633,7 @@ export default function App() {
         }
         if (key === 'v') {
           e.preventDefault();
-          studio.pastePose();
+          e.shiftKey ? runtime.current?.pasteMirroredPose() : studio.pastePose();
           return;
         }
         if (key === 'n') {
@@ -848,6 +848,7 @@ export default function App() {
         },
         {
           label: 'Paste mirrored',
+          shortcut: 'Ctrl Shift V',
           run: () => runtime.current?.pasteMirroredPose(),
           disabled: !s.clipboard,
         },
