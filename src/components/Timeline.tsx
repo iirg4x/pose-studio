@@ -44,6 +44,16 @@ const initialTimelineMorePosition: TimelineMorePosition = {
   maxWidth: 320,
   maxHeight: 480,
 };
+
+const STANDARD_FRAME_RATES = [24, 25, 30, 48, 60] as const;
+
+/** Keep the common transport rates while retaining an imported project's rate. */
+export function frameRateOptions(current: number) {
+  const rates = new Set<number>(STANDARD_FRAME_RATES);
+  if (Number.isFinite(current) && current >= 1 && current <= 120) rates.add(current);
+  return [...rates].sort((a, b) => a - b);
+}
+
 export const Timeline = memo(function Timeline({
   expanded = false,
   expand,
@@ -362,7 +372,7 @@ export const Timeline = memo(function Timeline({
             value={p.fps}
             onChange={(e) => studio.updateProject({ fps: Number(e.target.value) })}
           >
-            {[24, 25, 30, 48, 60].map((v) => (
+            {frameRateOptions(p.fps).map((v) => (
               <option key={v} value={v}>
                 {v} fps
               </option>

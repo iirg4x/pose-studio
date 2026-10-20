@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { studio } from '../core/store';
 import { usePresence, useStudioChrome, useStudioSelector } from '../hooks';
-import { Timeline, KeyLockButton } from './Timeline';
+import { Timeline, KeyLockButton, frameRateOptions } from './Timeline';
 import { ActiveLayer } from './PoseActions';
 import { LoopControls } from './LoopControls';
 import { ScrubNumber } from './ScrubNumber';
@@ -496,7 +496,7 @@ function TimeSlider({ editors, toggleEditors }: { editors: boolean; toggleEditor
             value={s.fps}
             onChange={(e) => studio.updateProject({ fps: Number(e.target.value) })}
           >
-            {[24, 25, 30, 48, 60].map((v) => (
+            {frameRateOptions(s.fps).map((v) => (
               <option key={v} value={v}>
                 {v} fps
               </option>

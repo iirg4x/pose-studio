@@ -1,3 +1,7 @@
+## 0.8.35 — preserve imported frame rates in playback controls
+
+Desktop and touch playback selectors now include the current animation rate alongside the standard presets. Imported 96 fps and other supported rates display their actual value instead of falling back visually to 24 fps.
+
 ## 0.8.34 — preserve peaks in baked motion reconstruction
 
 Rebuild baked easing now keeps prominent peaks and troughs between holds, with horizontal handles at direction changes. A drift-scaled noise floor ignores tiny derivative chatter; short flat-topped extrema retain both plateau edges. The supplied Position Y curve now keeps the two lifts at frames 58 and 70: 39 source keys reduce to 9, with 0.205 cm frame deviation instead of 7.25 cm. The approved six-key Rotation X reconstruction remains unchanged.
