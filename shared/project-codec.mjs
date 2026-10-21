@@ -80,11 +80,12 @@ export async function decodeProject(bytes) {
     .pipeThrough(new DecompressionStream('gzip'))
     .pipeThrough(new TextDecoderStream())
     .getReader();
-  let buffer = '',
-    total = 0,
+  let total = 0,
     line = 0,
     project,
-    ended = false;
+    ended = false,
+    fragments = [],
+    recordLength = 0;
   const assets = {},
     ids = new Set();
   const record = (text) => {
@@ -134,16 +135,32 @@ export async function decodeProject(bytes) {
       if (done) break;
       total += value.length;
       if (total > MAX_TOTAL) throw Error('Project exceeds the document storage limit.');
-      buffer += value;
-      let newline;
-      while ((newline = buffer.indexOf('\n')) >= 0) {
-        if (newline > MAX_RECORD) throw Error('Project record is too large.');
-        record(buffer.slice(0, newline));
-        buffer = buffer.slice(newline + 1);
+      let start = 0;
+      while (start < value.length) {
+        const newline = value.indexOf('\n', start);
+        if (newline < 0) {
+          const fragment = value.slice(start);
+          fragments.push(fragment);
+          recordLength += fragment.length;
+          if (recordLength > MAX_RECORD) throw Error('Project record is too large.');
+          break;
+        }
+        const fragment = value.slice(start, newline);
+        if (fragment) {
+          fragments.push(fragment);
+          recordLength += fragment.length;
+        }
+        if (recordLength > MAX_RECORD) throw Error('Project record is too large.');
+        record(fragments.join(''));
+        fragments = [];
+        recordLength = 0;
+        start = newline + 1;
       }
-      if (buffer.length > MAX_RECORD) throw Error('Project record is too large.');
     }
-    if (buffer.trim()) record(buffer);
+    if (recordLength) {
+      const buffer = fragments.join('');
+      if (buffer.trim()) record(buffer);
+    }
     if (!ended || !project) throw Error('Incomplete Pose document.');
     if (Object.keys(assets).length) project.characterAssets = assets;
     return valid(project);

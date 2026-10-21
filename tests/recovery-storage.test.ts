@@ -1,4 +1,4 @@
-import { indexedDB as fakeIndexedDB } from 'fake-indexeddb';
+import { IDBDatabase as FakeIDBDatabase, indexedDB as fakeIndexedDB } from 'fake-indexeddb';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AnimationEntry, AnimationLibrary } from '../src/core/library';
 import type { Project } from '../src/core/model';
@@ -304,5 +304,42 @@ describe('IndexedDB recovery persistence', () => {
     await expect(malformedTab.initializeStorage()).resolves.toBeUndefined();
     const malformed = await malformedTab.readStoredRecovery('legacy-index');
     expect(malformed?.content).toContain('preserve-me');
+
+    const batchPrefix = 'manny-studio-library-v3:clip:';
+    const batchFirstKey = `${batchPrefix}batch-first`;
+    const batchLastKey = `${batchPrefix}batch-last`;
+    await restarted.writeAsset(
+      batchFirstKey,
+      entry('batch-first', project('First in order', { root: [1] })),
+    );
+    await restarted.writeAsset(
+      batchLastKey,
+      entry('batch-last', project('Last in order', { root: [3] })),
+    );
+    await restarted.writeAsset(legacyIndexKey, {
+      version: 3,
+      rig: 'ue5-manny-simple',
+      name: 'Batched legacy project',
+      activeId: 'batch-first',
+      openIds: ['batch-first', 'batch-missing', 'batch-last'],
+      poses: [],
+      clipIds: ['batch-first', 'batch-missing', 'batch-last'],
+    });
+    const batchTab = await loadTab('batch-tab');
+    await batchTab.initializeStorage();
+    const transactionSpy = vi.spyOn(FakeIDBDatabase.prototype, 'transaction');
+    transactionSpy.mockClear();
+    const batched = await batchTab.readStoredRecovery('legacy-index');
+    const batchedPayload = JSON.parse(batched!.content) as {
+      recovery: AnimationLibrary;
+      missingClipIds: string[];
+    };
+    expect(batchedPayload.recovery.clips.map((clip) => clip.id)).toEqual([
+      'batch-first',
+      'batch-last',
+    ]);
+    expect(batchedPayload.missingClipIds).toEqual(['batch-missing']);
+    expect(transactionSpy.mock.calls.filter(([, mode]) => mode === 'readonly')).toHaveLength(1);
+    transactionSpy.mockRestore();
   });
 });

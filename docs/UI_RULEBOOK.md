@@ -357,6 +357,8 @@ Only explicit playback controls or an actual controller/keyframe edit pause the 
 
 Opening timeline, curves or motion trails must not start full-scene recomputation on every UI event. Hidden panels/trails perform no unnecessary continuous work. Keep scrolling and pointer updates local; measure frame time with representative rigs and keys. Reuse the existing performance baseline and record before/after evidence for expensive UI work.
 
+Startup recovery and project opening use the same shared loading status. Mount it before restoring local storage or reading a selected project, clear it on cancellation or failure, and let the existing open flow report viewport preparation. Animation and character navigation are view changes; they must not capture full-library undo snapshots or serialize the entire library merely to change tabs.
+
 ## 12. Implementation discipline
 
 Use `src/design-system.css` as the central token owner when implementing this contract. Reuse `src/elevation.css` and `src/motion.css` for depth and motion. Existing tokens with older values are migration inputs, not exceptions. Layout styles belong to their component/responsive layer; semantic colors, radii and interaction states do not get redefined in each device stylesheet.

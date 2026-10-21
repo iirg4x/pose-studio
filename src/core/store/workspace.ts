@@ -86,6 +86,17 @@ export class WorkspaceStore extends SelectionStore {
     return result;
   }
 
+  /** Apply a navigation patch without creating an editable-workspace history entry. */
+  protected patchNavigation(value: Partial<StudioState>) {
+    const replaying = this.workspaceHistoryReplay;
+    this.workspaceHistoryReplay = true;
+    try {
+      this.patch(value);
+    } finally {
+      this.workspaceHistoryReplay = replaying;
+    }
+  }
+
   protected captureWorkspaceHistoryState(
     workspace = this.workspaceSnapshot(),
   ): WorkspaceHistoryState | null {
@@ -253,14 +264,14 @@ export class WorkspaceStore extends SelectionStore {
     if (!w?.characters?.some((c) => c.id === id)) return;
     w.activeCharacterId = id;
     w.previewCharacterId = id;
-    this.patch({ workspace: w });
+    this.patchNavigation({ workspace: w });
   }
   selectPreviewCharacter(id: string) {
     const w = this.workspaceSnapshot();
     if (!w || (id && !w.characters?.some((c) => c.id === id))) return;
     w.previewCharacterId = id || undefined;
     if (id) w.activeCharacterId = id;
-    this.patch({
+    this.patchNavigation({
       workspace: w,
       retargetRest: false,
       message: 'Preview model: ' + (w.characters?.find((c) => c.id === id)?.name ?? 'Manny'),
@@ -455,6 +466,7 @@ export class WorkspaceStore extends SelectionStore {
     }
   }
   activate(id: string) {
+    if (this.state.workspace?.activeId === id) return;
     const workspace = this.workspaceSnapshot();
     if (!workspace) return;
     const next = workspace.clips.find((c) => c.id === id);
@@ -467,7 +479,7 @@ export class WorkspaceStore extends SelectionStore {
     const history = this.histories.get(id);
     this.past = history?.past ?? [];
     this.future = history?.future ?? [];
-    this.patch({
+    this.patchNavigation({
       timelineSelection: [],
       workspace,
       project: clone(next.project),
@@ -483,7 +495,9 @@ export class WorkspaceStore extends SelectionStore {
     let workspace = this.workspaceSnapshot();
     if (!workspace) return;
     if (workspace.openIds.length === 1 && workspace.openIds.includes(id)) {
-      this.patch({ message: 'Keep one animation open. All animations stay in the library.' });
+      this.patchNavigation({
+        message: 'Keep one animation open. All animations stay in the library.',
+      });
       return;
     }
     if (workspace.activeId === id) {
@@ -493,7 +507,7 @@ export class WorkspaceStore extends SelectionStore {
       workspace = this.workspaceSnapshot()!;
     }
     workspace.openIds = workspace.openIds.filter((key) => key !== id);
-    this.patch({ workspace, message: 'Tab closed. Reopen it from Animations.' });
+    this.patchNavigation({ workspace, message: 'Tab closed. Reopen it from Animations.' });
   }
   deleteAnimation(id: string) {
     this.endGesture();

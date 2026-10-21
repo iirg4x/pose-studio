@@ -328,10 +328,13 @@ export default function App() {
   const open = async (merge = false) => {
     importMode.current = merge;
     if (window.studioDesktop) {
+      if (!merge) studio.patch({ opening: { name: 'project', stage: 'Reading file' } });
       try {
         const p = await window.studioDesktop.openProject();
         if (p) receive(p, merge);
+        else if (!merge) studio.patch({ opening: null });
       } catch (e) {
+        if (!merge) studio.patch({ opening: null });
         studio.patch({ message: (e as Error).message });
         reportFailure('Could not open project: ' + (e as Error).message);
       }

@@ -1,5 +1,4 @@
 import type { AnimationLibrary } from '../library';
-import { clone } from '../model';
 import type { ControlId, Pose, Project } from '../model';
 import type { TimelineKey } from '../timelineKeys';
 
@@ -33,25 +32,34 @@ export interface WorkspaceHistoryEntry {
  * not undoable in this store. Project contents and library relationships remain
  * significant, including character assets themselves.
  */
-function editableWorkspace(workspace: AnimationLibrary) {
+function editableWorkspaceMetadata(workspace: AnimationLibrary) {
   return {
     version: workspace.version,
     rig: workspace.rig,
     name: workspace.name,
-    characters: clone(workspace.characters),
-    poses: clone(workspace.poses),
-    clips: workspace.clips.map((clip) => ({
-      id: clip.id,
-      project: clone(clip.project),
-      previewSync: clip.previewSync,
-      folder: clone(clip.folder),
-      previewId: clip.previewId,
-    })),
+    characters: workspace.characters,
+    poses: workspace.poses,
+  };
+}
+
+function editableClip(clip: AnimationLibrary['clips'][number]) {
+  return {
+    id: clip.id,
+    project: clip.project,
+    previewSync: clip.previewSync,
+    folder: clip.folder,
+    previewId: clip.previewId,
   };
 }
 
 export function sameEditableWorkspace(a: AnimationLibrary, b: AnimationLibrary) {
-  return JSON.stringify(editableWorkspace(a)) === JSON.stringify(editableWorkspace(b));
+  if (JSON.stringify(editableWorkspaceMetadata(a)) !== JSON.stringify(editableWorkspaceMetadata(b)))
+    return false;
+  if (a.clips.length !== b.clips.length) return false;
+  return a.clips.every(
+    (clip, index) =>
+      JSON.stringify(editableClip(clip)) === JSON.stringify(editableClip(b.clips[index]!)),
+  );
 }
 
 /** Navigation may move between tabs while a same-clip-set workspace edit is undoable. */

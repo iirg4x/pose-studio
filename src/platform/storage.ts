@@ -254,11 +254,9 @@ async function loadCandidate(candidate: RecoveryCandidate): Promise<unknown> {
   }
   const references = candidate.clipReferences;
   if (references) {
-    const stored = await Promise.all(
-      references.map(
-        (reference) => readAsset(reference.key) as Promise<AnimationEntry | undefined>,
-      ),
-    );
+    const stored = (await readAssets(references.map((reference) => reference.key))) as Array<
+      AnimationEntry | undefined
+    >;
     candidate.missingClipIds = references
       .filter((_, position) => !stored[position])
       .map((reference) => reference.id);
@@ -269,11 +267,9 @@ async function loadCandidate(candidate: RecoveryCandidate): Promise<unknown> {
     return candidate.data;
   }
   if (candidate.legacyClipIds && candidate.metadata) {
-    const stored = await Promise.all(
-      candidate.legacyClipIds.map(
-        (clip) => readAsset(legacyClipKey(clip)) as Promise<AnimationEntry | undefined>,
-      ),
-    );
+    const stored = (await readAssets(candidate.legacyClipIds.map(legacyClipKey))) as Array<
+      AnimationEntry | undefined
+    >;
     candidate.missingClipIds = candidate.legacyClipIds.filter((_, position) => !stored[position]);
     candidate.data = {
       ...candidate.metadata,
@@ -400,6 +396,51 @@ export async function initializeStorage() {
 export function readPreference(key: string) {
   return values.get(key) ?? localStorage.getItem(key);
 }
+
+function readAssets(keys: readonly string[]): Promise<unknown[]> {
+  if (!keys.length) return Promise.resolve([]);
+  return new Promise((resolve, reject) => {
+    let transaction: IDBTransaction | undefined;
+    let settled = false;
+    const values = new Array<unknown>(keys.length);
+    let completedRequests = 0;
+    const fail = (error: unknown, fallback: string) => {
+      if (settled) return;
+      settled = true;
+      reject(error ?? Error(fallback));
+    };
+
+    try {
+      transaction = database.transaction('files', 'readonly');
+      const store = transaction.objectStore('files');
+      transaction.oncomplete = () => {
+        if (settled) return;
+        if (completedRequests !== keys.length) {
+          fail(
+            Error('Storage read completed before all requests finished.'),
+            'Storage read failed.',
+          );
+          return;
+        }
+        settled = true;
+        resolve(values);
+      };
+      transaction.onerror = () => fail(transaction?.error, 'Storage read failed.');
+      transaction.onabort = () => fail(transaction?.error, 'Storage read was interrupted.');
+      keys.forEach((key, position) => {
+        const request = store.get(key);
+        request.onsuccess = () => {
+          values[position] = request.result;
+          completedRequests += 1;
+        };
+        request.onerror = () => fail(request.error, 'Storage read failed.');
+      });
+    } catch (error) {
+      fail(error, 'Storage read failed.');
+    }
+  });
+}
+
 export async function writePreference(key: string, value: string) {
   if (database) {
     await writeAsset(key, value);

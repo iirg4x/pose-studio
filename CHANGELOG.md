@@ -1,3 +1,11 @@
+## 0.8.39 — reduce large-project loading and navigation costs
+
+Animation and character navigation now bypass workspace-edit history capture, so opening an animation no longer deep-copies and compares the entire library. Genuine workspace edits keep their undo history; comparison runs one clip at a time without another deep copy or a library-sized JSON string. In a 32-clip weapon subset, activation falls from 4.0–4.9 seconds to 16–58 ms. The full 627-clip library switches in approximately 0.2 seconds in the core benchmark.
+
+The project decoder scans incoming text once and joins each JSON record once instead of repeatedly rescanning unfinished multi-megabyte records. A matched full-file decoder benchmark improves from 24.3 to 8.8 seconds. Recovery reads clip records in one IndexedDB transaction, embedded asset decoding avoids per-byte callback allocations, and startup/file reads show the existing shared loading status before expensive work.
+
+Site updates reuse previous application-cache responses only after verifying their SHA-256 against the new build. Unchanged large models no longer require another download; changed or unverifiable files are fetched normally, and a failed install preserves the previous cache.
+
 ## 0.8.38 — preserve shoulders in baked motion
 
 Baked easing reconstruction now retains meaningful slowdowns inside a continuous move. When one Bézier span loses that change of speed, cleanup adds a source-valued key with a shared sampled tangent and refits both sides. Redundant-key culling preserves that boundary. Refits use immutable source observations and sample curved motion between frames, avoiding distortion from generated reference keys and underconstrained short transitions.

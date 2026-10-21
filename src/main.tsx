@@ -7,6 +7,7 @@ import './dark-ui.css';
 import './action-ui.css';
 import './properties.css';
 import { initializeAndroid } from './platform/android';
+import { LoadingStatus } from './components/ProjectLoading';
 import './tablet.css';
 import './animation-tools.css';
 import './compact-ui.css';
@@ -15,18 +16,28 @@ import './timeline-editor.css';
 import './elevation.css';
 import './motion.css';
 import './interpolation-settings.css';
+
+const rootElement = document.getElementById('root');
+if (!rootElement) throw new Error('Pose could not find its application root.');
+const root = createRoot(rootElement);
+root.render(<LoadingStatus title="Starting Pose Studio" stage="Restoring workspace" />);
+
 initializeAndroid()
   .then(initializeBrowser)
   .then(() =>
-    createRoot(document.getElementById('root')!).render(
+    root.render(
       <StudioErrorBoundary>
         <App />
       </StudioErrorBoundary>,
     ),
   )
   .catch((error) => {
-    document.getElementById('root')!.textContent =
-      'Pose could not initialize local storage: ' + error.message;
+    root.render(
+      <p role="alert">
+        Pose could not initialize local storage:{' '}
+        {error instanceof Error ? error.message : String(error)}
+      </p>,
+    );
   });
 
 import './animation-links.css';

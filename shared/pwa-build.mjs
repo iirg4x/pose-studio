@@ -15,15 +15,38 @@ const APP_ASSETS = [
   'example-fantasy-male.glb',
   'example-fantasy-female.glb',
 ];
-export function serviceWorkerSource(files, revision) {
+export function serviceWorkerSource(files, revision, hashes = {}) {
+  const expectedHashes = files.map((file) => hashes[file] ?? null);
   return `const ROOT=new URL('./',self.location.href);
 const PREFIX='pose-studio-shell:'+ROOT.href+':';
 const CACHE=PREFIX+${JSON.stringify(revision)};
 const URLS=${JSON.stringify(files)}.map(file=>new URL(file,ROOT).href);
+const HASHES=${JSON.stringify(expectedHashes)};
 const SHELL=new Set(URLS);
+async function reusableResponse(url,expectedHash,previousCaches){
+ if(!expectedHash||!self.crypto?.subtle)return null;
+ for(const name of previousCaches){
+  try{
+   const cache=await caches.open(name),candidate=await cache.match(url);
+   if(!candidate||!candidate.ok)continue;
+   const digest=await self.crypto.subtle.digest('SHA-256',await candidate.clone().arrayBuffer());
+   const actual=[...new Uint8Array(digest)].map(byte=>byte.toString(16).padStart(2,'0')).join('');
+   if(actual.toLowerCase()===String(expectedHash).toLowerCase())return candidate;
+  }catch{}
+ }
+ return null;
+}
 self.addEventListener('install',event=>event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);
- try{for(const url of URLS){const response=await fetch(new Request(url,{cache:'reload'}));if(!response.ok)throw Error('Could not download '+url);await cache.put(url,response);}}
+ try{
+  const previousCaches=(await caches.keys()).filter(name=>name.startsWith(PREFIX)&&name!==CACHE);
+  for(let index=0;index<URLS.length;index++){
+   const url=URLS[index],reused=await reusableResponse(url,HASHES[index],previousCaches);
+   const response=reused||await fetch(new Request(url,{cache:'reload'}));
+   if(!response.ok)throw Error('Could not download '+url);
+   await cache.put(url,response);
+  }
+ }
  catch(error){await caches.delete(CACHE);throw error;}
  // Do not skipWaiting: an update must not replace an editor with unsaved work.
 })()));
@@ -77,21 +100,23 @@ export function posePwa() {
       const files = (await filesAt(out))
         .filter((file) => file !== 'sw.js' && !file.startsWith('.') && !file.endsWith('.map'))
         .sort();
-      const hash = createHash('sha256');
+      const hash = createHash('sha256'),
+        hashes = {};
       for (const file of files) {
         hash.update(file);
-        hash.update(await fs.readFile(path.join(out, file)));
+        const bytes = await fs.readFile(path.join(out, file));
+        hash.update(bytes);
+        hashes[file] = createHash('sha256').update(bytes).digest('hex');
       }
       const revision = hash.digest('hex').slice(0, 20);
       const index = path.join(out, 'index.html');
-      await fs.writeFile(
-        index,
-        (await fs.readFile(index, 'utf8')).replace(
-          '</head>',
-          `<meta name="pose-build" content="${revision}"/></head>`,
-        ),
+      const indexSource = (await fs.readFile(index, 'utf8')).replace(
+        '</head>',
+        `<meta name="pose-build" content="${revision}"/></head>`,
       );
-      await fs.writeFile(path.join(out, 'sw.js'), serviceWorkerSource(files, revision));
+      await fs.writeFile(index, indexSource);
+      hashes['index.html'] = createHash('sha256').update(indexSource).digest('hex');
+      await fs.writeFile(path.join(out, 'sw.js'), serviceWorkerSource(files, revision, hashes));
       await fs.writeFile(path.join(out, '.nojekyll'), '');
     },
   };
