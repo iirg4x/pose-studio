@@ -8,6 +8,7 @@ const fixture = JSON.parse(
   fs.readFileSync('tests/fixtures/inspect-weapon-py-reduction.json', 'utf8'),
 ) as { end: number; curve: Curve };
 
+// Exhaustive handle fitting can exceed the shared CI runner's 20 s default.
 it('culls redundant baked hold boundaries inside the declared drift budget', () => {
   const original = structuredClone(fixture.curve);
   const integerValues = Array.from({ length: fixture.end + 1 }, (_, frame) =>
@@ -44,4 +45,4 @@ it('culls redundant baked hold boundaries inside the declared drift budget', () 
     for (const handle of [key.left, key.right])
       if (handle) expect(handle.every(Number.isFinite)).toBe(true);
   expect(fixture.curve).toEqual(original);
-});
+}, 60_000);
