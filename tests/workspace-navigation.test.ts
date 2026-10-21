@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createProject } from '../src/core/model';
+import { createProject, pose } from '../src/core/model';
 import type { AnimationLibrary } from '../src/core/library';
 import type { RetargetCharacter } from '../src/core/retarget';
 import { StudioStore } from '../src/core/store';
@@ -94,5 +94,50 @@ describe('workspace navigation history', () => {
     expect(store.workspaceHistoryLengths.past).toBe(historyBeforeEdit.past + 1);
     store.undo();
     expect(store.state.workspace!.name).toBe(original);
+  });
+});
+
+describe('authored content revision', () => {
+  it('preserves the authored revision across view-only navigation', () => {
+    const store = setup(),
+      first = store.state.workspace!.activeId;
+    store.addAnimation({});
+    const second = store.state.workspace!.activeId;
+    store.addCharacter(character('first'));
+    store.addCharacter(character('second'));
+    const before = store.authoredRevision;
+
+    store.activate(first);
+    store.setFrame(12);
+    store.closeAnimation(first);
+    store.selectCharacter('first');
+    store.selectPreviewCharacter('second');
+
+    expect(store.state.workspace!.activeId).toBe(second);
+    expect(store.authoredRevision).toBe(before);
+  });
+
+  it('advances for authored patches while ignoring empty-draft frame seeks', () => {
+    const store = setup();
+    const advance = (change: () => void) => {
+      const before = store.authoredRevision;
+      change();
+      expect(store.authoredRevision).toBeGreaterThan(before);
+    };
+
+    const emptyDrafts = store.authoredRevision;
+    store.setFrame(12);
+    expect(store.authoredRevision).toBe(emptyDrafts);
+
+    advance(() => store.editWorld('root', pose([0.2, 0, 0])));
+    advance(() => store.undo());
+    advance(() => store.redo());
+    advance(() => store.updateProject({ name: 'Renamed animation' }));
+    advance(() => store.renameWorkspace('Renamed project'));
+    advance(() => store.patch({ drafts: { root: pose([0.3, 0, 0]) } }));
+    advance(() => store.patch({ frame: store.state.frame + 1 }));
+    advance(() => store.patch({ drafts: {} }));
+    advance(() => store.patch({ revision: store.state.revision }));
+    advance(() => store.open(createProject({}, false)));
   });
 });

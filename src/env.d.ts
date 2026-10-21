@@ -40,7 +40,7 @@ declare global {
       status: () => Promise<{ blender: string | null; maximized: boolean }>;
       chooseBlender: () => Promise<string | null>;
       saveProject: (p: unknown) => Promise<string | null>;
-      openProject: () => Promise<unknown | null>;
+      openProject: (options?: { recovery?: boolean }) => Promise<unknown | null>;
       takeProject: () => Promise<unknown | null>;
       onProjectQueued: (callback: () => void) => () => void;
       recentProjects: () => Promise<{ path: string; name: string; openedAt: string }[]>;

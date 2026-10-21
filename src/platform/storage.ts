@@ -1,5 +1,6 @@
 import type { AnimationEntry, AnimationLibrary } from '../core/library';
 import { Capacitor } from '@capacitor/core';
+import { decodeDocumentProject } from './projectDecoding';
 import {
   addRecoveryGeneration,
   documentRecoveryId,
@@ -9,6 +10,8 @@ import {
   referencedRecoveryClips,
 } from './recoveryGenerations';
 import type { RecoveryClipReference, RecoveryManifest } from './recoveryGenerations';
+import type { ProjectRecoverySource } from './recoveryRecords';
+import { encode64 } from './portableAssets';
 
 export const isAndroid = Capacitor.getPlatform() === 'android';
 export const isTouch =
@@ -27,10 +30,30 @@ const recoveryArchiveCatalogKey = RECOVERY + ':quarantine:index';
 const recoveryHoldKey = RECOVERY + ':quarantine:hold';
 const clipKey = (session: string, generation: string, clip: string) =>
   `${RECOVERY}:clip:${session}:${generation}:${clip}`;
+const sourceKey = (session: string, generation: string) =>
+  `${RECOVERY}:source:${session}:${generation}`;
 const legacyClipKey = (clip: string) => `${RECOVERY}:clip:${clip}`;
 const archiveKey = (archive: string) => `${RECOVERY}:quarantine:${archive}`;
 
 type LegacyIndex = Omit<AnimationLibrary, 'clips'> & { clipIds: string[] };
+
+interface RecoverySourceWrapper {
+  poseRecoverySourceFormat: number;
+  bytes?: Uint8Array | Blob;
+}
+
+interface RecoveryClipView {
+  frame: number;
+  selected: AnimationEntry['selected'];
+  drafts: AnimationEntry['drafts'];
+  folder?: AnimationEntry['folder'] | null;
+  previewId?: AnimationEntry['previewId'] | null;
+  previewSync?: AnimationEntry['previewSync'] | null;
+}
+
+type RecoveryMetadata = Omit<AnimationLibrary, 'clips'> & {
+  poseRecoveryClipViews?: Record<string, RecoveryClipView>;
+};
 
 export interface RecoveryCandidate {
   id: string;
@@ -41,7 +64,7 @@ export interface RecoveryCandidate {
   autoRestore: boolean;
   source: 'generation' | 'legacy-index' | 'legacy-value' | 'quarantine';
   data?: unknown;
-  metadata?: Omit<AnimationLibrary, 'clips'>;
+  metadata?: RecoveryMetadata;
   clipReferences?: RecoveryClipReference[];
   legacyClipIds?: string[];
   archiveKey?: string;
@@ -104,10 +127,16 @@ let recoveryCandidates: RecoveryCandidate[] = [];
 // validation. Keep that fact out of the persisted candidate shape so cached
 // live-project payloads retain their defensive-clone behavior.
 const freshRecoveryCandidates = new WeakSet<RecoveryCandidate>();
+const candidateLoads = new WeakMap<
+  RecoveryCandidate,
+  { normal?: Promise<unknown>; fresh?: Promise<unknown> }
+>();
 let recoveryProblem: RecoveryProblem | null = null;
 let recoveryWriteHeld = false;
 let recoveryState: RecoveryState = { writeHeld: false, problem: null, generations: [] };
 let legacyClipIdsForCleanup: string[] = [];
+let primaryRecoveryCandidate: RecoveryCandidate | null = null;
+let primaryRecoveryPromise: Promise<void> | null = null;
 const values = new Map<string, string>();
 const recoveryListeners = new Set<() => void>();
 
@@ -249,7 +278,101 @@ function hasDurableClipReferences(candidate: RecoveryCandidate) {
   );
 }
 
-async function loadCandidate(candidate: RecoveryCandidate, forceFresh = false): Promise<unknown> {
+function isRecoverySourceWrapper(value: unknown): value is Partial<RecoverySourceWrapper> {
+  return !!value && typeof value === 'object' && Object.hasOwn(value, 'poseRecoverySourceFormat');
+}
+
+function invalidRecoverySourceClip(expectedId: string, key: string): AnimationEntry {
+  return {
+    id: expectedId,
+    project: {
+      version: 0,
+      recoverySourceKey: key,
+    } as unknown as AnimationEntry['project'],
+    frame: 0,
+    selected: 'root' as AnimationEntry['selected'],
+    drafts: {},
+  };
+}
+
+async function decodeRecoverySource(raw: unknown): Promise<Map<string, AnimationEntry>> {
+  if (!isRecoverySourceWrapper(raw)) throw Error('Invalid packed recovery source.');
+  const source = raw as RecoverySourceWrapper;
+  if (source.poseRecoverySourceFormat !== 1)
+    throw Error('Unsupported packed recovery source version.');
+  const decoded =
+    source.bytes !== undefined ? await decodeDocumentProject(source.bytes) : undefined;
+  if (!decoded) throw Error('Invalid packed recovery source.');
+  const project = decoded as Partial<AnimationLibrary>;
+  if (!Array.isArray(project.clips)) throw Error('Packed recovery source has no clips.');
+  const clips = new Map<string, AnimationEntry>();
+  for (const clip of project.clips) {
+    if (!clip || typeof clip.id !== 'string' || clips.has(clip.id))
+      throw Error('Packed recovery source has invalid clip identity.');
+    clips.set(clip.id, clip);
+  }
+  return clips;
+}
+
+function recoveryClipViews(
+  metadata?: unknown,
+): Readonly<Record<string, RecoveryClipView>> | undefined {
+  const views = (metadata as RecoveryMetadata | undefined)?.poseRecoveryClipViews;
+  return views && typeof views === 'object' && !Array.isArray(views) ? views : undefined;
+}
+
+function validRecoveryClipView(value: unknown): value is RecoveryClipView {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const view = value as Record<string, unknown>;
+  if (Object.hasOwn(view, 'frame') && !Number.isFinite(view.frame)) return false;
+  if (Object.hasOwn(view, 'selected') && typeof view.selected !== 'string') return false;
+  if (
+    Object.hasOwn(view, 'drafts') &&
+    (!view.drafts || typeof view.drafts !== 'object' || Array.isArray(view.drafts))
+  )
+    return false;
+  if (
+    Object.hasOwn(view, 'folder') &&
+    view.folder !== null &&
+    (!Array.isArray(view.folder) || view.folder.some((item) => typeof item !== 'string'))
+  )
+    return false;
+  if (
+    Object.hasOwn(view, 'previewId') &&
+    view.previewId !== null &&
+    typeof view.previewId !== 'string'
+  )
+    return false;
+  if (
+    Object.hasOwn(view, 'previewSync') &&
+    view.previewSync !== null &&
+    view.previewSync !== 'time' &&
+    view.previewSync !== 'phase'
+  )
+    return false;
+  return true;
+}
+
+function overlayRecoveryClipView(clip: AnimationEntry, view?: RecoveryClipView): AnimationEntry {
+  if (view === undefined) return clip;
+  if (!validRecoveryClipView(view)) throw Error('Invalid recovery animation view.');
+  const next = { ...clip };
+  if (Object.hasOwn(view, 'frame')) next.frame = view.frame;
+  if (Object.hasOwn(view, 'selected')) next.selected = view.selected;
+  if (Object.hasOwn(view, 'drafts')) next.drafts = view.drafts;
+  if (Object.hasOwn(view, 'folder'))
+    next.folder = view.folder === null || view.folder === undefined ? undefined : [...view.folder];
+  if (Object.hasOwn(view, 'previewId'))
+    next.previewId = view.previewId === null ? undefined : view.previewId;
+  if (Object.hasOwn(view, 'previewSync'))
+    next.previewSync = view.previewSync === null ? undefined : view.previewSync;
+  return next;
+}
+
+async function loadCandidateUncached(
+  candidate: RecoveryCandidate,
+  forceFresh = false,
+): Promise<unknown> {
   if (candidate.data !== undefined && !forceFresh) return candidate.data;
   if (candidate.source === 'quarantine' && candidate.archiveKey) {
     const archived = (await readAsset(candidate.archiveKey)) as
@@ -261,16 +384,58 @@ async function loadCandidate(candidate: RecoveryCandidate, forceFresh = false): 
   }
   const references = candidate.clipReferences;
   if (references) {
-    const stored = (await readAssets(references.map((reference) => reference.key))) as Array<
-      AnimationEntry | undefined
-    >;
-    candidate.missingClipIds = references
-      .filter((_, position) => !stored[position])
-      .map((reference) => reference.id);
-    candidate.data = {
-      ...candidate.metadata,
-      clips: stored.filter((clip): clip is AnimationEntry => !!clip),
+    const keys = [...new Set(references.map((reference) => reference.key))];
+    const stored = await readAssets(keys);
+    const storedByKey = new Map(keys.map((key, position) => [key, stored[position]]));
+    const sourceClips = new Map<string, Map<string, AnimationEntry>>();
+    const invalidSources = new Map<string, unknown>();
+    for (const key of keys) {
+      const value = storedByKey.get(key);
+      if (!isRecoverySourceWrapper(value)) continue;
+      try {
+        sourceClips.set(key, await decodeRecoverySource(value));
+      } catch {
+        invalidSources.set(key, value);
+      }
+    }
+    const views = recoveryClipViews(candidate.metadata);
+    const missingClipIds: string[] = [];
+    const clips: AnimationEntry[] = [];
+    for (const reference of references) {
+      const source = sourceClips.get(reference.key);
+      if (source) {
+        const clip = source.get(reference.id);
+        if (clip) {
+          try {
+            clips.push(overlayRecoveryClipView(clip, views?.[reference.id]));
+          } catch {
+            // Keep the untrusted view metadata in candidate.metadata and make
+            // validation fail explicitly instead of dropping the bad view or
+            // throwing before the recovery payload can be quarantined.
+            clips.push(invalidRecoverySourceClip(reference.id, reference.key));
+            invalidSources.set(reference.key, storedByKey.get(reference.key));
+          }
+        } else {
+          missingClipIds.push(reference.id);
+          invalidSources.set(reference.key, storedByKey.get(reference.key));
+        }
+        continue;
+      }
+      const invalidSource = invalidSources.get(reference.key);
+      if (invalidSource !== undefined) {
+        clips.push(invalidRecoverySourceClip(reference.id, reference.key));
+        continue;
+      }
+      const clip = storedByKey.get(reference.key);
+      if (clip) clips.push(clip as AnimationEntry);
+      else missingClipIds.push(reference.id);
+    }
+    candidate.missingClipIds = missingClipIds;
+    const data = { ...candidate.metadata, clips } as AnimationLibrary & {
+      poseRecoverySources?: Record<string, unknown>;
     };
+    if (invalidSources.size) data.poseRecoverySources = Object.fromEntries(invalidSources);
+    candidate.data = data;
     freshRecoveryCandidates.add(candidate);
     return candidate.data;
   }
@@ -286,6 +451,60 @@ async function loadCandidate(candidate: RecoveryCandidate, forceFresh = false): 
     freshRecoveryCandidates.add(candidate);
   }
   return candidate.data;
+}
+
+function loadCandidate(candidate: RecoveryCandidate, forceFresh = false): Promise<unknown> {
+  const slot = forceFresh ? 'fresh' : 'normal';
+  const loads = candidateLoads.get(candidate) ?? {};
+  const existing = loads[slot];
+  if (existing) return existing;
+  let pending: Promise<unknown>;
+  pending = loadCandidateUncached(candidate, forceFresh).finally(() => {
+    if (loads[slot] === pending) loads[slot] = undefined;
+  });
+  loads[slot] = pending;
+  candidateLoads.set(candidate, loads);
+  return pending;
+}
+
+async function awaitPrimaryRecovery(candidate: RecoveryCandidate) {
+  if (candidate === primaryRecoveryCandidate && primaryRecoveryPromise)
+    await primaryRecoveryPromise;
+}
+
+async function preloadPrimaryRecovery(
+  primary: RecoveryCandidate,
+  parsedLegacyIndex: LegacyIndex | null,
+) {
+  try {
+    await loadCandidate(primary);
+    let malformedJson = false;
+    if (primary.source === 'legacy-value' && typeof primary.data === 'string')
+      try {
+        JSON.parse(primary.data);
+      } catch {
+        malformedJson = true;
+      }
+    if (
+      !recoveryProblem &&
+      (primary.missingClipIds.length ||
+        malformedJson ||
+        (!parsedLegacyIndex && primary.source === 'legacy-index'))
+    )
+      await rejectRecoveryCandidate(
+        primary,
+        primary.missingClipIds.length
+          ? Error('Recovery is missing stored animation data.')
+          : malformedJson
+            ? Error('Recovery contains invalid JSON.')
+            : Error('Recovery index is malformed.'),
+      );
+  } catch (error) {
+    // Startup must remain usable when the background recovery read fails. The
+    // rejection path records the hold and retries the durable payload for
+    // quarantine without leaking an unhandled rejection.
+    if (!recoveryProblem) await rejectRecoveryCandidate(primary, error).catch(() => {});
+  }
 }
 
 export async function initializeStorage() {
@@ -308,8 +527,12 @@ export async function initializeStorage() {
 
   recoveryManifest = normalizeRecoveryManifest(await readAsset(recoveryManifestKey));
   recoveryCandidates = [];
+  recovery = null;
+  previousClips = new Map();
   recoveryProblem = null;
   recoveryWriteHeld = false;
+  primaryRecoveryCandidate = null;
+  primaryRecoveryPromise = null;
   const primarySessionId = recoveryManifest.sessions.some((session) => session.id === sessionId)
     ? sessionId
     : recoveryManifest.sessions[0]?.id;
@@ -375,28 +598,9 @@ export async function initializeStorage() {
 
   const primary = recoveryCandidates.find((candidate) => candidate.autoRestore);
   if (primary) {
-    await loadCandidate(primary);
-    let malformedJson = false;
-    if (primary.source === 'legacy-value' && typeof primary.data === 'string')
-      try {
-        JSON.parse(primary.data);
-      } catch {
-        malformedJson = true;
-      }
-    if (
-      !recoveryProblem &&
-      (primary.missingClipIds.length ||
-        malformedJson ||
-        (!parsedLegacyIndex && primary.source === 'legacy-index'))
-    )
-      await rejectRecoveryCandidate(
-        primary,
-        primary.missingClipIds.length
-          ? Error('Recovery is missing stored animation data.')
-          : malformedJson
-            ? Error('Recovery contains invalid JSON.')
-            : Error('Recovery index is malformed.'),
-      );
+    primaryRecoveryCandidate = primary;
+    primaryRecoveryPromise = preloadPrimaryRecovery(primary, parsedLegacyIndex);
+    void primaryRecoveryPromise.catch(() => {});
   }
   publishRecoveryState();
   void navigator.storage?.persist?.().catch(() => false);
@@ -530,6 +734,7 @@ export function readRecoveryCandidates() {
   return recoveryCandidates.filter((candidate) => candidate.autoRestore);
 }
 export async function readRecoveryCandidate(candidate: RecoveryCandidate) {
+  await awaitPrimaryRecovery(candidate);
   const data = await loadCandidate(candidate);
   if (data === undefined) throw Error('The stored recovery payload is unavailable.');
   if (candidate.missingClipIds.length)
@@ -549,6 +754,7 @@ export async function readRecoveryCandidate(candidate: RecoveryCandidate) {
  * Cached live or quarantine payloads deliberately keep the defensive path.
  */
 export async function readOwnedRecoveryCandidate(candidate: RecoveryCandidate) {
+  await awaitPrimaryRecovery(candidate);
   if (!hasDurableClipReferences(candidate)) {
     const data = await readRecoveryCandidate(candidate);
     // Legacy JSON is immutable after parsing; cached object payloads still
@@ -725,7 +931,13 @@ export async function rejectRecoveryCandidate(candidate: RecoveryCandidate, reas
     publishRecoveryState();
     return;
   }
-  const storedCandidate = { ...candidate, clipReferences: undefined, legacyClipIds: undefined };
+  const storedCandidate = {
+    ...candidate,
+    data: original,
+    missingClipIds: [...candidate.missingClipIds],
+    clipReferences: undefined,
+    legacyClipIds: undefined,
+  };
   try {
     if (await archiveRecoveryProblem(problem, storedCandidate)) {
       recoveryProblem = { ...problem, archiveDurable: true };
@@ -752,11 +964,49 @@ export function readRecoveryProblem() {
   return recoveryProblem;
 }
 
-function recoveryDownload(candidate: RecoveryCandidate, name?: string): RecoveryDownload {
+type RecoveryDownloadBytes = { encoding: 'base64'; data: string };
+
+function encodeRecoveryBytes(bytes: Uint8Array) {
+  const native = bytes as Uint8Array & { toBase64?: () => string };
+  return typeof native.toBase64 === 'function' ? native.toBase64() : encode64(bytes);
+}
+
+async function recoverySourceForDownload(value: unknown): Promise<unknown> {
+  if (!isRecoverySourceWrapper(value)) return value;
+  const bytes = (value as RecoverySourceWrapper).bytes;
+  if (bytes === undefined) return value;
+  const raw =
+    bytes instanceof Uint8Array
+      ? bytes
+      : bytes && typeof (bytes as Blob).arrayBuffer === 'function'
+        ? new Uint8Array(await (bytes as Blob).arrayBuffer())
+        : undefined;
+  if (!raw) return value;
+  const encoded: RecoveryDownloadBytes = { encoding: 'base64', data: encodeRecoveryBytes(raw) };
+  return { ...value, bytes: encoded };
+}
+
+async function recoveryDataForDownload(data: unknown): Promise<unknown> {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return data;
+  const sources = (data as { poseRecoverySources?: unknown }).poseRecoverySources;
+  if (!sources || typeof sources !== 'object' || Array.isArray(sources)) return data;
+  const entries = await Promise.all(
+    Object.entries(sources).map(
+      async ([key, value]) => [key, await recoverySourceForDownload(value)] as const,
+    ),
+  );
+  return { ...data, poseRecoverySources: Object.fromEntries(entries) };
+}
+
+async function recoveryDownload(
+  candidate: RecoveryCandidate,
+  name?: string,
+): Promise<RecoveryDownload> {
+  const data = await recoveryDataForDownload(candidate.data);
   const content = candidate.missingClipIds.length
     ? JSON.stringify(
         {
-          recovery: candidate.data,
+          recovery: data,
           missingClipIds: candidate.missingClipIds,
           source: candidate.source,
         },
@@ -765,7 +1015,7 @@ function recoveryDownload(candidate: RecoveryCandidate, name?: string): Recovery
       )
     : typeof candidate.data === 'string'
       ? candidate.data
-      : JSON.stringify(candidate.data, null, 2);
+      : JSON.stringify(data, null, 2);
   return {
     name: name ?? `pose-recovery-${new Date(candidate.createdAt || Date.now()).toISOString()}.json`,
     type: 'application/json',
@@ -832,7 +1082,11 @@ export async function readFailedRecovery(): Promise<RecoveryDownload | null> {
   for (const candidate of candidates) {
     try {
       const data = await loadCandidate(candidate);
-      if (data !== undefined) return recoveryDownload(candidate, recoveryProblem.downloadName);
+      if (data !== undefined)
+        return recoveryDownload(
+          { ...candidate, data, missingClipIds: [...candidate.missingClipIds] },
+          recoveryProblem.downloadName,
+        );
     } catch {
       // The hold remains active; a later download attempt retries the durable read.
     }
@@ -868,11 +1122,21 @@ export async function resolveFailedRecovery(choice: 'preserve' | 'discard') {
     }
   }
   if (choice === 'preserve' && !problem.archiveDurable) {
-    const original = recoveryCandidates.find((candidate) => candidate.id === problem.candidateId);
-    if (!original) throw Error('The failed recovery copy is no longer available to preserve.');
-    if ((await loadCandidate(original)) === undefined)
+    const originalCandidate = recoveryCandidates.find(
+      (candidate) => candidate.id === problem.candidateId,
+    );
+    if (!originalCandidate)
       throw Error('The failed recovery copy is no longer available to preserve.');
-    const storedCandidate = { ...original, clipReferences: undefined, legacyClipIds: undefined };
+    const originalData = await loadCandidate(originalCandidate);
+    if (originalData === undefined)
+      throw Error('The failed recovery copy is no longer available to preserve.');
+    const storedCandidate = {
+      ...originalCandidate,
+      data: originalData,
+      missingClipIds: [...originalCandidate.missingClipIds],
+      clipReferences: undefined,
+      legacyClipIds: undefined,
+    };
     if (!(await archiveRecoveryProblem(problem, storedCandidate)))
       throw Error(
         `Recovery archive limit (${MAX_ARCHIVES}) reached. Download this copy and explicitly discard it before continuing.`,
@@ -968,8 +1232,10 @@ export async function readStoredRecovery(candidateId?: string): Promise<Recovery
     ? recoveryCandidates.find((item) => item.id === candidateId)
     : (recoveryCandidates.find((item) => item.autoRestore) ?? recoveryCandidates[0]);
   if (!candidate) return null;
-  await loadCandidate(candidate);
-  return recoveryDownload(candidate);
+  await awaitPrimaryRecovery(candidate);
+  const data = await loadCandidate(candidate);
+  if (data === undefined) return null;
+  return recoveryDownload({ ...candidate, data, missingClipIds: [...candidate.missingClipIds] });
 }
 
 function sameShallowRecord(
@@ -1011,20 +1277,39 @@ function clipChanged(previous: AnimationEntry | undefined, next: AnimationEntry,
 }
 
 /** Commit a bounded immutable generation; the transaction merges other tabs' latest manifest. */
-export function writeRecovery(data: AnimationLibrary): Promise<void> {
+export function writeRecovery(
+  data: AnimationLibrary,
+  source?: ProjectRecoverySource,
+  options?: { readonly reuseSourceClips?: boolean },
+): Promise<void> {
   const context: RecoveryProjectContext = new Map<string, AnimationEntry['project']>(
     data.clips.map((clip) => [clip.id, clip.project]),
   );
+  const sourceClipIds = source ? new Set(source.clipIds) : undefined;
+  const reuseSourceClips = options?.reuseSourceClips === true;
   const run = () =>
     new Promise<void>((resolve, reject) => {
       if (!database) {
         reject(Error('Project storage is not ready.'));
         return;
       }
-      const { clips, ...metadata } = data;
+      const { clips, ...metadataBase } = data;
+      const poseRecoveryClipViews: Record<string, RecoveryClipView> = {};
+      for (const clip of clips)
+        poseRecoveryClipViews[clip.id] = {
+          frame: clip.frame,
+          selected: clip.selected,
+          drafts: clip.drafts,
+          folder: clip.folder ? [...clip.folder] : null,
+          previewId: clip.previewId ?? null,
+          previewSync: clip.previewSync ?? null,
+        };
+      const metadata: RecoveryMetadata = { ...metadataBase, poseRecoveryClipViews };
       const generationId = id();
       const createdAt = Date.now();
-      const transaction = database.transaction('files', 'readwrite');
+      const transaction = source
+        ? database.transaction('files', 'readwrite', { durability: 'strict' })
+        : database.transaction('files', 'readwrite');
       const store = transaction.objectStore('files');
       const manifestRequest = store.get(recoveryManifestKey);
       const archiveRequest = store.get(recoveryArchiveCatalogKey);
@@ -1037,7 +1322,7 @@ export function writeRecovery(data: AnimationLibrary): Promise<void> {
       let finalizationQueued = false;
       let currentManifest: RecoveryManifest | undefined;
       let pendingManifest: RecoveryManifest | undefined;
-      const pendingClipWrites: { value: AnimationEntry; key: string }[] = [];
+      const pendingClipWrites: { value: unknown; key: string }[] = [];
       let pendingClipIndex = 0;
       const abortTransaction = (error: unknown) => {
         clipWriteError ??= error instanceof Error ? error : Error(String(error));
@@ -1081,6 +1366,7 @@ export function writeRecovery(data: AnimationLibrary): Promise<void> {
           ) {
             const pending = pendingClipWrites[pendingClipIndex];
             const request = store.put(pending.value, pending.key);
+            pending.value = undefined;
             request.onerror = () => {
               clipWriteError ??= request.error ?? Error('Recovery clip write failed.');
             };
@@ -1123,15 +1409,35 @@ export function writeRecovery(data: AnimationLibrary): Promise<void> {
           const latest = current.sessions.find((item) => item.id === sessionId)?.generations[0];
           committedDocumentId = documentRecoveryId(clips, latest, committedDocumentId);
           const oldReferences = new Map(latest?.clips.map((clip) => [clip.id, clip.key]) ?? []);
+          const packedSourceKey = source ? sourceKey(sessionId, generationId) : undefined;
+          const sourceReferencePrefix = `${RECOVERY}:source:`;
+          let sourceUsed = false;
           const references = clips.map((clip) => {
             const changed = clipChanged(previousClips.get(clip.id), clip, data.activeId);
-            const key = changed
-              ? clipKey(sessionId, generationId, clip.id)
-              : (oldReferences.get(clip.id) ?? clipKey(sessionId, generationId, clip.id));
-            if (changed || !oldReferences.has(clip.id))
+            const oldKey = oldReferences.get(clip.id);
+            const reuseSource =
+              reuseSourceClips &&
+              previousClips.has(clip.id) &&
+              oldKey?.startsWith(sourceReferencePrefix) === true;
+            const useSource =
+              !reuseSource && !!packedSourceKey && !!sourceClipIds?.has(clip.id) && changed;
+            const key = reuseSource
+              ? oldKey!
+              : useSource
+                ? packedSourceKey!
+                : changed
+                  ? clipKey(sessionId, generationId, clip.id)
+                  : (oldKey ?? clipKey(sessionId, generationId, clip.id));
+            if (useSource) sourceUsed = true;
+            else if (!reuseSource && (changed || !oldReferences.has(clip.id)))
               pendingClipWrites.push({ value: canonicalRecoveryClip(clip, context), key });
             return { id: clip.id, key };
           });
+          if (sourceUsed)
+            pendingClipWrites.unshift({
+              value: { poseRecoverySourceFormat: 1, bytes: source!.bytes },
+              key: packedSourceKey!,
+            });
           pendingManifest = addRecoveryGeneration(current, {
             id: generationId,
             sessionId,

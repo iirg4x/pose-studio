@@ -1,5 +1,6 @@
 import { IDBDatabase as FakeIDBDatabase, indexedDB as fakeIndexedDB } from 'fake-indexeddb';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { encodeProject } from '../shared/project-codec.mjs';
 import { blankProject } from '../src/core/assets';
 import { validateLibrary } from '../src/core/library';
 import type { AnimationEntry, AnimationLibrary } from '../src/core/library';
@@ -7,6 +8,7 @@ import { addAnimationLayer } from '../src/core/layers';
 import { clone, createBodyAction, createProject, pose, putKey } from '../src/core/model';
 import type { Project } from '../src/core/model';
 import type { RecoveryManifest } from '../src/platform/recoveryGenerations';
+import { decode64 } from '../src/platform/portableAssets';
 
 const sessionKey = 'manny-studio-library-v3:session:v2';
 const manifestKey = 'manny-studio-library-v3:manifest:v2';
@@ -165,11 +167,11 @@ describe('IndexedDB recovery persistence', () => {
 
     const missingTab = await loadTab('tab-a');
     await missingTab.initializeStorage();
-    expect(missingTab.getRecoveryState().writeHeld).toBe(true);
     const missingCandidates = missingTab.readRecoveryCandidates();
     await expect(missingTab.readRecoveryCandidate(missingCandidates[0])).rejects.toThrow(
       'missing stored animation data',
     );
+    expect(missingTab.getRecoveryState().writeHeld).toBe(true);
     const completeFallback = await missingTab.readRecoveryCandidate(missingCandidates[1]);
     expect((completeFallback as AnimationLibrary).clips).toHaveLength(2);
     await missingTab.resolveFailedRecovery('discard');
@@ -540,6 +542,364 @@ describe('IndexedDB recovery persistence', () => {
     expect(unresolvedBody.otherTracks).toEqual(originalUnresolvedOtherTracks);
     const restored = validateLibrary({ ...data, clips: [...storedById.values()] });
     expect(restored).toEqual(validateLibrary(data));
+  });
+
+  it('stores eligible fresh source bytes once and overlays recovery views on expansion', async () => {
+    const writer = await loadTab('compact-source-writer');
+    await writer.initializeStorage();
+    const sourceData = library(
+      'Compact source',
+      [entry('raw-a', blankProject()), entry('raw-b', blankProject())],
+      'raw-a',
+    );
+    const data = clone(sourceData) as AnimationLibrary;
+    data.clips[0].frame = 19;
+    data.clips[0].folder = ['Weapons', 'Axe'];
+    data.clips[1].frame = 7;
+    data.clips[1].selected = 'hand_l';
+    const bytes = await encodeProject(sourceData);
+    await writer.writeRecovery(data, {
+      bytes,
+      clipIds: new Set(data.clips.map((clip) => clip.id)),
+    });
+
+    const manifest = (await writer.readAsset(manifestKey)) as RecoveryManifest;
+    const generation = manifest.sessions
+      .flatMap((session) => session.generations)
+      .find((item) => item.sessionId === 'compact-source-writer')!;
+    expect(new Set(generation.clips.map((clip) => clip.key)).size).toBe(1);
+    const sourceReference = generation.clips[0];
+    const stored = (await writer.readAsset(sourceReference.key)) as {
+      poseRecoverySourceFormat: number;
+      bytes: Uint8Array;
+    };
+    expect(stored.poseRecoverySourceFormat).toBe(1);
+    expect(stored.bytes).toEqual(bytes);
+
+    const reader = await loadTab('compact-source-reader');
+    await reader.initializeStorage();
+    const candidate = reader.readRecoveryCandidates()[0];
+    candidate.data = undefined;
+    const restored = (await reader.readRecoveryCandidate(candidate)) as AnimationLibrary;
+    expect(restored.clips.map((clip) => [clip.id, clip.frame])).toEqual([
+      ['raw-a', 19],
+      ['raw-b', 7],
+    ]);
+    expect(restored.clips[0].folder).toEqual(['Weapons', 'Axe']);
+    expect(restored.clips[1].selected).toBe('hand_l');
+    expect(validateLibrary(restored)).toEqual(validateLibrary(data));
+  });
+
+  it('reuses trusted source references across navigation saves and replaces edited clips natively', async () => {
+    const writer = await loadTab('compact-source-reuse-writer');
+    await writer.initializeStorage();
+    const authored = library(
+      'Compact source reuse',
+      [entry('raw', blankProject()), entry('native', blankProject())],
+      'native',
+    );
+    const sourceBytes = await encodeProject(authored);
+    await writer.writeRecovery(authored, {
+      bytes: sourceBytes,
+      clipIds: new Set(['raw']),
+    });
+
+    const firstManifest = (await writer.readAsset(manifestKey)) as RecoveryManifest;
+    const first = firstManifest.sessions.find(
+      (session) => session.id === 'compact-source-reuse-writer',
+    )!.generations[0];
+    const firstRawKey = first.clips.find((clip) => clip.id === 'raw')!.key;
+    const firstNativeKey = first.clips.find((clip) => clip.id === 'native')!.key;
+    expect(firstRawKey.startsWith('manny-studio-library-v3:source:')).toBe(true);
+    expect(firstNativeKey.startsWith('manny-studio-library-v3:source:')).toBe(false);
+
+    const navigation = clone(authored) as AnimationLibrary;
+    navigation.activeId = 'raw';
+    navigation.clips[0].frame = 19;
+    navigation.clips[0].selected = 'hand_l';
+    navigation.clips[0].folder = ['Weapons', 'Axe'];
+    await writer.writeRecovery(navigation, undefined, { reuseSourceClips: true });
+
+    const secondManifest = (await writer.readAsset(manifestKey)) as RecoveryManifest;
+    const second = secondManifest.sessions.find(
+      (session) => session.id === 'compact-source-reuse-writer',
+    )!.generations[0];
+    expect(second.clips.find((clip) => clip.id === 'raw')!.key).toBe(firstRawKey);
+    // Native records keep the normal copy-on-write path; only packed sources
+    // use the trusted view-only reference optimization.
+    expect(second.clips.find((clip) => clip.id === 'native')!.key).not.toBe(firstNativeKey);
+
+    const reader = await loadTab('compact-source-reuse-reader');
+    await reader.initializeStorage();
+    const restoredNavigation = (await reader.readRecoveryCandidate(
+      reader.readRecoveryCandidates()[0],
+    )) as AnimationLibrary;
+    const restoredRaw = restoredNavigation.clips.find((clip) => clip.id === 'raw')!;
+    expect(restoredNavigation.activeId).toBe('raw');
+    expect(restoredRaw.frame).toBe(19);
+    expect(restoredRaw.selected).toBe('hand_l');
+    expect(restoredRaw.folder).toEqual(['Weapons', 'Axe']);
+    expect(restoredRaw.project).toEqual(authored.clips[0].project);
+
+    const edited: AnimationLibrary = {
+      ...navigation,
+      clips: [
+        {
+          ...navigation.clips[0],
+          project: { ...navigation.clips[0].project, name: 'Edited authored clip' },
+        },
+        navigation.clips[1],
+      ],
+    };
+    await writer.writeRecovery(edited);
+    const thirdManifest = (await writer.readAsset(manifestKey)) as RecoveryManifest;
+    const third = thirdManifest.sessions.find(
+      (session) => session.id === 'compact-source-reuse-writer',
+    )!.generations[0];
+    const thirdRawKey = third.clips.find((clip) => clip.id === 'raw')!.key;
+    expect(thirdRawKey).not.toBe(firstRawKey);
+    expect(thirdRawKey.startsWith('manny-studio-library-v3:source:')).toBe(false);
+
+    const editedReader = await loadTab('compact-source-reuse-edited-reader');
+    await editedReader.initializeStorage();
+    const restoredEdit = (await editedReader.readRecoveryCandidate(
+      editedReader.readRecoveryCandidates()[0],
+    )) as AnimationLibrary;
+    expect(restoredEdit.clips.find((clip) => clip.id === 'raw')?.project.name).toBe(
+      'Edited authored clip',
+    );
+    expect(restoredEdit.clips.find((clip) => clip.id === 'raw')?.frame).toBe(19);
+  });
+
+  it('stores and expands a Blob recovery source without copying it per clip', async () => {
+    const writer = await loadTab('compact-source-blob-writer');
+    await writer.initializeStorage();
+    const sourceData = library('Compact Blob source', [entry('blob', blankProject())], 'blob');
+    const data = clone(sourceData) as AnimationLibrary;
+    data.clips[0].frame = 23;
+    const bytes = await encodeProject(sourceData);
+    const compressed = new Blob([bytes], { type: 'application/gzip' });
+    const compressedBytes = new Uint8Array(await compressed.arrayBuffer());
+    await writer.writeRecovery(data, {
+      bytes: compressed,
+      clipIds: new Set(['blob']),
+    });
+
+    const manifest = (await writer.readAsset(manifestKey)) as RecoveryManifest;
+    const generation = manifest.sessions
+      .flatMap((session) => session.generations)
+      .find((item) => item.sessionId === 'compact-source-blob-writer')!;
+    const stored = (await writer.readAsset(generation.clips[0].key)) as {
+      poseRecoverySourceFormat: number;
+      bytes: Blob;
+    };
+    expect(stored.poseRecoverySourceFormat).toBe(1);
+    expect(stored.bytes).toBeInstanceOf(Blob);
+    expect(new Uint8Array(await stored.bytes.arrayBuffer())).toEqual(compressedBytes);
+
+    const reader = await loadTab('compact-source-blob-reader');
+    await reader.initializeStorage();
+    const restored = (await reader.readRecoveryCandidate(reader.readRecoveryCandidates()[0])) as
+      | AnimationLibrary
+      | undefined;
+    expect(restored?.clips[0].id).toBe('blob');
+    expect(restored?.clips[0].frame).toBe(23);
+    expect(validateLibrary(restored!)).toEqual(validateLibrary(data));
+  });
+
+  it('retains malformed recovery view metadata as an invalid clip instead of throwing', async () => {
+    const writer = await loadTab('compact-source-invalid-view-writer');
+    await writer.initializeStorage();
+    const data = library('Invalid recovery view', [entry('view', blankProject())], 'view');
+    const bytes = await encodeProject(data);
+    await writer.writeRecovery(data, { bytes, clipIds: new Set(['view']) });
+    const manifest = (await writer.readAsset(manifestKey)) as RecoveryManifest;
+    const generation = manifest.sessions
+      .flatMap((session) => session.generations)
+      .find((item) => item.sessionId === 'compact-source-invalid-view-writer')!;
+    (generation.metadata as unknown as Record<string, unknown>).poseRecoveryClipViews = {
+      view: { frame: 0, selected: 'root', drafts: {}, folder: 7 },
+    };
+    await writer.writeAsset(manifestKey, manifest);
+
+    const reader = await loadTab('compact-source-invalid-view-reader');
+    await reader.initializeStorage();
+    const candidate = reader.readRecoveryCandidates()[0];
+    const payload = (await reader.readRecoveryCandidate(candidate)) as AnimationLibrary & {
+      poseRecoveryClipViews?: Record<string, unknown>;
+    };
+    expect(payload.clips[0].project.version).toBe(0);
+    const sources = (
+      payload as unknown as { poseRecoverySources: Record<string, { bytes: Uint8Array }> }
+    ).poseRecoverySources;
+    expect(sources[generation.clips[0].key].bytes).toEqual(bytes);
+    expect(payload.poseRecoveryClipViews?.view).toEqual({
+      frame: 0,
+      selected: 'root',
+      drafts: {},
+      folder: 7,
+    });
+  });
+
+  it('replaces edited source clips natively while retaining unchanged source references', async () => {
+    const writer = await loadTab('compact-source-edits');
+    await writer.initializeStorage();
+    const initial = library(
+      'Compact source edits',
+      [entry('raw', blankProject()), entry('native', blankProject())],
+      'native',
+    );
+    const sourceBytes = await encodeProject(initial);
+    await writer.writeRecovery(initial, {
+      bytes: sourceBytes,
+      clipIds: new Set(['raw']),
+    });
+    const firstManifest = (await writer.readAsset(manifestKey)) as RecoveryManifest;
+    const first = firstManifest.sessions.find((session) => session.id === 'compact-source-edits')!
+      .generations[0];
+    const sourceKey = first.clips.find((clip) => clip.id === 'raw')!.key;
+    const firstNativeKey = first.clips.find((clip) => clip.id === 'native')!.key;
+    expect(firstNativeKey).not.toBe(sourceKey);
+
+    const edited: AnimationLibrary = {
+      ...initial,
+      clips: [
+        initial.clips[0],
+        {
+          ...initial.clips[1],
+          project: { ...initial.clips[1].project, name: 'Edited native clip' },
+        },
+      ],
+    };
+    await writer.writeRecovery(edited);
+    const secondManifest = (await writer.readAsset(manifestKey)) as RecoveryManifest;
+    const second = secondManifest.sessions.find((session) => session.id === 'compact-source-edits')!
+      .generations[0];
+    expect(second.clips.find((clip) => clip.id === 'raw')!.key).toBe(sourceKey);
+    expect(second.clips.find((clip) => clip.id === 'native')!.key).not.toBe(firstNativeKey);
+    expect(second.clips.find((clip) => clip.id === 'native')!.key).not.toBe(sourceKey);
+
+    const reader = await loadTab('compact-source-edits-reader');
+    await reader.initializeStorage();
+    const restored = (await reader.readRecoveryCandidate(reader.readRecoveryCandidates()[0])) as
+      | AnimationLibrary
+      | undefined;
+    expect(restored?.clips.find((clip) => clip.id === 'raw')?.project.name).toBe(
+      initial.clips[0].project.name,
+    );
+    expect(restored?.clips.find((clip) => clip.id === 'native')?.project.name).toBe(
+      'Edited native clip',
+    );
+  });
+
+  it('keeps linked body-base clips native when their source clip is edited', async () => {
+    const writer = await loadTab('compact-source-linked-writer');
+    await writer.initializeStorage();
+    const sourceProject = addAnimationLayer(createProject({}, false), 'pose');
+    const sourceClip = entry('source', sourceProject);
+    const linkedClip = entry('linked', createBodyAction(sourceProject, sourceClip.id));
+    const initial = library('Compact linked source', [sourceClip, linkedClip], 'linked');
+    const bytes = await encodeProject(initial);
+    await writer.writeRecovery(initial, {
+      bytes,
+      clipIds: new Set(['source']),
+    });
+    const firstManifest = (await writer.readAsset(manifestKey)) as RecoveryManifest;
+    const first = firstManifest.sessions.find(
+      (session) => session.id === 'compact-source-linked-writer',
+    )!.generations[0];
+    const firstSourceKey = first.clips.find((clip) => clip.id === 'source')!.key;
+    expect(first.clips.find((clip) => clip.id === 'linked')!.key).not.toBe(firstSourceKey);
+
+    const editedSourceProject = { ...sourceProject, name: 'Edited source' };
+    const editedLinkedProject = {
+      ...linkedClip.project,
+      bodyBase: {
+        ...linkedClip.project.bodyBase!,
+        source: editedSourceProject,
+      },
+      otherTracks: editedSourceProject.tracks,
+    };
+    const edited: AnimationLibrary = {
+      ...initial,
+      clips: [
+        { ...sourceClip, project: editedSourceProject },
+        { ...linkedClip, project: editedLinkedProject },
+      ],
+    };
+    await writer.writeRecovery(edited);
+    const secondManifest = (await writer.readAsset(manifestKey)) as RecoveryManifest;
+    const second = secondManifest.sessions.find(
+      (session) => session.id === 'compact-source-linked-writer',
+    )!.generations[0];
+    expect(second.clips.find((clip) => clip.id === 'source')!.key).not.toBe(firstSourceKey);
+    expect(second.clips.find((clip) => clip.id === 'linked')!.key).not.toBe(firstSourceKey);
+
+    const reader = await loadTab('compact-source-linked-reader');
+    await reader.initializeStorage();
+    const restored = (await reader.readRecoveryCandidate(
+      reader.readRecoveryCandidates()[0],
+    )) as AnimationLibrary;
+    expect(restored.clips.find((clip) => clip.id === 'source')?.project.name).toBe('Edited source');
+    expect(restored.clips.find((clip) => clip.id === 'linked')?.project.bodyBase?.source.name).toBe(
+      'Edited source',
+    );
+  });
+
+  it('keeps an invalid compact source as one quarantine payload', async () => {
+    const writer = await loadTab('compact-source-invalid-writer');
+    await writer.initializeStorage();
+    const sourceKey = 'manny-studio-library-v3:source:compact-source-invalid-writer:bad';
+    const badBytes = new Uint8Array([0, 1, 2]);
+    const source = {
+      poseRecoverySourceFormat: 2,
+      bytes: new Blob([badBytes], { type: 'application/gzip' }),
+    };
+    await writer.writeAsset(sourceKey, source);
+    const sourceMetadata = library('Invalid compact source', [entry('bad', blankProject())], 'bad');
+    const { clips: _clips, ...metadata } = sourceMetadata;
+    await writer.writeAsset(manifestKey, {
+      format: 2,
+      sessions: [
+        {
+          id: 'compact-source-invalid-writer',
+          updatedAt: Date.now(),
+          generations: [
+            {
+              id: 'bad-generation',
+              sessionId: 'compact-source-invalid-writer',
+              documentId: 'bad-document',
+              createdAt: Date.now(),
+              metadata,
+              clips: [{ id: 'bad', key: sourceKey }],
+            },
+          ],
+        },
+      ],
+    } satisfies RecoveryManifest);
+    const reader = await loadTab('compact-source-invalid-reader');
+    await reader.initializeStorage();
+    const candidate = reader.readRecoveryCandidates()[0];
+    const payload = (await reader.readRecoveryCandidate(candidate)) as AnimationLibrary & {
+      poseRecoverySources?: Record<string, unknown>;
+    };
+    expect(payload.clips[0].project.version).toBe(0);
+    const storedSource = payload.poseRecoverySources?.[sourceKey] as {
+      poseRecoverySourceFormat: number;
+      bytes: Blob;
+    };
+    expect(storedSource.poseRecoverySourceFormat).toBe(2);
+    expect(new Uint8Array(await storedSource.bytes.arrayBuffer())).toEqual(badBytes);
+    await reader.rejectRecoveryCandidate(candidate, Error('invalid compact source'));
+    const failed = await reader.readFailedRecovery();
+    expect(failed).not.toBeNull();
+    const failedPayload = JSON.parse(failed!.content) as {
+      poseRecoverySources?: Record<string, { bytes?: { encoding?: string; data?: string } }>;
+    };
+    const encoded = failedPayload.poseRecoverySources?.[sourceKey]?.bytes;
+    expect(encoded?.encoding).toBe('base64');
+    expect(decode64(encoded!.data!)).toEqual(badBytes);
+    await reader.resolveFailedRecovery('discard');
   });
 
   it('batches recovery clip writes and rolls back a later batch failure', async () => {

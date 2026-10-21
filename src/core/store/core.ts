@@ -72,6 +72,9 @@ export interface StudioState {
 /** State, subscriptions, batching, undo history, gestures and snapshots. */
 export abstract class StoreCore {
   readonly displayClock = new DisplayClock();
+  private authoredRevisionValue = 0;
+  /** Navigation patches can replace editable references without changing content. */
+  protected suppressAuthoredRevision = false;
   state: StudioState = {
     footPivot: 'ankle',
     multiSelect: false,
@@ -144,6 +147,9 @@ export abstract class StoreCore {
   protected gesture: Project | null = null;
   protected gestureChanged = false;
   protected gestureFrame: number | null = null;
+  get authoredRevision() {
+    return this.authoredRevisionValue;
+  }
   subscribe = (fn: () => void) => {
     this.listeners.add(fn);
     return () => {
@@ -169,8 +175,31 @@ export abstract class StoreCore {
       }
     }
   }
+  private draftsMeaningfullyChanged(next: StudioState['drafts'] | undefined) {
+    const previous = this.state.drafts,
+      current = next ?? {},
+      previousKeys = Object.keys(previous) as ControlId[],
+      currentKeys = Object.keys(current);
+    if (!previousKeys.length && !currentKeys.length) return false;
+    // A same-reference draft patch may follow an in-place change. Treat it as
+    // authored whenever drafts are present because that case cannot be
+    // distinguished from an unchanged object after the mutation.
+    if (previous === current) return true;
+    if (previousKeys.length !== currentKeys.length) return true;
+    return previousKeys.some((id) => JSON.stringify(previous[id]) !== JSON.stringify(current[id]));
+  }
+  private authoredContentChanged(p: Partial<StudioState>) {
+    if (this.suppressAuthoredRevision) return false;
+    const has = (key: keyof StudioState) => Object.prototype.hasOwnProperty.call(p, key);
+    if (has('revision') || has('project') || has('workspace')) return true;
+    if (has('drafts') && this.draftsMeaningfullyChanged(p.drafts)) return true;
+    return (
+      has('frame') && p.frame !== this.state.frame && Object.keys(this.state.drafts).length > 0
+    );
+  }
   patch(p: Partial<StudioState>) {
     if (p.selected && !p.selection) p.selection = [p.selected];
+    if (this.authoredContentChanged(p)) this.authoredRevisionValue++;
     this.state = { ...this.state, ...p };
     this.notify();
   }

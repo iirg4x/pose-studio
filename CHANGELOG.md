@@ -1,3 +1,9 @@
+## 0.8.41 — faster complete project opening and recovery
+
+Full weapon-project opening, including committed recovery saving and responsive input, falls from a 16.15-second median to 10.94 seconds across three local production-PWA observations per build. Reload and recovery fall from 10.49 to 8.53 seconds. All 627 animations and 79 embedded assets are included. See [loading-performance.md](docs/loading-performance.md) for ranges and the complete endpoint.
+
+Large gzip documents use bounded native decompression in a module worker. Recovery stores the original compressed source once and shares it across unchanged eligible clips; authored edits retain canonical native recovery. Startup overlaps recovery reads with model preparation. Verified clean receipts survive animation navigation, view-state saves reuse the existing curve records, and completed recovery writes avoid duplicate unload flushes. Exact v4 signatures, v3 compatibility, validation and failed-recovery preservation remain intact. All 708 tests across 116 files, type checks, Knip and the PWA build pass.
+
 ## 0.8.40 — Blender interpolation parity and loading pipeline hardening
 
 Interpolation now uses one canonical catalogue of Blender-compatible Constant, Linear, Bézier, Sinusoidal, Quadratic, Cubic, Quartic, Quintic, Exponential, Circular, Back, Bounce and Elastic modes. Auto, In, Out and InOut easing choices use the same picker; Elastic follows Blender's BLI behavior with amplitude in native channel units, a frame-based period and equal-endpoint oscillation. Baked equal-endpoint samples can be reconstructed as Elastic when validation supports it. Position and grip amplitudes retain the correct units through track and key edits. Legacy Spring and Bounce forms remain preserved outside the canonical manual choices for compatible projects and sampled fits.

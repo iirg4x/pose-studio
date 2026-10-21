@@ -1,3 +1,4 @@
+import { discardProjectRecoveryRecords } from './platform/projectDocuments';
 import { useCompactViewport } from './hooks/compactViewport';
 import { FailureNotice } from './components/FailureNotice';
 import { PoseActions } from './components/PoseActions';
@@ -11,7 +12,7 @@ import {
   notifyPwaIdle,
   appInstallSnapshot,
 } from './platform/pwa';
-import { getRecoveryState, subscribeRecoveryState } from './platform/storage';
+import { getRecoveryState, readRecovery, subscribeRecoveryState } from './platform/storage';
 import { useSurfaceOcclusion } from './hooks/surfaceOcclusion';
 import { DesktopWorkspace, useDesktopLayout } from './components/DesktopWorkspace';
 import { MenuBar, ContextMenu } from './components/MenuBar';
@@ -120,6 +121,14 @@ export default function App() {
     [recording, setRecording] = useState(false),
     [characterExport, setCharacterExport] = useState(false),
     [saved, setSaved] = useState('Recovery copy'),
+    recoveryReceipt = useRef<{
+      project: typeof studio.state.project;
+      workspace: typeof studio.state.workspace;
+      drafts: typeof studio.state.drafts;
+      revision: number;
+      authoredRevision: number;
+    } | null>(null),
+    initialRecoverySeeded = useRef(false),
     [help, setHelp] = useState(false),
     fileInput = useRef<HTMLInputElement>(null),
     projectMenu = useRef<HTMLDivElement>(null),
@@ -288,6 +297,17 @@ export default function App() {
       document.removeEventListener('contextmenu', menu, true);
     };
   }, []);
+  const onRecoverySaved = useCallback(() => {
+    const { project, workspace, drafts, revision } = studio.state;
+    recoveryReceipt.current = {
+      project,
+      workspace,
+      drafts,
+      revision,
+      authoredRevision: studio.authoredRevision,
+    };
+    setSaved('Recovery copy up to date');
+  }, []);
   const setRuntime = useCallback((r: StudioScene | null) => {
     runtime.current = r;
     setInspectorRuntime(r);
@@ -298,10 +318,23 @@ export default function App() {
   }, []);
   useEffect(() => {
     const flush = () => {
+      const receipt = recoveryReceipt.current,
+        state = studio.state;
+      if (
+        receipt &&
+        receipt.project === state.project &&
+        receipt.workspace === state.workspace &&
+        receipt.drafts === state.drafts &&
+        receipt.revision === state.revision &&
+        receipt.authoredRevision === studio.authoredRevision
+      )
+        return;
       const data = studio.recoverySnapshot();
       if (data)
         try {
-          void writeRecovery(data).catch(() => {});
+          void writeRecovery(data, undefined, {
+            reuseSourceClips: receipt?.authoredRevision === studio.authoredRevision,
+          }).catch(() => {});
         } catch {}
     };
     const hidden = () => {
@@ -320,19 +353,25 @@ export default function App() {
       s.ready,
       exporting || recording || characterExport || importing || assets || !!newAction,
       async (shouldCancel) => runtime.current?.settled(30000, shouldCancel),
+      onRecoverySaved,
     ),
     save = file.save;
   const importMode = useRef(false);
   const receive = (p: unknown, merge: boolean) => {
-    if (merge) studio.importAnimations(p);
-    else file.requestOpen(p);
+    if (merge) {
+      try {
+        studio.importAnimations(p);
+      } finally {
+        void discardProjectRecoveryRecords(p).catch(() => {});
+      }
+    } else file.requestOpen(p);
   };
   const open = async (merge = false) => {
     importMode.current = merge;
     if (window.studioDesktop) {
       if (!merge) studio.patch({ opening: { name: 'project', stage: 'Reading file' } });
       try {
-        const p = await window.studioDesktop.openProject();
+        const p = await window.studioDesktop.openProject({ recovery: !merge });
         if (p) receive(p, merge);
         else if (!merge) studio.patch({ opening: null });
       } catch (e) {
@@ -365,23 +404,85 @@ export default function App() {
     // Opening commits its validated snapshot explicitly. Let it finish before
     // a background autosave serializes the same large library again.
     if (!s.project || s.opening) return;
-    setSaved('Saving…');
-    const t = setTimeout(async () => {
-      try {
-        const data = studio.recoverySnapshot();
-        if (data) await writeRecovery(data);
+    // Workspace init has already validated and accepted a durable recovery
+    // payload before installing this state. Seed the receipt once when the
+    // exact accepted workspace is still current, so startup does not rewrite
+    // the full library. A failed/fallback recovery has a different identity
+    // and continues through the normal autosave path.
+    if (!initialRecoverySeeded.current) {
+      initialRecoverySeeded.current = true;
+      const durable = readRecovery();
+      if (durable && !getRecoveryState().writeHeld && studio.state.workspace === durable) {
+        const { project, workspace, drafts, revision } = studio.state;
+        recoveryReceipt.current = {
+          project,
+          workspace,
+          drafts,
+          revision,
+          authoredRevision: studio.authoredRevision,
+        };
         setSaved('Recovery copy up to date');
-      } catch (error) {
-        if (getRecoveryState().writeHeld) {
-          setSaved('Recovery needs attention');
-          return;
-        }
-        setSaved('Save needed · autosave full');
-        reportFailure('Could not save local recovery: ' + (error as Error).message);
+        return;
       }
+    }
+    const captured = {
+      project: studio.state.project,
+      workspace: studio.state.workspace,
+      drafts: studio.state.drafts,
+      revision: studio.state.revision,
+      authoredRevision: studio.authoredRevision,
+    };
+    const receipt = recoveryReceipt.current;
+    if (
+      receipt &&
+      receipt.project === captured.project &&
+      receipt.workspace === captured.workspace &&
+      receipt.drafts === captured.drafts &&
+      receipt.revision === captured.revision &&
+      receipt.authoredRevision === captured.authoredRevision
+    ) {
+      setSaved('Recovery copy up to date');
+      return;
+    }
+    setSaved('Saving…');
+    const t = setTimeout(() => {
+      void (async () => {
+        try {
+          const data = studio.recoverySnapshot();
+          if (data)
+            await writeRecovery(data, undefined, {
+              reuseSourceClips:
+                recoveryReceipt.current?.authoredRevision === studio.authoredRevision,
+            });
+          const current = studio.state;
+          if (
+            current.project === captured.project &&
+            current.workspace === captured.workspace &&
+            current.drafts === captured.drafts &&
+            current.revision === captured.revision &&
+            studio.authoredRevision === captured.authoredRevision
+          ) {
+            recoveryReceipt.current = {
+              project: captured.project,
+              workspace: captured.workspace,
+              drafts: captured.drafts,
+              revision: captured.revision,
+              authoredRevision: captured.authoredRevision,
+            };
+            setSaved('Recovery copy up to date');
+          }
+        } catch (error) {
+          if (getRecoveryState().writeHeld) {
+            setSaved('Recovery needs attention');
+            return;
+          }
+          setSaved('Save needed · autosave full');
+          reportFailure('Could not save local recovery: ' + (error as Error).message);
+        }
+      })();
     }, 650);
     return () => clearTimeout(t);
-  }, [s.project, s.workspace, s.drafts, s.opening]);
+  }, [s.project, s.workspace, s.drafts, s.revision, s.opening, studio.authoredRevision]);
   const updateBlocked = useRef(false);
   updateBlocked.current =
     exporting ||

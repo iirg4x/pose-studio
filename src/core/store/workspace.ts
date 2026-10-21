@@ -88,12 +88,15 @@ export class WorkspaceStore extends SelectionStore {
 
   /** Apply a navigation patch without creating an editable-workspace history entry. */
   protected patchNavigation(value: Partial<StudioState>) {
-    const replaying = this.workspaceHistoryReplay;
+    const replaying = this.workspaceHistoryReplay,
+      suppressing = this.suppressAuthoredRevision;
     this.workspaceHistoryReplay = true;
+    this.suppressAuthoredRevision = true;
     try {
       this.patch(value);
     } finally {
       this.workspaceHistoryReplay = replaying;
+      this.suppressAuthoredRevision = suppressing;
     }
   }
 
@@ -444,7 +447,6 @@ export class WorkspaceStore extends SelectionStore {
     this.workspacePast = [];
     this.workspaceFuture = [];
     this.pendingWorkspaceHistoryBefore = null;
-    for (const clip of workspace.clips) hydratePropTracks(clip.project);
     const active = workspace.clips.find((c) => c.id === workspace.activeId)!;
     const replaying = this.workspaceHistoryReplay;
     this.workspaceHistoryReplay = true;

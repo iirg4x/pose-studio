@@ -132,7 +132,7 @@ export async function initializeBrowser() {
         writeProjectAssets,
       );
     },
-    openProject: async () => {
+    openProject: async (options) => {
       const file = await pick('.pose,.json,.manny');
       if (!file) return null;
       if (file.size > 512 * 1024 * 1024) throw Error('Choose a project below 512 MB');
@@ -140,6 +140,7 @@ export async function initializeBrowser() {
         new Uint8Array(await file.arrayBuffer()),
         (id, data) => writeAsset('asset:' + id, data),
         writeProjectAssets,
+        options?.recovery !== false,
       );
     },
     takeProject: async () => null,

@@ -1,39 +1,48 @@
 # Loading performance measurements
 
-This note records the current end-to-end loading measurements for Pose Studio 0.8.40. It exists so future optimization work compares the same user-visible endpoints instead of reporting decoder time as project-open time.
+Pose Studio 0.8.41 reduces complete weapon-project opening and recovery time. The measurements below include recovery saving and actual input response.
 
-## Scope and measurement contract
+## Measurement contract
 
-The measured source is the original, unmodified `Animated Low Poly Weapons - Layered Pack.pose`: 131,649,004 compressed bytes, 627 clips and 79 embedded asset records. The comparison uses the latest matched local production-PWA builds, 0.8.39 and 0.8.40. It is a local application measurement, not an Internet download test: localhost responses used `cache-control: no-store`, and service workers were blocked.
+The source is the original, unmodified `Animated Low Poly Weapons - Layered Pack.pose`: 131,649,004 compressed bytes, 627 clips and 79 embedded asset records. Three completed observations of 0.8.40 are compared with three observations of the final 0.8.41 production PWA. Each run uses a fresh Chromium 156.0.8078.4 context on Windows, an i9-14900K and an RTX 4090 through D3D11. Responses are local with `cache-control: no-store`; service workers are blocked. This measures application loading, not Internet delivery.
 
-The runs used a fresh Chromium 156.0.8078.4 context on Windows with an i9-14900K, 32 logical threads and an RTX 4090 using D3D11. For full file opening, the first-usable endpoint waits for all 627 clips to be available, the opening state to clear, active and preview props to finish loading, retargeting to be ready, two animation frames to complete, and a real input event to be accepted. Recovery transaction completion is reported separately rather than being treated as finished at the first usable frame.
+File-open timing begins before the file is supplied to the chooser. It includes source reading, decompression, parsing, validation, all embedded-asset checks and writes, active/preview model loading, retargeting, the exact canonical save signature and recovery saving. The endpoint requires the opening state to clear, a real application-menu click and Escape to respond, the recovery indicator to be up to date, zero pending IndexedDB write transactions, 750 ms since the last write, and two rendered animation frames.
 
-The full-open interval includes source read, decoding, validation, all embedded-asset validation/cache writes, active and preview model preparation, save-signature work, viewport preparation and the first usable workspace. Animation-open timings include the selected animation becoming usable. Recovery timings include the recovery transaction completion where stated.
+Recovery timing starts before page reload, including the old page's before-unload work. Animation switches and their autosaves finish before reload, and recovery must restore the latest selected animation. Frame-input checks run after the timed phase because seeking creates autosave work.
 
-## Latest matched pair
+## Matched observations
 
-Times are wall-clock seconds. “Before” is 0.8.39 and “After” is 0.8.40.
+Times are seconds. Medians and ranges describe these three runs per build on this shared machine; they are not guarantees for other devices or workloads.
 
-| User-visible operation | 0.8.39 | 0.8.40 | Change |
+| Operation | 0.8.40 median (range) | 0.8.41 median (range) | Median change |
 | --- | ---: | ---: | ---: |
-| Startup to blank editor | 2.086 | 1.986 | -0.100 |
-| Full file open through actual last-frame/first-frame response | 12.2304 | 9.3853 | -2.8451 |
-| Background recovery transaction completion, measured from file-open start | 12.8836 | 11.9226 | -0.9610 |
-| Open the same weapon animation | 0.488 | 0.403 | -0.085 |
-| Open a new weapon animation | 0.790 | 0.743 | -0.047 |
-| Full page reload plus recovery | 16.229 | 8.681 | -7.548 |
-| Recovery from new-document navigation | 13.7871 | 6.6463 | -7.1408 |
+| Full project open, durable and responsive | 16.152 (13.635–16.380) | 10.941 (10.747–11.280) | 32.3% less time |
+| Full reload and recovery, durable and responsive | 10.492 (10.207–10.552) | 8.531 (7.712–8.639) | 18.7% less time |
+| Blank editor startup | 2.965 (2.773–3.133) | 2.819 (2.712–3.004) | 4.9% less time |
 
-The full page-reload clock begins before reload and includes the before-unload dirty comparison in both builds; the new-document navigation row starts when the new document begins loading. The latest pair is an observed comparison on this machine and load state, not a best-case, median or guarantee. Full weapon-project opening still takes about 9.4 seconds, so the loading path remains an optimization target.
+The blank-startup ranges overlap, so the main demonstrated gains are full-project opening and recovery. Final animation switches took 0.480–0.541 seconds for another animation using the same weapon, and 0.800–0.844 seconds for a different weapon. The earlier approximately 9.4-second 0.8.40 result excluded recovery saving and does not satisfy this endpoint.
 
-## Changes represented by the comparison
+| Observation | Full open | Full recovery |
+| --- | ---: | ---: |
+| 0.8.40: final-before-2 | 13.635 | 10.492 |
+| 0.8.40: final-before-3 | 16.152 | 10.207 |
+| 0.8.40: matched-before-4 | 16.380 | 10.552 |
+| 0.8.41: final-worker-after-1-qa | 10.941 | 8.639 |
+| 0.8.41: final-worker-after-2 | 11.280 | 8.531 |
+| 0.8.41: final-worker-after-3 | 10.747 | 7.712 |
 
-Project signatures use canonical deduplication and asynchronous open-time comparison. Shared prop GLTF resources are cached and reference-counted across active and preview contexts, and Manny resources are reused. Recovery validates freshly read snapshots in place and keeps the durable original when validation fails. Imported embedded assets are validated before one atomic cache write. Startup uses the shared loading status, avoids rendering a covered scene before the workspace is ready, and loads Grip thumbnails lazily after the first usable view.
+## Loading changes
 
-Recovery writes yield between batches while retaining one atomic transaction. Each batch queues at most eight clip writes with an 8 ms enqueue budget. Tests verify rollback after a later-batch failure and restored-value equivalence after validating a canonical recovery snapshot.
+Large gzip inputs use native `DecompressionStream` in a module worker. Input views and transferred output batches are limited to 1 MiB, with four output credits bounding data queued ahead of parsing. The worker reports success after native gzip integrity validation and terminates on completion, cancellation or error. Worker-constructor and runtime failures retry through the native main-thread decoder with the intact source bytes. Small inputs and Blob callers retain the compatible native path. Manual UTF-8 decoding avoids an extra text-stream transform.
 
-## Verification context
+Recovery stores the original compressed source once. Eligible unchanged clips share that source reference; edited and ineligible clips use canonical native records. Source capture follows validation of all clips and assets. Recovery reads each shared source once, and failed recovery remains quarantinable and downloadable. Startup overlaps recovery preload with Manny preparation; recovery actions remain unavailable until the store is ready. Asset decoding uses native `fromBase64` when available, with the existing `atob` fallback.
 
-The release gate passed 679 tests across 115 files, including production and test type checks, Knip and the PWA build. The interpolation core matches 144 Blender 4.3.2 oracle cases with a worst absolute error of 2.567073e-6. Browser checks covered the 13 interpolation choices, dirty-operation cancellation, lazy Grip thumbnails, save/reopen, and compact desktop behavior.
+The exact v4 save signature and v3 compatibility remain unchanged. Open-time comparison yields between batches. A monotonic authored revision lets a verified clean receipt survive animation switching and empty-draft frame navigation; authored changes, drafts and undo invalidate it. View-only recovery writes persist metadata while reusing source-backed curves. Completed recovery receipts prevent duplicate unload flushes. The final full-pack run wrote one shared source record; navigating between the two tested animations added no native clip writes.
 
-These figures do not establish Internet delivery time, cold hardware behavior, or a universal improvement. Repeat the same endpoint definitions and source file when evaluating later changes, and keep the phase timings alongside the total so a faster decoder does not mask a slower validation, asset, model or signature phase.
+## Verification
+
+All 708 tests across 116 files passed, together with production/test type checks, Knip and the production PWA build. Focused coverage includes stream limits and Unicode seams, native gzip corruption, worker fallback and termination, source ownership, recovery rollback/quarantine, source-reference navigation and subsequent authored edits, and authored-revision invalidation.
+
+Every final browser run restored all 627 clips with the same complete canonical v4 authored-data signature, loaded the active and preview models without errors, completed real menu input, and ended with no pending writes or decoder workers. Additional QA verified playhead input, a persisted animation rename, reload after editing, and cancelling an open without losing the current project. Contexts, browsers and preview servers closed after every run.
+
+Keep this source and completion contract when comparing future changes. Decoder-only or first-paint timing cannot substitute for the complete loaded, saved and responsive endpoint.

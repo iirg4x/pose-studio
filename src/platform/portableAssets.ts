@@ -13,6 +13,10 @@ export function assertGLBSize(size: number) {
 }
 
 export function decode64(text: string) {
+  const binary = Uint8Array as typeof Uint8Array & {
+    fromBase64?: (value: string) => Uint8Array;
+  };
+  if (binary.fromBase64) return binary.fromBase64(text);
   const raw = atob(text),
     bytes = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);

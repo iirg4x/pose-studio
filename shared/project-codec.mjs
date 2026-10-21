@@ -72,14 +72,26 @@ export async function encodeProject(project) {
     await new Response(input.pipeThrough(new CompressionStream('gzip'))).arrayBuffer(),
   );
 }
-export async function decodeProject(bytes) {
-  if (bytes[0] !== 0x1f || bytes[1] !== 0x8b)
-    return valid(JSON.parse(new TextDecoder().decode(bytes)));
-  const reader = new Blob([bytes])
-    .stream()
-    .pipeThrough(new DecompressionStream('gzip'))
-    .pipeThrough(new TextDecoderStream())
-    .getReader();
+function gzipStream(input) {
+  if (input instanceof Blob) return input.stream().pipeThrough(new DecompressionStream('gzip'));
+  let offset = 0;
+  return new ReadableStream({
+    pull(controller) {
+      if (offset >= input.length) {
+        controller.close();
+        return;
+      }
+      const end = Math.min(offset + 1024 * 1024, input.length);
+      controller.enqueue(input.subarray(offset, end));
+      offset = end;
+    },
+  }).pipeThrough(new DecompressionStream('gzip'));
+}
+
+/** Decode the bounded newline-delimited record stream. */
+async function decodeProjectStream(source) {
+  const reader = source.getReader();
+  const decoder = new TextDecoder();
   let total = 0,
     line = 0,
     project,
@@ -129,33 +141,43 @@ export async function decodeProject(bytes) {
     } else if (row.kind === 'end') ended = true;
     else throw Error('Unknown Pose document record.');
   };
+  const consumeText = (text) => {
+    if (!text) return;
+    total += text.length;
+    if (total > MAX_TOTAL) throw Error('Project exceeds the document storage limit.');
+    let start = 0;
+    while (start < text.length) {
+      const newline = text.indexOf('\n', start);
+      if (newline < 0) {
+        const fragment = text.slice(start);
+        fragments.push(fragment);
+        recordLength += fragment.length;
+        if (recordLength > MAX_RECORD) throw Error('Project record is too large.');
+        break;
+      }
+      const fragment = text.slice(start, newline);
+      if (fragment) {
+        fragments.push(fragment);
+        recordLength += fragment.length;
+      }
+      if (recordLength > MAX_RECORD) throw Error('Project record is too large.');
+      record(fragments.join(''));
+      fragments = [];
+      recordLength = 0;
+      start = newline + 1;
+    }
+  };
   try {
     for (;;) {
       const { value, done } = await reader.read();
-      if (done) break;
-      total += value.length;
-      if (total > MAX_TOTAL) throw Error('Project exceeds the document storage limit.');
-      let start = 0;
-      while (start < value.length) {
-        const newline = value.indexOf('\n', start);
-        if (newline < 0) {
-          const fragment = value.slice(start);
-          fragments.push(fragment);
-          recordLength += fragment.length;
-          if (recordLength > MAX_RECORD) throw Error('Project record is too large.');
-          break;
-        }
-        const fragment = value.slice(start, newline);
-        if (fragment) {
-          fragments.push(fragment);
-          recordLength += fragment.length;
-        }
-        if (recordLength > MAX_RECORD) throw Error('Project record is too large.');
-        record(fragments.join(''));
-        fragments = [];
-        recordLength = 0;
-        start = newline + 1;
+      if (done) {
+        // Flush a pending UTF-8 sequence exactly as TextDecoderStream does at
+        // EOF, including its replacement-character behavior for incomplete
+        // input.
+        consumeText(decoder.decode());
+        break;
       }
+      consumeText(decoder.decode(value, { stream: true }));
     }
     if (recordLength) {
       const buffer = fragments.join('');
@@ -170,4 +192,15 @@ export async function decodeProject(bytes) {
   } finally {
     reader.releaseLock();
   }
+}
+
+export async function decodeProject(input, decompress = gzipStream) {
+  if (input instanceof Blob) {
+    const header = new Uint8Array(await input.slice(0, 2).arrayBuffer());
+    if (header[0] !== 0x1f || header[1] !== 0x8b) return valid(JSON.parse(await input.text()));
+    return decodeProjectStream(decompress(input));
+  }
+  if (input[0] !== 0x1f || input[1] !== 0x8b)
+    return valid(JSON.parse(new TextDecoder().decode(input)));
+  return decodeProjectStream(decompress(input));
 }

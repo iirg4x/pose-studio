@@ -16,6 +16,7 @@ import './reliability.css';
 
 export function RecoveryNotice() {
   const state = useSyncExternalStore(subscribeRecoveryState, getRecoveryState);
+  const ready = useSyncExternalStore(studio.subscribe, () => studio.state.ready);
   const root = useRef<HTMLElement>(null);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState('');
@@ -24,8 +25,8 @@ export function RecoveryNotice() {
     setAllowDiscard(false);
     setSelected('');
   }, [state.problem?.id]);
-  useModalFocus({ rootRef: root, enabled: state.writeHeld });
-  if (!state.writeHeld || !state.problem) return null;
+  useModalFocus({ rootRef: root, enabled: state.writeHeld && ready });
+  if (!ready || !state.writeHeld || !state.problem) return null;
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
     try {

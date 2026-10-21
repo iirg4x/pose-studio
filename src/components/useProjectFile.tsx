@@ -12,7 +12,11 @@ import {
 } from '../platform/storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { studio } from '../core/store';
-import { consumeProjectDocument } from '../platform/projectDocuments';
+import {
+  consumeProjectDocument,
+  consumeProjectRecoverySource,
+  discardProjectRecoveryRecords,
+} from '../platform/projectDocuments';
 import type { AnimationLibrary } from '../core/library';
 import {
   projectMatchesSaveSignature,
@@ -28,6 +32,14 @@ import { useModalFocus } from '../hooks/modalFocus';
 type Pending =
   | { kind: 'close' }
   | { kind: 'open'; data: AnimationLibrary; source?: LinkedDocument };
+type CleanStateRefs = {
+  project: typeof studio.state.project;
+  workspace: typeof studio.state.workspace;
+  drafts: typeof studio.state.drafts;
+  revision: number;
+  authoredRevision: number;
+};
+type CleanReceipt = { baseline: string; authoredRevision: number };
 /** Lets the loading screen paint before the synchronous work that follows. */
 const nextPaint = () =>
   new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
@@ -35,8 +47,10 @@ export function useProjectFile(
   ready: boolean,
   blocked = false,
   settled: (shouldCancel?: () => boolean) => Promise<void> = async () => {},
+  onRecoverySaved?: () => void,
 ) {
   const saved = useRef<string | null>(null),
+    cleanReceipt = useRef<CleanReceipt | null>(null),
     [pending, setPending] = useState<Pending | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
@@ -53,6 +67,7 @@ export function useProjectFile(
     saveDialogCancel = useRef<HTMLButtonElement>(null);
   const dismissSaveDialog = () => {
     if (busyRef.current || recoveryBusyRef.current) return;
+    if (pending?.kind === 'open') void discardProjectRecoveryRecords(pending.data).catch(() => {});
     setPending(null);
     setError('');
     setRecoveryError('');
@@ -88,6 +103,32 @@ export function useProjectFile(
     localStorage.setItem('pose-follow-document', String(value));
     setFollowProjectState(value);
   };
+  const rememberClean = useCallback((baseline: string, expected?: CleanStateRefs) => {
+    const state = studio.state;
+    if (
+      saved.current !== baseline ||
+      (expected &&
+        (state.project !== expected.project ||
+          state.workspace !== expected.workspace ||
+          state.drafts !== expected.drafts ||
+          state.revision !== expected.revision ||
+          studio.authoredRevision !== expected.authoredRevision))
+    )
+      return false;
+    cleanReceipt.current = {
+      baseline,
+      authoredRevision: studio.authoredRevision,
+    };
+    return true;
+  }, []);
+  const cleanReceiptMatches = useCallback(() => {
+    const receipt = cleanReceipt.current;
+    return !!(
+      receipt &&
+      saved.current === receipt.baseline &&
+      studio.authoredRevision === receipt.authoredRevision
+    );
+  }, []);
   useEffect(() => {
     try {
       saved.current = readPreference(BASELINE);
@@ -101,20 +142,35 @@ export function useProjectFile(
       );
     } catch {}
   }, []);
-  const markSignatureSaved = useCallback((signature: string) => {
+  const markSignatureSaved = useCallback((signature: string): Promise<void> => {
     saved.current = signature;
+    cleanReceipt.current = null;
     try {
-      void writePreference(BASELINE, saved.current).catch(() => {});
+      return writePreference(BASELINE, saved.current).catch(() => {});
     } catch {}
+    return Promise.resolve();
   }, []);
   const markSaved = useCallback(
-    (data: AnimationLibrary) => markSignatureSaved(projectSaveSignature(data)),
+    (data: AnimationLibrary) => {
+      const signature = projectSaveSignature(data);
+      return markSignatureSaved(signature).then(() => signature);
+    },
     [markSignatureSaved],
   );
   const dirty = useCallback(() => {
+    if (cleanReceiptMatches()) return false;
     const data = studio.recoverySnapshot();
-    return !!data && !projectMatchesSaveSignature(data, saved.current);
-  }, []);
+    if (!data) return false;
+    const baseline = saved.current;
+    if (!baseline) {
+      cleanReceipt.current = null;
+      return true;
+    }
+    const matches = projectMatchesSaveSignature(data, baseline);
+    if (matches) rememberClean(baseline);
+    else cleanReceipt.current = null;
+    return !matches;
+  }, [cleanReceiptMatches, rememberClean]);
   /**
    * Compare the current workspace without monopolising the main thread.
    *
@@ -126,58 +182,84 @@ export function useProjectFile(
    * Legacy v3 baselines use their exact old payload with the same yielding
    * comparison, so a dirty check never silently upgrades a saved baseline.
    */
-  const dirtyAsync = useCallback(async (shouldCancel?: () => boolean) => {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      if (shouldCancel?.()) return false;
-      const baseline = saved.current,
-        revision = studio.state.revision,
-        workspace = studio.state.workspace,
-        project = studio.state.project,
-        drafts = studio.state.drafts,
-        data = studio.recoverySnapshot();
-      if (!data) return false;
-      // A missing baseline is conservatively dirty, matching dirty().
-      if (!baseline) return true;
-      try {
-        const matches = await projectMatchesSaveSignatureAsync(
-          data,
-          baseline,
-          () =>
-            !!shouldCancel?.() ||
+  const dirtyAsync = useCallback(
+    async (shouldCancel?: () => boolean) => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        if (shouldCancel?.()) return false;
+        if (cleanReceiptMatches()) return false;
+        const baseline = saved.current,
+          revision = studio.state.revision,
+          authoredRevision = studio.authoredRevision,
+          workspace = studio.state.workspace,
+          project = studio.state.project,
+          drafts = studio.state.drafts,
+          data = studio.recoverySnapshot();
+        if (!data) return false;
+        // A missing baseline is conservatively dirty, matching dirty().
+        if (!baseline) {
+          cleanReceipt.current = null;
+          return true;
+        }
+        try {
+          const matches = await projectMatchesSaveSignatureAsync(
+            data,
+            baseline,
+            () =>
+              !!shouldCancel?.() ||
+              studio.state.revision !== revision ||
+              studio.authoredRevision !== authoredRevision ||
+              studio.state.workspace !== workspace ||
+              studio.state.project !== project ||
+              studio.state.drafts !== drafts,
+          );
+          if (shouldCancel?.()) return false;
+          // A save or edit may have happened while the signature yielded. Retry
+          // once against the newest state; after a continuously changing state,
+          // report dirty conservatively instead of opening over unsaved work.
+          if (
+            saved.current !== baseline ||
             studio.state.revision !== revision ||
+            studio.authoredRevision !== authoredRevision ||
             studio.state.workspace !== workspace ||
             studio.state.project !== project ||
-            studio.state.drafts !== drafts,
-        );
-        if (shouldCancel?.()) return false;
-        // A save or edit may have happened while the signature yielded. Retry
-        // once against the newest state; after a continuously changing state,
-        // report dirty conservatively instead of opening over unsaved work.
-        if (
-          saved.current !== baseline ||
-          studio.state.revision !== revision ||
-          studio.state.workspace !== workspace ||
-          studio.state.project !== project ||
-          studio.state.drafts !== drafts
-        )
-          continue;
-        return !matches;
-      } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          if (shouldCancel?.()) return false;
-          continue;
+            studio.state.drafts !== drafts
+          )
+            continue;
+          if (matches)
+            rememberClean(baseline, {
+              project,
+              workspace,
+              drafts,
+              revision,
+              authoredRevision,
+            });
+          else cleanReceipt.current = null;
+          return !matches;
+        } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') {
+            if (shouldCancel?.()) return false;
+            continue;
+          }
+          throw error;
         }
-        throw error;
       }
-    }
-    return true;
-  }, []);
+      return true;
+    },
+    [cleanReceiptMatches, rememberClean],
+  );
   const recover = async () => {
     const data = studio.recoverySnapshot();
     if (data) await writeRecovery(data);
   };
   const save = useCallback(async () => {
-    const data = studio.documentSnapshot();
+    const data = studio.documentSnapshot(),
+      initial: CleanStateRefs = {
+        project: studio.state.project,
+        workspace: studio.state.workspace,
+        drafts: studio.state.drafts,
+        revision: studio.state.revision,
+        authoredRevision: studio.authoredRevision,
+      };
     if (!data || busyRef.current) return false;
     busyRef.current = true;
     setBusy(true);
@@ -201,7 +283,8 @@ export function useProjectFile(
         // user's saved project for dirty-state purposes.
         studio.patch({ message: 'Download requested: ' + a.download });
       }
-      markSaved(data);
+      const signature = await markSaved(data);
+      rememberClean(signature, initial);
       return true;
     } catch (e) {
       const message = 'Could not save: ' + (e as Error).message;
@@ -213,7 +296,7 @@ export function useProjectFile(
       busyRef.current = false;
       setBusy(false);
     }
-  }, [markSaved]);
+  }, [markSaved, rememberClean]);
   const open = useCallback(
     async (data: AnimationLibrary, source?: LinkedDocument) => {
       // Invalidate a dirty check that has not reached the open step yet. This
@@ -221,6 +304,8 @@ export function useProjectFile(
       // request is still hashing the current library.
       openRequestGeneration.current++;
       const generation = ++openGeneration.current;
+      cleanReceipt.current = null;
+      const recoverySource = consumeProjectRecoverySource(data);
       let current: AnimationLibrary | null = null;
       studio.patch({ opening: { name: data.name || 'project', stage: 'Building animations' } });
       try {
@@ -228,16 +313,68 @@ export function useProjectFile(
         if (generation !== openGeneration.current) return;
         studio.openValidated(data);
         current = studio.recoverySnapshot();
-        // Hash bounded clip batches while models and shaders prepare. Opening
-        // remains busy until both the exact saved baseline and viewport finish.
-        const [, signature] = await Promise.all([
-          settled(() => generation !== openGeneration.current),
-          current
+        const initial: CleanStateRefs = {
+          project: studio.state.project,
+          workspace: studio.state.workspace,
+          drafts: studio.state.drafts,
+          revision: studio.state.revision,
+          authoredRevision: studio.authoredRevision,
+        };
+        let recoveryPending = !!current;
+        const recovery = current
+          ? writeRecovery(current, recoverySource)
+              .then(() => null)
+              .catch((error) => error)
+              .finally(() => {
+                recoveryPending = false;
+              })
+          : Promise.resolve(null);
+        // Hash bounded clip batches while models and shaders prepare. Keep the
+        // loading surface up until the scene, signature and first recovery copy
+        // have all settled. If the viewport wins the race, expose the remaining
+        // storage work instead of making the UI appear finished early.
+        const viewport = settled(() => generation !== openGeneration.current).then(() => {
+            if (recoveryPending && generation === openGeneration.current && current)
+              studio.patch({
+                opening: { name: data.name || 'project', stage: 'Saving recovery copy' },
+              });
+          }),
+          signature = current
             ? projectSaveSignatureAsync(current, () => generation !== openGeneration.current)
             : Promise.resolve(null),
-        ]);
+          [viewportResult, signatureResult, recoveryResult] = await Promise.allSettled([
+            viewport,
+            signature,
+            recovery,
+          ]);
         if (generation !== openGeneration.current) return;
-        if (signature) markSignatureSaved(signature);
+        if (viewportResult.status === 'rejected') throw viewportResult.reason;
+        if (signatureResult.status === 'rejected') throw signatureResult.reason;
+        if (recoveryResult.status === 'rejected') throw recoveryResult.reason;
+        const signatureValue = signatureResult.value,
+          recoveryError = recoveryResult.value;
+        if (signatureValue) await markSignatureSaved(signatureValue);
+        // The baseline write can outlive this open when another open starts
+        // while it is pending. Do not let the older operation report success,
+        // activate its linked document, or clear the newer operation's UI.
+        if (generation !== openGeneration.current) return;
+        if (signatureValue) rememberClean(signatureValue, initial);
+        if (recoveryError) {
+          const message =
+            'Project opened, but local recovery could not be saved: ' +
+            (recoveryError instanceof Error ? recoveryError.message : String(recoveryError));
+          studio.patch({ message });
+          reportFailure(message);
+        } else if (
+          current &&
+          studio.state.project === initial.project &&
+          studio.state.workspace === initial.workspace &&
+          studio.state.drafts === initial.drafts &&
+          studio.state.revision === initial.revision &&
+          studio.authoredRevision === initial.authoredRevision
+        ) {
+          onRecoverySaved?.();
+        }
       } catch (e) {
         if (generation !== openGeneration.current) return;
         const message = 'Could not open project: ' + (e as Error).message;
@@ -248,19 +385,11 @@ export function useProjectFile(
       } finally {
         if (generation === openGeneration.current) studio.patch({ opening: null });
       }
-      if (current) {
-        void writeRecovery(current).catch((e) => {
-          const message =
-            'Project opened, but local recovery could not be saved: ' + (e as Error).message;
-          studio.patch({ message });
-          reportFailure(message);
-        });
-      }
       if (isAndroid) activateDocument(source);
       setPending(null);
       setError('');
     },
-    [markSignatureSaved, settled],
+    [markSignatureSaved, onRecoverySaved, rememberClean, settled],
   );
   const requestOpen = useCallback(
     async (data: unknown) => {
@@ -274,7 +403,10 @@ export function useProjectFile(
         const hasChanges = await dirtyAsync(
           () => requestGeneration !== openRequestGeneration.current,
         );
-        if (requestGeneration !== openRequestGeneration.current) return;
+        if (requestGeneration !== openRequestGeneration.current) {
+          await discardProjectRecoveryRecords(data);
+          return;
+        }
         if (hasChanges) {
           // The unsaved-changes prompt comes first; the loading screen returns on open.
           studio.patch({ opening: null });
@@ -283,6 +415,7 @@ export function useProjectFile(
           setRecoveryError('');
         } else await open(validated, source);
       } catch (e) {
+        await discardProjectRecoveryRecords(data).catch(() => {});
         if (requestGeneration !== openRequestGeneration.current) return;
         const message = (e as Error).message;
         studio.patch({ opening: null, message });
