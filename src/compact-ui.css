@@ -586,13 +586,8 @@
   border-radius: var(--radius-group);
   padding: 8px;
 }
-.android .motion-direction {
-  display: flex;
-  gap: 4px;
-}
 .android .motion-direction button {
   min-height: 44px;
-  flex: 1;
   font-size: 11px;
   padding: 4px;
 }

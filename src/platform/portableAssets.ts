@@ -45,6 +45,9 @@ export function validateGLB(data: Uint8Array) {
   return data;
 }
 export const assetHash = sha256Hex;
+export type AssetBatchWriter = (
+  entries: readonly (readonly [string, Uint8Array])[],
+) => Promise<void>;
 export function builtInAsset(id: string) {
   return /^(example-fantasy-(male|female)|builtin-(axe|rifle|magazine|unreal-fp-gun))$/.test(id);
 }
@@ -78,6 +81,7 @@ export async function embedAssets(project: unknown, read: (id: string) => Promis
 export async function restoreAssets(
   project: unknown,
   write: (id: string, data: Uint8Array) => Promise<void>,
+  writeBatch?: AssetBatchWriter,
 ) {
   const data = project as Record<string, unknown>;
   const assets = data.characterAssets as Record<string, unknown> | undefined;
@@ -98,7 +102,9 @@ export async function restoreAssets(
         throw Error('Asset checksum mismatch.');
       checked.push([id, bytes]);
     }
-    for (const [id, bytes] of checked) if (!builtInAsset(id)) await write(id, bytes);
+    const imported = checked.filter(([id]) => !builtInAsset(id));
+    if (writeBatch && imported.length) await writeBatch(imported);
+    else for (const [id, bytes] of imported) await write(id, bytes);
     delete data.characterAssets;
   }
   return data;

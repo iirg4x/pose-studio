@@ -1,11 +1,12 @@
 import { lockControlKeys } from '../curveLocks';
 import { copyPoseTracks } from '../poseEdits';
 import { keyingFrame, editLayerAllowed } from '../layers';
-import { applyKeySettings } from '../timelineSettings';
+import { applyKeySettings, curveMotionOptions } from '../timelineSettings';
 import type { KeySettings } from '../timelineSettings';
 import { insertChannels, KEYING_SETS } from '../keying';
 import type { KeyingSet } from '../keying';
 import { channelsFor, channelValue } from '../curves';
+import type { Channel } from '../curves';
 import { motionOptions, validateMotionOptions } from '../interpolation';
 import type { MotionOptions } from '../interpolation';
 import { visibleControls, clone, putKey, sample, controlEnabled } from '../model';
@@ -274,11 +275,12 @@ export class KeyframeStore extends PosingStore {
     track.interpolation = value;
     for (const key of track.keys)
       Object.assign(key, motionOptions(track), { interpolation: value });
-    for (const curve of Object.values(track.curves ?? {}))
+    for (const [channel, curve] of Object.entries(track.curves ?? {}))
       if (curve) {
+        const projected = curveMotionOptions(track, channel as Channel);
         delete curve.loop;
         for (const key of curve.keys)
-          Object.assign(key, motionOptions(track), {
+          Object.assign(key, clone(projected), {
             interpolation: value === 'smooth' ? 'bezier' : value,
           });
       }
@@ -299,10 +301,12 @@ export class KeyframeStore extends PosingStore {
     for (const key of track.keys)
       if ((key.interpolation ?? track.interpolation) === track.interpolation)
         Object.assign(key, motionOptions(track));
-    for (const curve of Object.values(track.curves ?? {}))
-      if (curve)
+    for (const [channel, curve] of Object.entries(track.curves ?? {}))
+      if (curve) {
+        const projected = curveMotionOptions(track, channel as Channel);
         for (const key of curve.keys)
-          if (key.interpolation === track.interpolation) Object.assign(key, motionOptions(track));
+          if (key.interpolation === track.interpolation) Object.assign(key, clone(projected));
+      }
     this.commit(p, 'Interpolation settings updated');
     this.patch({ drafts: {} });
   }

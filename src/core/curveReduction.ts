@@ -7,6 +7,7 @@ import { detectNoise } from './bakedNoise';
 import type { BlenderNoiseSettings } from './blenderNoise';
 import { detectMotion } from './bakedMotion';
 import type { MotionDetection } from './bakedMotion';
+import { isBlenderInterpolation } from './interpolation';
 
 export interface NoiseReduction {
   algorithm: 'blender';
@@ -147,7 +148,10 @@ function explicit(curve: Curve): Curve {
   };
 }
 const primitive = (k: CurveKey) =>
-  k.interpolation === 'step' || k.interpolation === 'spring' || k.interpolation === 'bounce';
+  k.interpolation === 'step' ||
+  k.interpolation === 'spring' ||
+  k.interpolation === 'bounce' ||
+  isBlenderInterpolation(k.interpolation);
 
 /** Baked motion describes samples, not the corners of an earlier interpolation.
  * Fractional authored keys remain observations alongside each integer frame. */
@@ -219,7 +223,14 @@ function motionValidationError(source: Curve, candidate: Curve, frames: number[]
 function hasMotionSpan(curve: Curve) {
   return curve.keys
     .slice(0, -1)
-    .some((key) => key.interpolation === 'spring' || key.interpolation === 'bounce');
+    .some(
+      (key) =>
+        key.interpolation === 'spring' ||
+        key.interpolation === 'bounce' ||
+        key.interpolation === 'elastic' ||
+        key.interpolation === 'back' ||
+        key.interpolation === 'blenderBounce',
+    );
 }
 
 function extrema(p: Cubic) {

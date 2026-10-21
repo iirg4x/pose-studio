@@ -13,25 +13,28 @@ import { ScrubNumber } from './ScrubNumber';
 import { LayerPanel } from './LayerPanel';
 import { PropertySection } from './PropertySection';
 import { activeAnimationLayer } from '../core/layers';
-import { MotionSettings } from './MotionSettings';
+import { MotionSettings, type UiMotionMode, type UiMotionOptions } from './MotionSettings';
+import { interpolationChoicesFor, isMotionInterpolation } from './interpolationOptions';
+import type { InterpolationMode } from './interpolationOptions';
 import { BodyBasePanel } from './BodyBasePanel';
+import { GripPresets } from './GripPresets';
 import { controlTint } from '../core/controlStyle';
 import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
-import { Hand, Bone, Layers, Move3D, SlidersHorizontal, ChevronRight } from 'lucide-react';
+import { Bone, Layers, Move3D, SlidersHorizontal, ChevronRight } from 'lucide-react';
 import { useStudioChrome } from '../hooks';
 import { studio } from '../core/store';
 import { controlLabels, clone, limbMode, controlEnabled, evaluate } from '../core/model';
 import { CONTROLS, isOffsetControl, isBoneControl } from '../core/controls';
 import type { LimbId, LimbMode } from '../core/controls';
 import type { Pose, Interpolation, Project } from '../core/model';
+import type { MotionOptions } from '../core/interpolation';
 
 type ControlPropertiesTab = 'transform' | 'rig' | 'layer';
 
 export function Inspector({
   runtime,
   onClose,
-  thumbs,
   switchLimb,
   attach,
   pick,
@@ -40,7 +43,6 @@ export function Inspector({
   onClose: () => void;
   attach: (target: AttachmentTarget, position: boolean, rotation: boolean) => void;
   pick: () => void;
-  thumbs: string[];
   switchLimb: (limb: LimbId, mode: LimbMode) => void;
 }) {
   const compactViewport = useCompactViewport(),
@@ -90,6 +92,13 @@ export function Inspector({
     enabled = controlEnabled(s.project, id, s.frame),
     limb = definition.limb,
     activeLayer = activeAnimationLayer(s.project);
+  const trackMode = s.project.tracks[id].interpolation as unknown as InterpolationMode | 'smooth',
+    displayedTrackMode: InterpolationMode = trackMode === 'smooth' ? 'bezier' : trackMode,
+    trackMotionMode = isMotionInterpolation(displayedTrackMode)
+      ? (displayedTrackMode as UiMotionMode)
+      : undefined,
+    interpolationOptions = interpolationChoicesFor(displayedTrackMode);
+  const hasLoop = Object.values(s.project.tracks[id].curves ?? {}).some((c) => c?.loop);
   const edit = (value: Pose) => (body ? studio.editRaw(id, value) : studio.editWorld(id, value));
   const showControlTab = (tab: ControlPropertiesTab) => !compact || controlTab === tab;
   const chooseControlTab = (value: ControlPropertiesTab) => {
@@ -390,19 +399,7 @@ export function Inspector({
                       />
                     ))}
                     <p className="property-note">−1 outward · 0 rest · 1 closed</p>
-                    <div className="pose-presets">
-                      {['Relaxed', 'Rifle', 'Pinch'].map((label, i) => (
-                        <button
-                          key={label}
-                          className="pose-preset"
-                          onClick={() => setPose(i)}
-                          title={'Apply ' + label.toLowerCase() + ' grip'}
-                        >
-                          {thumbs[i] ? <img src={thumbs[i]} alt="" /> : <Hand size={30} />}
-                          <span>{label}</span>
-                        </button>
-                      ))}
-                    </div>
+                    <GripPresets runtime={runtime} ready={s.ready} apply={setPose} />
                   </PropertySection>
                 )}
               </>
@@ -413,29 +410,29 @@ export function Inspector({
                   <span>Between keys</span>
                   <select
                     aria-label="Between keys"
-                    value={
-                      Object.values(s.project.tracks[id].curves ?? {}).some((c) => c?.loop)
-                        ? 'loop'
-                        : s.project.tracks[id].interpolation
-                    }
-                    onChange={(e) =>
-                      studio.setInterpolation(e.target.value as Interpolation | 'loop')
-                    }
+                    value={hasLoop ? 'loop' : displayedTrackMode}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === 'loop') studio.setInterpolation('loop');
+                      else
+                        studio.setInterpolation(
+                          (value === 'bezier' ? 'smooth' : value) as unknown as Interpolation,
+                        );
+                    }}
                   >
-                    <option value="smooth">Smooth</option>
                     <option value="loop">Loop</option>
-                    <option value="linear">Linear</option>
-                    <option value="step">Stepped</option>
-                    <option value="spring">Spring</option>
-                    <option value="bounce">Bounce</option>
+                    {interpolationOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </label>
-                {(s.project.tracks[id].interpolation === 'spring' ||
-                  s.project.tracks[id].interpolation === 'bounce') && (
+                {trackMotionMode && (
                   <MotionSettings
-                    mode={s.project.tracks[id].interpolation as 'spring' | 'bounce'}
-                    options={s.project.tracks[id]}
-                    change={(value) => studio.setMotionOptions(value)}
+                    mode={trackMotionMode}
+                    options={s.project.tracks[id] as UiMotionOptions}
+                    change={(value) => studio.setMotionOptions(value as unknown as MotionOptions)}
                   />
                 )}
               </PropertySection>

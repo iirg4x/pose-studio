@@ -1,14 +1,9 @@
 import { Check, Link2 } from 'lucide-react';
 import type { CurveKey, HandleMode } from '../core/curves';
 import { InterpolationConnector } from './InterpolationConnector';
+import { interpolationChoicesFor } from './interpolationOptions';
+import type { InterpolationMode } from './interpolationOptions';
 
-const modes = [
-  ['bezier', 'Bézier', 'Smooth arc'],
-  ['linear', 'Linear', 'Even speed'],
-  ['step', 'Stepped', 'Hold, then jump'],
-  ['spring', 'Spring', 'Overshoot & settle'],
-  ['bounce', 'Bounce', 'Impact & rebound'],
-] as const;
 export function InterpolationSettings({
   mode,
   change,
@@ -17,28 +12,37 @@ export function InterpolationSettings({
   range,
   disabled = false,
 }: {
-  mode: CurveKey['interpolation'] | 'mixed';
-  change: (mode: CurveKey['interpolation']) => void;
+  mode: (CurveKey['interpolation'] | InterpolationMode | 'smooth') | 'mixed';
+  change: (mode: InterpolationMode) => void;
   loop: boolean;
   loopChange: (enabled: boolean) => void;
   range: { start: number; end: number };
   disabled?: boolean;
 }) {
+  const active: InterpolationMode | 'mixed' =
+      mode === 'smooth' || mode === 'loop' ? 'bezier' : mode,
+    choices = interpolationChoicesFor(active);
   return (
     <section className="interpolation-settings" aria-label="Interpolation settings">
       <div className="interpolation-section-label">
         <span>Between keys</span>
         {mode === 'mixed' && <small>Mixed</small>}
       </div>
-      <div className="interpolation-choices" role="group" aria-label="Keyframe interpolation">
-        {modes.map(([value, label, hint]) => (
+      <div
+        className="interpolation-choices"
+        role="group"
+        aria-label="Keyframe interpolation"
+        data-interpolation-count={choices.length}
+      >
+        {choices.map(({ value, label, hint, legacy }) => (
           <button
             type="button"
             className="interpolation-choice"
             key={value}
             data-interpolation={value}
+            data-legacy={legacy ? 'true' : undefined}
             aria-label={label + ' interpolation'}
-            aria-pressed={mode === value}
+            aria-pressed={active === value}
             title={hint}
             disabled={disabled}
             onClick={() => change(value)}

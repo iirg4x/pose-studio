@@ -3,7 +3,7 @@ import { measureTouchViewport } from './touchViewport';
 import { randomId } from '../core/crypto';
 import { encodeProject } from '../../shared/project-codec.mjs';
 import { readProjectDocument } from './projectDocuments';
-import { readAsset, writeAsset, isTouch } from './storage';
+import { readAsset, writeAsset, writeAssets, isTouch } from './storage';
 import {
   assetHash,
   assertGLBSize,
@@ -12,7 +12,10 @@ import {
   restoreAssets,
   validateGLB,
 } from './portableAssets';
+import type { AssetBatchWriter } from './portableAssets';
 const noop = () => () => {};
+const writeProjectAssets: AssetBatchWriter = (entries) =>
+  writeAssets(entries.map(([id, data]) => [`asset:${id}`, data] as const));
 function download(data: Uint8Array, name: string, type = 'application/octet-stream') {
   const url = URL.createObjectURL(new Blob([data.slice().buffer], { type })),
     a = document.createElement('a');
@@ -123,14 +126,20 @@ export async function initializeBrowser() {
     openExample: async () => {
       const r = await fetch('examples/Axe%20studio.pose.json');
       if (!r.ok) throw Error('Example unavailable');
-      return restoreAssets(await r.json(), (id, data) => writeAsset('asset:' + id, data));
+      return restoreAssets(
+        await r.json(),
+        (id, data) => writeAsset('asset:' + id, data),
+        writeProjectAssets,
+      );
     },
     openProject: async () => {
       const file = await pick('.pose,.json,.manny');
       if (!file) return null;
       if (file.size > 512 * 1024 * 1024) throw Error('Choose a project below 512 MB');
-      return readProjectDocument(new Uint8Array(await file.arrayBuffer()), (id, data) =>
-        writeAsset('asset:' + id, data),
+      return readProjectDocument(
+        new Uint8Array(await file.arrayBuffer()),
+        (id, data) => writeAsset('asset:' + id, data),
+        writeProjectAssets,
       );
     },
     takeProject: async () => null,

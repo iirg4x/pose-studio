@@ -5,7 +5,7 @@ import type { ControllerConstraint } from '../controllerConstraints';
 import {
   readPreference,
   acceptRecoveryCandidate,
-  readRecoveryCandidate,
+  readOwnedRecoveryCandidate,
   readRecoveryCandidates,
   rejectRecoveryCandidate,
   RECOVERY,
@@ -379,9 +379,9 @@ export class WorkspaceStore extends SelectionStore {
     let failedRecovery = false;
     for (const candidate of readRecoveryCandidates()) {
       try {
-        const candidateData = await readRecoveryCandidate(candidate);
+        const candidateData = await readOwnedRecoveryCandidate(candidate);
         const saved = typeof candidateData === 'string' ? JSON.parse(candidateData) : candidateData;
-        workspace = validateLibrary(saved);
+        workspace = validateLibrary(saved, { takeOwnership: true });
         acceptRecoveryCandidate(candidate, workspace);
         message = failedRecovery
           ? 'Recovered an older autosave · the failed copy is preserved'

@@ -11,7 +11,7 @@ import type { PropBindings } from './assets';
 import type { BoneFollowing } from './boneFollowing';
 import { evaluateLayers, rawForLayer, syncLayers, layerParent, switchLayerParent } from './layers';
 import type { AnimationLayer } from './layers';
-import { validateMotionOptions, motionOptions } from './interpolation';
+import { INTERPOLATION_MODES, validateMotionOptions, motionOptions } from './interpolation';
 import {
   CONTROLS,
   CONTROL_IDS,
@@ -42,7 +42,7 @@ import type { Channel, Curve } from './curves';
 export type V3 = [number, number, number];
 export type Q4 = [number, number, number, number];
 export type ParentId = ControlId | 'world';
-export type Interpolation = 'smooth' | 'linear' | 'step' | 'spring' | 'bounce';
+export type Interpolation = (typeof INTERPOLATION_MODES)[number];
 export interface Pose {
   layerPosition?: boolean;
   p: V3;
@@ -999,7 +999,7 @@ function validateOwnedProject(p: Project): Project {
         t.keys.length > 5000 ||
         !Array.isArray(t.spaces) ||
         t.spaces.length > 5000 ||
-        !['smooth', 'linear', 'step', 'spring', 'bounce'].includes(t.interpolation)
+        !INTERPOLATION_MODES.includes(t.interpolation)
       )
         throw Error('Invalid animation track: ' + id);
       if ((id === 'root' && t.spaces.length) || t.spaces.some((s) => s.parent === 'root'))
@@ -1105,10 +1105,7 @@ function validateOwnedProject(p: Project): Project {
         if (k.layerPosition !== undefined && typeof k.layerPosition !== 'boolean')
           throw Error('Invalid layer position intent.');
         validateMotionOptions(k);
-        if (
-          k.interpolation !== undefined &&
-          !['smooth', 'linear', 'step', 'spring', 'bounce'].includes(k.interpolation)
-        )
+        if (k.interpolation !== undefined && !INTERPOLATION_MODES.includes(k.interpolation))
           throw Error('Invalid key interpolation.');
         if (
           !Number.isFinite(k.frame) ||

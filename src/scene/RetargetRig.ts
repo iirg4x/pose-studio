@@ -5,6 +5,14 @@ import type { RetargetCharacter } from '../core/retarget';
 import { mappingIssues } from '../core/retarget';
 
 type Rest = { p: T.Vector3; q: T.Quaternion; s: T.Vector3; world: T.Matrix4 };
+export type RetargetRigOptions = {
+  /**
+   * Whether this rig owns the model's render resources. SkeletonUtils clones
+   * share geometry and materials, so callers that pass a borrowed clone must
+   * opt out of disposing those resources with the rig.
+   */
+  ownsResources?: boolean;
+};
 const position = (m: T.Matrix4) => new T.Vector3().setFromMatrixPosition(m);
 const rotation = (m: T.Matrix4) => {
   const q = new T.Quaternion();
@@ -25,8 +33,17 @@ export class RetargetRig {
   private pairs: { source: string; target: T.Bone }[] = [];
   private source?: MannyRig;
   private config?: RetargetCharacter;
-  constructor(public model: T.Group) {
-    prepareSkinRoot(model);
+  private ownsResources: boolean;
+  constructor(
+    public model: T.Group,
+    options: RetargetRigOptions = {},
+  ) {
+    this.ownsResources = options.ownsResources ?? true;
+    // A SkeletonUtils clone reuses geometry/materials/textures from its source.
+    // The loaded Manny source has already gone through the full-skin setup, so
+    // preparing a borrowed clone here would mutate materials still owned by
+    // StudioScene. Imported rigs remain fully owned and are prepared as before.
+    if (this.ownsResources) prepareSkinRoot(model);
     this.root.name = 'RetargetCharacter';
     this.root.add(model);
     this.root.updateMatrixWorld(true);
@@ -373,6 +390,13 @@ export class RetargetRig {
     );
   }
   dispose() {
+    this.root.removeFromParent();
+    const skeletons = new Set<T.Skeleton>();
+    for (const mesh of this.meshes) {
+      if (mesh instanceof T.SkinnedMesh) skeletons.add(mesh.skeleton);
+    }
+    for (const skeleton of skeletons) skeleton.dispose();
+    if (!this.ownsResources) return;
     const materials = new Set<T.Material>(),
       textures = new Set<T.Texture>(),
       geometry = new Set<T.BufferGeometry>();
@@ -387,6 +411,5 @@ export class RetargetRig {
     }
     for (const t of textures) t.dispose();
     for (const g of geometry) g.dispose();
-    this.root.removeFromParent();
   }
 }

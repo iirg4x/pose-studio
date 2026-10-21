@@ -17,13 +17,7 @@ import { studio } from '../core/store';
 import { useStudioChrome } from '../hooks';
 import { useTransientPopover } from '../hooks/transientPopover';
 import { GraphicsFallback } from './GraphicsFallback';
-export function Viewport({
-  onRuntime,
-  onThumbs,
-}: {
-  onRuntime: (r: StudioScene | null) => void;
-  onThumbs: (t: string[]) => void;
-}) {
+export function Viewport({ onRuntime }: { onRuntime: (r: StudioScene | null) => void }) {
   const ref = useRef<HTMLDivElement>(null),
     runtime = useRef<StudioScene | null>(null),
     s = useStudioChrome(),
@@ -48,9 +42,7 @@ export function Viewport({
       r = new StudioScene(
         ref.current!,
         studio,
-        () => {
-          if (active && r) onThumbs(r.gripThumbnails());
-        },
+        () => {},
         (message) => {
           if (active) setFailure(message);
         },
@@ -67,7 +59,7 @@ export function Viewport({
       runtime.current = null;
       onRuntime(null);
     };
-  }, [onRuntime, onThumbs, attempt]);
+  }, [onRuntime, attempt]);
   return (
     <main
       className={

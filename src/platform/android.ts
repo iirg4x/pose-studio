@@ -1,7 +1,7 @@
 import { encodeProject } from '../../shared/project-codec.mjs';
 import { registerPlugin } from '@capacitor/core';
 import type { PluginListenerHandle } from '@capacitor/core';
-import { isAndroid, initializeStorage, readAsset, writeAsset } from './storage';
+import { isAndroid, initializeStorage, readAsset, writeAsset, writeAssets } from './storage';
 import {
   assetHash,
   assertGLBSize,
@@ -13,6 +13,7 @@ import {
   restoreAssets,
   validateGLB,
 } from './portableAssets';
+import type { AssetBatchWriter } from './portableAssets';
 import { activateDocument, documentIdentity, rememberDocument } from './linkedDocuments';
 import { validateLibrary } from '../core/library';
 import type { AnimationLibrary } from '../core/library';
@@ -34,6 +35,8 @@ interface Files {
 const native = registerPlugin<Files>('PoseFiles');
 const CHUNK = 512 * 1024;
 const MAX_DOCUMENT_BYTES = 512 * 1024 * 1024;
+const writeProjectAssets: AssetBatchWriter = (entries) =>
+  writeAssets(entries.map(([id, data]) => [`asset:${id}`, data] as const));
 function assertDocumentSize(size: number) {
   if (!Number.isSafeInteger(size) || size < 0 || size > MAX_DOCUMENT_BYTES)
     throw Error('Choose a document below 512 MB.');
@@ -113,7 +116,11 @@ async function project(doc: Document, knownHashes: string[] = []) {
   if (!data) return null;
   const hash = await assetHash(data);
   if (knownHashes.includes(hash)) return null;
-  const parsed = await readProjectDocument(data, (id, value) => writeAsset('asset:' + id, value));
+  const parsed = await readProjectDocument(
+    data,
+    (id, value) => writeAsset('asset:' + id, value),
+    writeProjectAssets,
+  );
   rememberDocument(parsed, {
     uri: doc.uri,
     name: doc.name,
@@ -196,7 +203,11 @@ export async function initializeAndroid() {
     openExample: async () => {
       const r = await fetch('examples/Axe%20studio.pose.json');
       if (!r.ok) throw Error('Example unavailable. Open your .pose project from Files.');
-      return restoreAssets(await r.json(), (id, data) => writeAsset('asset:' + id, data));
+      return restoreAssets(
+        await r.json(),
+        (id, data) => writeAsset('asset:' + id, data),
+        writeProjectAssets,
+      );
     },
     saveProject,
     openProject: async () => project(await native.open()),

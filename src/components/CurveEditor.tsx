@@ -5,8 +5,9 @@ import { MotionPresence } from './Motion';
 import { CurvePlayhead } from './TimelinePlayhead';
 import { ScrubNumber } from './ScrubNumber';
 import { ModifierPanel } from './ModifierPanel';
-import { MotionSettings } from './MotionSettings';
+import { MotionSettings, type UiMotionMode, type UiMotionOptions } from './MotionSettings';
 import { InterpolationSettings, HandleSettings } from './InterpolationSettings';
+import { isMotionInterpolation } from './interpolationOptions';
 import { loopRange } from '../core/loops';
 import { INTERPOLATION_NAMES } from '../core/timelineSettings';
 import {
@@ -252,6 +253,8 @@ export const CurveEditor = memo(function CurveEditor({
     Math.max(0, Math.min(p.end, Math.round(v.from + ((px - bounds.left) / cw) * (v.to - v.from))));
   const valueAt = (py: number) => v.max - ((py - bounds.top) / ch) * (v.max - v.min);
   const active = curve.keys.find((k) => k.frame === selected.at(-1)),
+    activeIndex = active ? curve.keys.indexOf(active) : -1,
+    nextActive = activeIndex >= 0 ? curve.keys[activeIndex + 1] : undefined,
     selectedKeys = curve.keys.filter((k) => selected.includes(k.frame));
   const remove = () => {
     const keys = curve.keys.filter((k) => !selected.includes(k.frame));
@@ -1357,10 +1360,19 @@ export const CurveEditor = memo(function CurveEditor({
                       })}
                     </details>
                   )}
-                  {(active.interpolation === 'spring' || active.interpolation === 'bounce') && (
+                  {isMotionInterpolation(active.interpolation) && (
                     <MotionSettings
-                      mode={active.interpolation}
-                      options={active}
+                      mode={active.interpolation as UiMotionMode}
+                      options={active as UiMotionOptions}
+                      segment={
+                        nextActive
+                          ? {
+                              begin: active.value,
+                              end: nextActive.value,
+                              duration: nextActive.frame - active.frame,
+                            }
+                          : undefined
+                      }
                       change={(value) => editKeys((k) => ({ ...k, ...value }))}
                     />
                   )}

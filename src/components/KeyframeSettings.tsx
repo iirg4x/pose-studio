@@ -3,12 +3,20 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Diamond, X, Copy, ClipboardPaste, FlipHorizontal2, Trash2 } from 'lucide-react';
 import { studio } from '../core/store';
+import type { MotionOptions } from '../core/interpolation';
+import { channelsFor, readCurve } from '../core/curves';
 import { useStudioChrome } from '../hooks';
 import { useTransientPopover } from '../hooks/transientPopover';
 import { selectedCurveKeys } from '../core/timelineSettings';
 import { loopRange } from '../core/loops';
-import { MotionSettings } from './MotionSettings';
+import {
+  MotionSettings,
+  type MotionPreviewContext,
+  type UiMotionMode,
+  type UiMotionOptions,
+} from './MotionSettings';
 import { InterpolationSettings, HandleSettings } from './InterpolationSettings';
+import { isMotionInterpolation } from './interpolationOptions';
 
 export function KeyframeSettings({
   x,
@@ -27,7 +35,26 @@ export function KeyframeSettings({
     modes = new Set(keys.map((k) => k.interpolation)),
     handles = new Set(keys.map((k) => k.handle));
   const mode = modes.size === 1 ? keys[0].interpolation : 'mixed',
-    handle = handles.size === 1 ? keys[0].handle : 'mixed';
+    handle = handles.size === 1 ? keys[0].handle : 'mixed',
+    motionMode = isMotionInterpolation(mode) ? (mode as UiMotionMode) : undefined;
+  const motionSegment: MotionPreviewContext | undefined = (() => {
+    if (!s.project || !motionMode) return undefined;
+    for (const selection of s.timelineSelection) {
+      const track = s.project.tracks[selection.id];
+      if (!track) continue;
+      for (const channel of channelsFor(selection.id, track)) {
+        const curve = readCurve(track, channel),
+          index = curve.keys.findIndex((key) => key.frame === selection.frame),
+          current = index >= 0 ? curve.keys[index] : undefined,
+          next = index >= 0 ? curve.keys[index + 1] : undefined;
+        if (current?.interpolation !== mode || !next) continue;
+        const duration = next.frame - current.frame;
+        if (duration > 0)
+          return { begin: current.value, end: next.value, duration } satisfies MotionPreviewContext;
+      }
+    }
+    return undefined;
+  })();
   const loop =
     !!s.project &&
     s.timelineSelection.some((k) =>
@@ -118,11 +145,14 @@ export function KeyframeSettings({
               change={(handle) => studio.setTimelineKeySettings({ handle })}
             />
           </Collapse>
-          {(mode === 'spring' || mode === 'bounce') && (
+          {motionMode && (
             <MotionSettings
-              mode={mode}
-              options={keys[0]}
-              change={(settings) => studio.setTimelineKeySettings(settings)}
+              mode={motionMode}
+              options={(keys[0] ?? {}) as UiMotionOptions}
+              segment={motionSegment}
+              change={(settings) =>
+                studio.setTimelineKeySettings(settings as unknown as MotionOptions)
+              }
             />
           )}
           <p className="key-setting-note">

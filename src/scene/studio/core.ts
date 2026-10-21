@@ -2,6 +2,7 @@ import { DisplayCadence, RenderBudget, tabletPixelRatio } from '../renderBudget'
 import { isTouch as isAndroid } from '../../platform/storage';
 import { AttachmentSolver } from '../attachments';
 import { ProjectProps } from '../ProjectProps';
+import { PropAssetCache } from '../PropAssetCache';
 import { RetargetRig } from '../RetargetRig';
 import { MannyCharacter } from '../MannyCharacter';
 import { StudioReflections } from '../reflections';
@@ -28,6 +29,7 @@ export abstract class SceneCore {
   protected abstract updateControls(frame: number): void;
 
   canonicalRig?: MannyRig;
+  protected mannySource?: T.Group;
   retargetRig?: RetargetRig;
   previewCharacter?: MannyCharacter;
   protected previewSignature = '';
@@ -45,6 +47,7 @@ export abstract class SceneCore {
   protected recording = false;
   protected projectObjects!: ProjectProps;
   protected previewObjects!: ProjectProps;
+  protected propAssetCache = new PropAssetCache();
   protected previewProject?: Project;
   protected previewBodyRoot = new T.Matrix4();
   renderer!: T.WebGLRenderer;

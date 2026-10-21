@@ -66,9 +66,10 @@ export function CurveReducer({
     (count, result) => ({
       spring: count.spring + result.rows.reduce((n, row) => n + (row.motion?.spring ?? 0), 0),
       bounce: count.bounce + result.rows.reduce((n, row) => n + (row.motion?.bounce ?? 0), 0),
+      elastic: count.elastic + result.rows.reduce((n, row) => n + (row.motion?.elastic ?? 0), 0),
     }),
-    { spring: 0, bounce: 0 },
-  ) ?? { spring: 0, bounce: 0 };
+    { spring: 0, bounce: 0, elastic: 0 },
+  ) ?? { spring: 0, bounce: 0, elastic: 0 };
   useEffect(() => {
     dialog.current?.focus();
     return () => worker.current?.terminate();
@@ -371,8 +372,8 @@ export function CurveReducer({
               <label
                 title={
                   range
-                    ? 'Spring and bounce detection analyzes the complete curve'
-                    : 'Fit editable Spring or Bounce interpolation only when the sampled motion passes validation'
+                    ? 'Spring, bounce, and elastic detection analyzes the complete curve'
+                    : 'Fit editable Spring, Bounce, or Elastic interpolation only when the sampled motion passes validation'
                 }
               >
                 <input
@@ -381,7 +382,7 @@ export function CurveReducer({
                   disabled={range}
                   onChange={(e) => configure({ detectMotion: e.target.checked })}
                 />
-                Detect spring / bounce
+                Detect spring / bounce / elastic
               </label>
             )}
             {!baked && (
@@ -441,12 +442,12 @@ export function CurveReducer({
           <p className="reducer-note">
             {baked
               ? 'Rebuilds flat holds and eased motion. Drift is measured as a percentage of the channel range; measured changes are shown below.'
-              : 'Each axis reduces independently. Modifiers and stepped, spring and bounce segments stay intact.'}{' '}
+              : 'Each axis reduces independently. Modifiers and stepped, spring, bounce, and elastic segments stay intact.'}{' '}
             {options.detectNoise && options.fit !== 'linear' && !range
               ? 'Validated noise is kept as an editable Blender-compatible Noise modifier; other curves use the current key fitting.'
               : ''}{' '}
             {options.detectMotion && options.fit !== 'linear' && !range
-              ? 'Validated oscillations and impacts use editable Spring or Bounce interpolation.'
+              ? 'Validated oscillations, impacts, and elastic responses use editable Spring, Bounce, or Elastic interpolation.'
               : ''}{' '}
             Attachment switches and loop boundaries are protected.
           </p>
@@ -592,6 +593,7 @@ export function CurveReducer({
                               ` · ${[
                                 motionForRow(r)!.spring ? 'Spring' : '',
                                 motionForRow(r)!.bounce ? 'Bounce' : '',
+                                motionForRow(r)!.elastic ? 'Elastic' : '',
                               ]
                                 .filter(Boolean)
                                 .join(' / ')}`}
@@ -635,9 +637,9 @@ export function CurveReducer({
                   {options.detectMotion && options.fit !== 'linear' && !range && (
                     <p className="reducer-note" role="status">
                       <Check size={13} />
-                      {inferredMotion.spring || inferredMotion.bounce
-                        ? `${inferredMotion.spring} Spring and ${inferredMotion.bounce} Bounce spans inferred from sampled motion; validation errors are shown per axis.`
-                        : 'No sampled channel met the Spring or Bounce validation threshold.'}
+                      {inferredMotion.spring || inferredMotion.bounce || inferredMotion.elastic
+                        ? `${inferredMotion.spring} Spring, ${inferredMotion.bounce} Bounce, and ${inferredMotion.elastic} Elastic spans inferred from sampled motion; validation errors are shown per axis.`
+                        : 'No sampled channel met the Spring, Bounce, or Elastic validation threshold.'}
                     </p>
                   )}
                   <p className="reducer-note">

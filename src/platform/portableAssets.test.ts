@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   assetHash,
   assertGLBSize,
@@ -79,6 +79,48 @@ describe('browser and Android portable assets', () => {
       ),
     ).rejects.toThrow('checksum');
     expect(writes).toEqual([]);
+  });
+  it('validates every imported asset before invoking one batch write', async () => {
+    const first = glb({ asset: { version: '2.0' }, name: 'first' });
+    const second = glb({ asset: { version: '2.0' }, name: 'second' });
+    const firstId = await assetHash(first);
+    const secondId = await assetHash(second);
+    const batch = vi.fn(async (_entries: readonly (readonly [string, Uint8Array])[]) => {});
+    const write = vi.fn(async (_id: string, _data: Uint8Array) => {});
+    await restoreAssets(
+      {
+        characters: [{ asset: firstId }, { asset: secondId }, { asset: 'builtin-rifle' }],
+        characterAssets: {
+          [firstId]: encode64(first),
+          [secondId]: encode64(second),
+          'builtin-rifle': encode64(first),
+        },
+      },
+      write,
+      batch,
+    );
+    expect(batch).toHaveBeenCalledTimes(1);
+    expect(batch.mock.calls[0][0].map(([id]) => id)).toEqual([firstId, secondId]);
+    expect(write).not.toHaveBeenCalled();
+  });
+  it('does not invoke a batch write when a later asset fails validation', async () => {
+    const bytes = glb(),
+      id = await assetHash(bytes),
+      invalidId = '0'.repeat(64),
+      batch = vi.fn(async (_entries: readonly (readonly [string, Uint8Array])[]) => {}),
+      write = vi.fn(async (_asset: string, _data: Uint8Array) => {});
+    await expect(
+      restoreAssets(
+        {
+          characters: [{ asset: id }, { asset: invalidId }],
+          characterAssets: { [id]: encode64(bytes), [invalidId]: encode64(bytes) },
+        },
+        write,
+        batch,
+      ),
+    ).rejects.toThrow('checksum');
+    expect(batch).not.toHaveBeenCalled();
+    expect(write).not.toHaveBeenCalled();
   });
   it.each(['builtin-axe', 'builtin-rifle', 'builtin-magazine', 'builtin-unreal-fp-gun'])(
     'restores %s from a portable project using the bundled asset',

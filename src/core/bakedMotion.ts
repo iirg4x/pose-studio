@@ -1,6 +1,7 @@
-import { motionProgress } from './interpolation';
+import { blenderInterpolationValue, motionProgress } from './interpolation';
 import type {
   BounceSettings,
+  ElasticSettings,
   EaseDirection,
   MotionMode,
   MotionOptions,
@@ -16,6 +17,7 @@ export interface MotionDetection {
   motion: {
     spring: number;
     bounce: number;
+    elastic: number;
     maxError: number;
     validationError: number;
   };
@@ -25,23 +27,40 @@ type Point = { t: number; value: number };
 type Span = { from: number; to: number };
 type Shape =
   | { mode: 'spring'; easing: EaseDirection; spring: SpringSettings }
-  | { mode: 'bounce'; easing: EaseDirection; bounce: BounceSettings };
+  | { mode: 'bounce'; easing: EaseDirection; bounce: BounceSettings }
+  | {
+      mode: 'elastic';
+      easing: EaseDirection;
+      elastic: ElasticSettings;
+      begin: number;
+      change: number;
+      duration: number;
+    };
 type Fit = Shape & { sse: number; trainMax: number };
 type Validated = Fit & { span: Span; maxError: number; validationError: number; rms: number };
 
 const EPS = 1e-12;
 const DIRECTIONS: EaseDirection[] = ['out', 'in', 'inOut'];
+const ELASTIC_DIRECTIONS: EaseDirection[] = ['auto', 'out', 'in', 'inOut'];
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const finite = (value: number) => Number.isFinite(value);
 
 function settings(fit: Shape): MotionOptions {
-  return fit.mode === 'spring'
-    ? { spring: fit.spring, easing: fit.easing }
-    : { bounce: fit.bounce, easing: fit.easing };
+  if (fit.mode === 'spring') return { spring: fit.spring, easing: fit.easing };
+  if (fit.mode === 'bounce') return { bounce: fit.bounce, easing: fit.easing };
+  return { elastic: fit.elastic, easing: fit.easing };
 }
 
 function progress(fit: Shape, t: number) {
-  return motionProgress(fit.mode, t, settings(fit));
+  if (fit.mode !== 'elastic') return motionProgress(fit.mode, t, settings(fit));
+  return blenderInterpolationValue(
+    'elastic',
+    t * fit.duration,
+    fit.begin,
+    fit.change,
+    fit.duration,
+    settings(fit),
+  );
 }
 
 function training(points: Point[]) {
@@ -118,6 +137,224 @@ function bounceFit(
       1,
     );
   return score({ mode: 'bounce', easing, bounce: { ...bounce, height } }, points);
+}
+
+function rawSpanPoints(keys: CurveKey[], span: Span) {
+  const first = keys[span.from],
+    last = keys[span.to],
+    duration = last.frame - first.frame;
+  return keys.slice(span.from, span.to + 1).map((key) => ({
+    t: (key.frame - first.frame) / duration,
+    value: key.value,
+  }));
+}
+
+function elasticFit(
+  points: Point[],
+  easing: EaseDirection,
+  begin: number,
+  change: number,
+  duration: number,
+  amplitude: number,
+  period: number,
+) {
+  return elasticScore(
+    {
+      mode: 'elastic',
+      easing,
+      elastic: { amplitude, period },
+      begin,
+      change,
+      duration,
+    },
+    points,
+  );
+}
+
+function elasticScore(shape: Extract<Shape, { mode: 'elastic' }>, points: Point[]): Fit | null {
+  let sse = 0,
+    trainMax = 0;
+  for (const point of points) {
+    const error = progress(shape, point.t) - point.value;
+    if (!finite(error)) return null;
+    sse += error * error;
+    trainMax = Math.max(trainMax, Math.abs(error));
+  }
+  return { ...shape, sse, trainMax };
+}
+
+function residualExtrema(values: number[], band: number) {
+  const extrema: { index: number; value: number }[] = [];
+  for (let index = 1; index < values.length - 1; index++) {
+    const value = values[index],
+      left = values[index - 1],
+      right = values[index + 1],
+      maximum = value >= left && value >= right && (value > left || value > right),
+      minimum = value <= left && value <= right && (value < left || value < right);
+    if ((!maximum && !minimum) || Math.abs(value) <= band) continue;
+    const previous = extrema.at(-1);
+    // A baked plateau can report the same extremum on adjacent frames. Keep
+    // the most prominent sample so the period estimate remains stable.
+    if (previous && previous.value * value > 0) {
+      if (Math.abs(value) > Math.abs(previous.value))
+        ((previous.value = value), (previous.index = index));
+    } else extrema.push({ index, value });
+  }
+  return extrema;
+}
+
+function decays(values: number[]) {
+  if (values.length < 2) return false;
+  const first = Math.abs(values[0]),
+    last = Math.abs(values.at(-1)!);
+  return last < first * 0.96 && Math.max(...values.slice(1).map(Math.abs)) < first * 1.8;
+}
+
+function symmetricLobes(extrema: { index: number; value: number }[], pointCount: number) {
+  const midpoint = (pointCount - 1) / 2,
+    left = extrema.filter((point) => point.index < midpoint),
+    right = extrema.filter((point) => point.index > midpoint);
+  if (left.length < 3 || right.length < 3) return false;
+  const leftPeak = Math.max(...left.map((point) => Math.abs(point.value))),
+    rightPeak = Math.max(...right.map((point) => Math.abs(point.value))),
+    center = Math.min(leftPeak, rightPeak),
+    leftEdge = Math.abs(left[0].value),
+    rightEdge = Math.abs(right.at(-1)!.value);
+  // InOut elastic has a pair of equally strong center lobes. Its envelope
+  // grows toward the midpoint and decays symmetrically toward both holds,
+  // unlike a single ordinary Bezier bump.
+  return (
+    center > 0 &&
+    Math.abs(leftPeak - rightPeak) <= center * 0.28 &&
+    leftEdge < center * 0.8 &&
+    rightEdge < center * 0.8
+  );
+}
+
+function elasticEvidence(points: Point[], band: number) {
+  if (points.length < 12) return false;
+  const first = points[0].value,
+    last = points.at(-1)!.value,
+    change = last - first,
+    residuals = points.map((point) => point.value - (first + change * point.t)),
+    peak = Math.max(...residuals.map(Math.abs));
+  if (!(peak > band)) return false;
+  const extrema = residualExtrema(residuals, band * 0.35),
+    positive = extrema.some((point) => point.value > band),
+    negative = extrema.some((point) => point.value < -band),
+    tail = residuals.slice(Math.floor(residuals.length * 0.8));
+  // A Blender elastic segment crosses the endpoint line. This rejects eased
+  // bumps and ordinary Bezier arcs that only have one-sided drift.
+  if (extrema.length < 2 || !positive || !negative) return false;
+  if (Math.max(...tail.map(Math.abs)) > Math.max(band * 2, peak * 0.45)) return false;
+  // A large endpoint change can dominate the residual line. In that case the
+  // first lobe is not expected to be monotone in residual magnitude; signs and
+  // a settled tail are the useful evidence. Equal-endpoint curves still need
+  // the characteristic decaying oscillation in either time direction.
+  if (Math.abs(change) > band * 4) return true;
+  const magnitudes = extrema.map((point) => point.value);
+  return (
+    decays(magnitudes) ||
+    decays(magnitudes.slice().reverse()) ||
+    symmetricLobes(extrema, points.length)
+  );
+}
+
+function elasticPeriods(points: Point[], duration: number, band: number) {
+  const periods = new Set<number>();
+  // Blender's common elastic period is often a fractional cycle count over
+  // the authored span (for example 7.5 cycles over 96 frames gives 12.8
+  // frames). Keep that seed in the bounded coarse pass so symmetric InOut
+  // curves do not fall into a nearby period valley before refinement.
+  for (const cycles of [0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5, 6, 7.5, 8, 10, 12, 16]) {
+    const period = duration / cycles;
+    if (period >= 1.5 && period <= duration * 2) periods.add(period);
+  }
+  const extrema: number[] = [];
+  const residuals = points.map(
+    (point) => point.value - (points[0].value + (points.at(-1)!.value - points[0].value) * point.t),
+  );
+  for (let index = 1; index < residuals.length - 1; index++) {
+    if (
+      Math.abs(residuals[index]) > band * 0.35 &&
+      (residuals[index] - residuals[index - 1]) * (residuals[index + 1] - residuals[index]) <= 0
+    )
+      extrema.push(points[index].t);
+  }
+  for (let index = 1; index < extrema.length; index++) {
+    const period = (extrema[index] - extrema[index - 1]) * duration * 2;
+    if (period >= 1.5 && period <= duration * 2) periods.add(period);
+  }
+  return [...periods].sort((a, b) => a - b).slice(0, 32);
+}
+
+function searchElastic(
+  points: Point[],
+  begin: number,
+  change: number,
+  duration: number,
+  band: number,
+) {
+  const peak = Math.max(
+      ...points.map((point) => Math.abs(point.value - (begin + change * point.t))),
+    ),
+    transition = Math.max(Math.abs(change), band),
+    scale = Math.max(peak * 1.25, transition * 0.08, band * 2),
+    amplitudes = [
+      ...new Set([
+        ...[0.02, 0.04, 0.06, 0.08, 0.1, 0.15, 0.2, 0.3, 0.5, 0.8, 1.2].map(
+          (factor) => transition * factor,
+        ),
+        ...[0.25, 0.4, 0.6, 0.8, 1, 1.25, 1.5, 2, 3].map((factor) => scale * factor),
+      ]),
+    ].filter((amplitude) => amplitude > 0 && amplitude <= Math.max(scale * 8, transition * 2)),
+    periods = elasticPeriods(points, duration, band),
+    coarse: (Fit | null)[] = [];
+  for (const easing of ELASTIC_DIRECTIONS)
+    for (const amplitude of amplitudes)
+      for (const period of periods)
+        coarse.push(elasticFit(points, easing, begin, change, duration, amplitude, period));
+  const refined: Fit[] = [];
+  for (const seed of bestSeeds(coarse, 6)) {
+    if (seed.mode !== 'elastic') continue;
+    let current: Extract<Fit, { mode: 'elastic' }> = seed,
+      amplitudeStep = Math.max(current.elastic.amplitude * 0.35, band * 0.5),
+      periodStep = Math.max(duration * 0.04, 0.25);
+    for (let iteration = 0; iteration < 7; iteration++) {
+      const candidates: (Fit | null)[] = [],
+        amplitudes = [
+          current.elastic.amplitude - amplitudeStep,
+          current.elastic.amplitude,
+          current.elastic.amplitude + amplitudeStep,
+        ],
+        periods = [
+          current.elastic.period - periodStep,
+          current.elastic.period,
+          current.elastic.period + periodStep,
+        ];
+      // Search the small local amplitude/period grid together. Independent
+      // coordinate steps can settle on the wrong valley for symmetric InOut
+      // curves, where both parameters move slightly before the residual drops.
+      for (const amplitude of amplitudes)
+        for (const period of periods)
+          if (
+            amplitude > 0 &&
+            amplitude <= Math.max(scale * 8, Math.abs(change) * 2) &&
+            period >= 1.5 &&
+            period <= duration * 2
+          )
+            candidates.push(
+              elasticFit(points, current.easing, begin, change, duration, amplitude, period),
+            );
+      const next = bestSeeds(candidates, 1)[0];
+      if (!next || next.mode !== 'elastic') break;
+      current = next;
+      amplitudeStep *= 0.5;
+      periodStep *= 0.5;
+    }
+    refined.push(current);
+  }
+  return bestSeeds(refined, 4);
 }
 
 function bestSeeds(fits: (Fit | null)[], count: number) {
@@ -359,7 +596,7 @@ function criticalTimes(fit: Fit) {
 }
 
 function validate(
-  fit: Fit,
+  fit: Extract<Fit, { mode: 'spring' | 'bounce' }>,
   points: Point[],
   span: Span,
   tolerance: number,
@@ -400,6 +637,58 @@ function validate(
     relativeMax > 0.055 ||
     improvement < 0.85 ||
     !signature
+  )
+    return null;
+  return { ...fit, span, maxError, validationError, rms };
+}
+
+function validateElastic(
+  fit: Extract<Fit, { mode: 'elastic' }>,
+  points: Point[],
+  span: Span,
+  tolerance: number,
+  band: number,
+): Validated | null {
+  const allTimes = points.map((point) => point.t);
+  for (let index = 0; index < points.length - 1; index++)
+    allTimes.push((points[index].t + points[index + 1].t) / 2);
+  let maxError = 0,
+    validationError = 0,
+    sumSquared = 0;
+  for (const point of points) {
+    const error = Math.abs(progress(fit, point.t) - point.value);
+    if (!finite(error)) return null;
+    maxError = Math.max(maxError, error);
+  }
+  for (const t of allTimes) {
+    const error = Math.abs(progress(fit, t) - observedAt(points, t));
+    if (!finite(error)) return null;
+    validationError = Math.max(validationError, error);
+    sumSquared += error * error;
+  }
+  const scale = Math.max(
+      band * 2,
+      ...points.map((point) => Math.abs(point.value - fit.begin)),
+      Math.abs(fit.change),
+      // Blender's InOut elastic curve exposes half of the absolute
+      // amplitude in each lobe. Use the authored-unit amplitude as the
+      // validation scale so its legitimate fractional-frame curvature is
+      // not judged against only one lobe's observed height.
+      Math.abs(fit.elastic.amplitude),
+    ),
+    rms = Math.sqrt(sumSquared / allTimes.length),
+    relativeRms = rms / scale,
+    relativeMax = validationError / scale,
+    allowed = Math.min(tolerance, Math.max(band * 0.6, scale * 0.055)),
+    residuals = points.map((point) => point.value - (fit.begin + fit.change * point.t)),
+    linearSse = residuals.reduce((sum, value) => sum + value * value, 0),
+    improvement = linearSse > EPS ? 1 - fit.sse / linearSse : 1;
+  if (
+    validationError > allowed ||
+    relativeRms > 0.018 ||
+    relativeMax > 0.055 ||
+    improvement < 0.85 ||
+    !elasticEvidence(points, band)
   )
     return null;
   return { ...fit, span, maxError, validationError, rms };
@@ -475,6 +764,53 @@ function candidateSpans(keys: CurveKey[], tolerance: number) {
   );
 }
 
+function elasticCandidateSpans(keys: CurveKey[], tolerance: number) {
+  const values = keys.map((key) => key.value),
+    range = Math.max(...values) - Math.min(...values),
+    tailCount = Math.min(8, Math.max(3, Math.floor(keys.length / 8))),
+    baseline = median(values.slice(-tailCount)),
+    band = Math.max(tolerance * 0.5, range * 0.015),
+    first = values[0],
+    last = values.at(-1)!,
+    change = last - first,
+    residuals = values.map(
+      (value, index) => value - (first + change * (index / (values.length - 1))),
+    ),
+    active = residuals
+      .map((value, index) => ({ value, index }))
+      .filter(({ value }) => Math.abs(value) > band);
+  if (!active.length) return [{ from: 0, to: keys.length - 1 }];
+  const firstActive = active[0].index,
+    lastActive = active.at(-1)!.index,
+    pad = Math.max(1, Math.round(keys.length / 192));
+  const spans: Span[] = [
+    { from: 0, to: keys.length - 1 },
+    { from: Math.max(0, firstActive - pad), to: Math.min(keys.length - 1, lastActive + pad) },
+  ];
+  // A pulse can be surrounded by a long baseline. Include its baseline-to-
+  // event bounds so the reconstructed span does not absorb unrelated motion.
+  if (Math.abs(first - baseline) <= band && Math.abs(last - baseline) <= band) {
+    const deviation = values.map((value) => Math.abs(value - baseline)),
+      firstDeviation = deviation.findIndex((value) => value > band),
+      lastDeviation =
+        deviation.length -
+        1 -
+        deviation
+          .slice()
+          .reverse()
+          .findIndex((value) => value > band);
+    if (firstDeviation >= 0 && lastDeviation >= firstDeviation)
+      spans.push({
+        from: Math.max(0, firstDeviation - pad),
+        to: Math.min(keys.length - 1, lastDeviation + pad),
+      });
+  }
+  return spans.filter(
+    (span, index, all) =>
+      all.findIndex((other) => other.from === span.from && other.to === span.to) === index,
+  );
+}
+
 function makeCurve(source: Curve, fit: Validated) {
   const curve = structuredClone(source),
     keys = curve.keys,
@@ -485,9 +821,11 @@ function makeCurve(source: Curve, fit: Validated) {
   delete start.right;
   delete start.spring;
   delete start.bounce;
+  delete start.elastic;
   delete start.easing;
   if (fit.mode === 'spring') start.spring = { ...fit.spring };
-  else start.bounce = { ...fit.bounce };
+  else if (fit.mode === 'bounce') start.bounce = { ...fit.bounce };
+  else start.elastic = { ...fit.elastic };
   start.easing = fit.easing;
   curve.keys = [
     ...keys.slice(0, fit.span.from + 1),
@@ -498,7 +836,7 @@ function makeCurve(source: Curve, fit: Validated) {
 }
 
 /**
- * Infer one Spring or Bounce interpolation span from a uniform, linear baked
+ * Infer one editable dynamic interpolation span from a uniform, linear baked
  * scalar curve. The source is never mutated and ambiguous fits return null.
  */
 export function detectMotion(curve: Curve, tolerance: number): MotionDetection | null {
@@ -515,6 +853,7 @@ export function detectMotion(curve: Curve, tolerance: number): MotionDetection |
         key.interpolation !== 'linear' ||
         key.spring !== undefined ||
         key.bounce !== undefined ||
+        key.elastic !== undefined ||
         key.easing !== undefined,
     )
   )
@@ -531,25 +870,53 @@ export function detectMotion(curve: Curve, tolerance: number): MotionDetection |
     return null;
   const values = keys.map((key) => key.value),
     sourceRange = Math.max(...values) - Math.min(...values);
-  if (!(sourceRange > tolerance * 4)) return null;
+  if (!(sourceRange > tolerance * 2)) return null;
   const accepted: Validated[] = [];
-  for (const span of candidateSpans(keys, tolerance)) {
+  const spans = [
+    ...candidateSpans(keys, tolerance),
+    ...elasticCandidateSpans(keys, tolerance),
+  ].filter(
+    (span, index, all) =>
+      all.findIndex((other) => other.from === span.from && other.to === span.to) === index,
+  );
+  for (const span of spans) {
     const first = keys[span.from],
       last = keys[span.to],
-      magnitude = Math.abs(last.value - first.value);
-    if (!(magnitude > tolerance * 4) || magnitude < sourceRange * 0.2) continue;
-    const points = spanPoints(keys, span),
+      magnitude = Math.abs(last.value - first.value),
+      rawPoints = rawSpanPoints(keys, span),
+      elasticBand = Math.max(tolerance * 0.5, sourceRange * 0.015),
+      elastic = rawPoints.length >= 12 && elasticEvidence(rawPoints, elasticBand),
+      points = magnitude > EPS ? spanPoints(keys, span) : [],
       train = training(points),
-      modes = cheapModes(points, Math.max(0.02, (tolerance / magnitude) * 1.1));
+      modes =
+        magnitude > tolerance * 4 && magnitude >= sourceRange * 0.2
+          ? cheapModes(points, Math.max(0.02, (tolerance / magnitude) * 1.1))
+          : { spring: false, bounce: false };
+    if (elastic) {
+      const duration = last.frame - first.frame;
+      for (const fit of searchElastic(
+        training(rawPoints),
+        first.value,
+        last.value - first.value,
+        duration,
+        elasticBand,
+      )) {
+        if (fit.mode !== 'elastic') continue;
+        const validated = validateElastic(fit, rawPoints, span, tolerance, elasticBand);
+        if (validated) accepted.push(validated);
+      }
+    }
     if (train.length < 7) continue;
-    if (!modes.spring && !modes.bounce) continue;
-    const fits = [
-      ...(modes.spring ? searchSpring(train) : []),
-      ...(modes.bounce ? searchBounce(train) : []),
-    ];
-    for (const fit of fits) {
-      const validated = validate(fit, points, span, tolerance, magnitude);
-      if (validated) accepted.push(validated);
+    if (modes.spring || modes.bounce) {
+      const fits = [
+        ...(modes.spring ? searchSpring(train) : []),
+        ...(modes.bounce ? searchBounce(train) : []),
+      ];
+      for (const fit of fits) {
+        if (fit.mode === 'elastic') continue;
+        const validated = validate(fit, points, span, tolerance, magnitude);
+        if (validated) accepted.push(validated);
+      }
     }
   }
   if (!accepted.length) return null;
@@ -558,7 +925,7 @@ export function detectMotion(curve: Curve, tolerance: number): MotionDetection |
       b.span.to - b.span.from - (a.span.to - a.span.from) ||
       a.validationError - b.validationError ||
       a.rms - b.rms ||
-      (a.mode === 'spring' ? -1 : 1),
+      (a.mode === 'elastic' ? -1 : a.mode === 'spring' ? 0 : 1),
   );
   const best = accepted[0],
     result = makeCurve(curve, best);
@@ -569,6 +936,7 @@ export function detectMotion(curve: Curve, tolerance: number): MotionDetection |
     motion: {
       spring: best.mode === 'spring' ? 1 : 0,
       bounce: best.mode === 'bounce' ? 1 : 0,
+      elastic: best.mode === 'elastic' ? 1 : 0,
       maxError: best.maxError,
       validationError: best.validationError,
     },

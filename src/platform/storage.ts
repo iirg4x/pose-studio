@@ -8,11 +8,7 @@ import {
   orderedRecoveryGenerations,
   referencedRecoveryClips,
 } from './recoveryGenerations';
-import type {
-  RecoveryClipReference,
-  RecoveryGeneration,
-  RecoveryManifest,
-} from './recoveryGenerations';
+import type { RecoveryClipReference, RecoveryManifest } from './recoveryGenerations';
 
 export const isAndroid = Capacitor.getPlatform() === 'android';
 export const isTouch =
@@ -104,6 +100,10 @@ let previousClips = new Map<string, AnimationEntry>();
 let recoveryQueue = Promise.resolve();
 let recoveryManifest: RecoveryManifest = emptyRecoveryManifest();
 let recoveryCandidates: RecoveryCandidate[] = [];
+// A candidate assembled from its durable clip records is safe to transfer to
+// validation. Keep that fact out of the persisted candidate shape so cached
+// live-project payloads retain their defensive-clone behavior.
+const freshRecoveryCandidates = new WeakSet<RecoveryCandidate>();
 let recoveryProblem: RecoveryProblem | null = null;
 let recoveryWriteHeld = false;
 let recoveryState: RecoveryState = { writeHeld: false, problem: null, generations: [] };
@@ -242,8 +242,15 @@ function publishRecoveryState() {
   for (const listener of recoveryListeners) listener();
 }
 
-async function loadCandidate(candidate: RecoveryCandidate): Promise<unknown> {
-  if (candidate.data !== undefined) return candidate.data;
+function hasDurableClipReferences(candidate: RecoveryCandidate) {
+  return (
+    (candidate.source === 'generation' && Array.isArray(candidate.clipReferences)) ||
+    (candidate.source === 'legacy-index' && Array.isArray(candidate.legacyClipIds))
+  );
+}
+
+async function loadCandidate(candidate: RecoveryCandidate, forceFresh = false): Promise<unknown> {
+  if (candidate.data !== undefined && !forceFresh) return candidate.data;
   if (candidate.source === 'quarantine' && candidate.archiveKey) {
     const archived = (await readAsset(candidate.archiveKey)) as
       | { candidate?: RecoveryCandidate }
@@ -264,6 +271,7 @@ async function loadCandidate(candidate: RecoveryCandidate): Promise<unknown> {
       ...candidate.metadata,
       clips: stored.filter((clip): clip is AnimationEntry => !!clip),
     };
+    freshRecoveryCandidates.add(candidate);
     return candidate.data;
   }
   if (candidate.legacyClipIds && candidate.metadata) {
@@ -275,6 +283,7 @@ async function loadCandidate(candidate: RecoveryCandidate): Promise<unknown> {
       ...candidate.metadata,
       clips: stored.filter((clip): clip is AnimationEntry => !!clip),
     };
+    freshRecoveryCandidates.add(candidate);
   }
   return candidate.data;
 }
@@ -465,6 +474,55 @@ export function writeAsset(key: string, value: unknown): Promise<void> {
   });
 }
 
+/** Persist several values in one atomic IndexedDB transaction. */
+export function writeAssets(entries: readonly (readonly [string, unknown])[]): Promise<void> {
+  if (!entries.length) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    let transaction: IDBTransaction;
+    try {
+      transaction = database.transaction('files', 'readwrite');
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    let settled = false;
+    let failure: unknown;
+    const rejectFailure = (error: unknown) => {
+      if (settled) return;
+      settled = true;
+      reject(error instanceof Error ? error : Error(String(error)));
+    };
+    const abort = (error: unknown) => {
+      if (settled) return;
+      failure ??= error;
+      try {
+        transaction.abort();
+      } catch {
+        // The transaction may already be aborting after a request error.
+        rejectFailure(failure);
+      }
+    };
+    transaction.oncomplete = () => {
+      if (!settled) {
+        settled = true;
+        resolve();
+      }
+    };
+    transaction.onerror = () => {
+      failure ??= transaction.error ?? Error('Storage write failed.');
+      abort(failure);
+    };
+    transaction.onabort = () =>
+      rejectFailure(failure ?? transaction.error ?? Error('Storage write was interrupted.'));
+    try {
+      const store = transaction.objectStore('files');
+      for (const [key, value] of entries) store.put(value, key);
+    } catch (error) {
+      abort(error);
+    }
+  });
+}
+
 export function readRecovery() {
   return recovery;
 }
@@ -480,6 +538,36 @@ export async function readRecoveryCandidate(candidate: RecoveryCandidate) {
     );
   return data;
 }
+
+/**
+ * Read a durable recovery payload for validation and transfer its ownership.
+ *
+ * Generation and legacy-index candidates are assembled from fresh IndexedDB
+ * records. Detaching that payload lets takeOwnership validation avoid another
+ * full-library clone. If validation fails, rejectRecoveryCandidate sees the
+ * detached candidate and reloads the original records before archiving them.
+ * Cached live or quarantine payloads deliberately keep the defensive path.
+ */
+export async function readOwnedRecoveryCandidate(candidate: RecoveryCandidate) {
+  if (!hasDurableClipReferences(candidate)) {
+    const data = await readRecoveryCandidate(candidate);
+    // Legacy JSON is immutable after parsing; cached object payloads still
+    // need isolation before takeOwnership validation is allowed to mutate them.
+    return typeof data === 'string' ? data : structuredClone(data);
+  }
+  const data = await loadCandidate(
+    candidate,
+    candidate.data !== undefined && !freshRecoveryCandidates.has(candidate),
+  );
+  if (data === undefined) throw Error('The stored recovery payload is unavailable.');
+  if (candidate.missingClipIds.length)
+    throw Error(
+      'Recovery is missing stored animation data: ' + candidate.missingClipIds.join(', '),
+    );
+  candidate.data = undefined;
+  freshRecoveryCandidates.delete(candidate);
+  return data;
+}
 export function getRecoveryState() {
   return recoveryState;
 }
@@ -490,6 +578,7 @@ export function subscribeRecoveryState(listener: () => void) {
 export function acceptRecoveryCandidate(candidate: RecoveryCandidate, data: AnimationLibrary) {
   recovery = data;
   candidate.data = data;
+  freshRecoveryCandidates.delete(candidate);
   if (candidate.source === 'generation')
     previousClips = new Map(data.clips.map((clip) => [clip.id, clip]));
 }
@@ -587,15 +676,27 @@ function withArchiveLimitMessage(problem: RecoveryProblem): RecoveryProblem {
   };
 }
 
+function recoveryReason(reason: unknown) {
+  return reason instanceof Error ? reason.message : String(reason);
+}
+
+async function persistRecoveryHold(problem: RecoveryProblem) {
+  try {
+    await writeAsset(recoveryHoldKey, { format: 1, problem });
+    return null;
+  } catch (error) {
+    return error;
+  }
+}
+
 export async function rejectRecoveryCandidate(candidate: RecoveryCandidate, reason: unknown) {
   if (recoveryProblem) return;
-  await loadCandidate(candidate);
   const problem: RecoveryProblem = {
     id: id(),
     archiveId: id(),
     candidateId: candidate.id,
     createdAt: Date.now(),
-    message: reason instanceof Error ? reason.message : String(reason),
+    message: recoveryReason(reason),
     downloadName: `pose-recovery-${new Date().toISOString().replace(/[:.]/g, '-')}.json`,
     hasOlderGeneration: recoveryCandidates.some(
       (item) =>
@@ -609,9 +710,23 @@ export async function rejectRecoveryCandidate(candidate: RecoveryCandidate, reas
   recoveryProblem = problem;
   recoveryWriteHeld = true;
   publishRecoveryState();
+  await persistRecoveryHold(problem);
+  let original: unknown;
+  try {
+    original = await loadCandidate(candidate);
+    if (original === undefined) throw Error('The stored recovery payload is unavailable.');
+  } catch (error) {
+    let message = `${problem.message} The original recovery copy could not be reloaded for preservation: ${recoveryReason(error)}`;
+    const retryHoldError = await persistRecoveryHold({ ...problem, message });
+    if (retryHoldError)
+      message += ` The recovery hold could not be written: ${recoveryReason(retryHoldError)}`;
+    recoveryProblem = { ...problem, message };
+    recoveryWriteHeld = true;
+    publishRecoveryState();
+    return;
+  }
   const storedCandidate = { ...candidate, clipReferences: undefined, legacyClipIds: undefined };
   try {
-    await writeAsset(recoveryHoldKey, { format: 1, problem });
     if (await archiveRecoveryProblem(problem, storedCandidate)) {
       recoveryProblem = { ...problem, archiveDurable: true };
       addArchiveCandidate(recoveryProblem, storedCandidate);
@@ -620,10 +735,15 @@ export async function rejectRecoveryCandidate(candidate: RecoveryCandidate, reas
     }
     publishRecoveryState();
   } catch (error) {
+    let message = `${problem.message} The recovery archive could not be written: ${recoveryReason(error)}`;
+    const retryHoldError = await persistRecoveryHold({ ...problem, message });
+    if (retryHoldError)
+      message += ` The recovery hold could not be written: ${recoveryReason(retryHoldError)}`;
     recoveryProblem = {
       ...problem,
-      message: `${problem.message} The recovery archive could not be written: ${(error as Error).message}`,
+      message,
     };
+    recoveryWriteHeld = true;
     publishRecoveryState();
   }
 }
@@ -653,6 +773,54 @@ function recoveryDownload(candidate: RecoveryCandidate, name?: string): Recovery
   };
 }
 
+// The live model keeps the active layer tracks in the top-level tracks alias,
+// but an edit can leave the layer object itself stale until the next sync.
+// Persist a shallow canonical wrapper so IndexedDB sees one shared graph for
+// both fields without mutating the live clip used by change detection.
+type RecoveryProjectContext = ReadonlyMap<string, AnimationEntry['project']>;
+
+function canonicalRecoveryProject(
+  project: AnimationEntry['project'],
+  context: RecoveryProjectContext,
+  seen = new Set<AnimationEntry['project']>(),
+): AnimationEntry['project'] {
+  if (seen.has(project)) return project;
+  seen.add(project);
+  let next = project;
+  if (project.layers && project.activeLayerId) {
+    const activeIndex = project.layers.findIndex((layer) => layer.id === project.activeLayerId);
+    if (activeIndex >= 0 && project.layers[activeIndex].tracks !== project.tracks) {
+      const layers = project.layers.slice();
+      layers[activeIndex] = { ...layers[activeIndex], tracks: project.tracks };
+      next = { ...next, layers };
+    }
+  }
+  const base = next.bodyBase;
+  if (base) {
+    const source = canonicalRecoveryProject(base.source, context, seen);
+    const resolvedSource = context.get(base.sourceId);
+    const resolved = !!resolvedSource && resolvedSource.editing !== next.editing;
+    const sourceChanged = source !== base.source;
+    const derivedChanged = resolved && next.otherTracks !== source.tracks;
+    if (sourceChanged || derivedChanged)
+      next = {
+        ...next,
+        ...(sourceChanged ? { bodyBase: { ...base, source } } : {}),
+        ...(derivedChanged ? { otherTracks: source.tracks } : {}),
+      };
+  }
+  seen.delete(project);
+  return next;
+}
+
+function canonicalRecoveryClip(
+  clip: AnimationEntry,
+  context: RecoveryProjectContext,
+): AnimationEntry {
+  const project = canonicalRecoveryProject(clip.project, context);
+  return project === clip.project ? clip : { ...clip, project };
+}
+
 export async function readFailedRecovery(): Promise<RecoveryDownload | null> {
   if (!recoveryProblem) return null;
   const candidates = [
@@ -662,8 +830,12 @@ export async function readFailedRecovery(): Promise<RecoveryDownload | null> {
     recoveryCandidates.find((item) => item.id === recoveryProblem?.candidateId),
   ].filter((candidate): candidate is RecoveryCandidate => !!candidate);
   for (const candidate of candidates) {
-    const data = await loadCandidate(candidate);
-    if (data !== undefined) return recoveryDownload(candidate, recoveryProblem.downloadName);
+    try {
+      const data = await loadCandidate(candidate);
+      if (data !== undefined) return recoveryDownload(candidate, recoveryProblem.downloadName);
+    } catch {
+      // The hold remains active; a later download attempt retries the durable read.
+    }
   }
   return null;
 }
@@ -840,6 +1012,9 @@ function clipChanged(previous: AnimationEntry | undefined, next: AnimationEntry,
 
 /** Commit a bounded immutable generation; the transaction merges other tabs' latest manifest. */
 export function writeRecovery(data: AnimationLibrary): Promise<void> {
+  const context: RecoveryProjectContext = new Map<string, AnimationEntry['project']>(
+    data.clips.map((clip) => [clip.id, clip.project]),
+  );
   const run = () =>
     new Promise<void>((resolve, reject) => {
       if (!database) {
@@ -858,6 +1033,75 @@ export function writeRecovery(data: AnimationLibrary): Promise<void> {
       let committedDocumentId = id();
       let blockedError: RecoveryWriteHeldError | undefined;
       let blockedCatalog: RecoveryArchiveCatalog | undefined;
+      let clipWriteError: unknown;
+      let finalizationQueued = false;
+      let currentManifest: RecoveryManifest | undefined;
+      let pendingManifest: RecoveryManifest | undefined;
+      const pendingClipWrites: { value: AnimationEntry; key: string }[] = [];
+      let pendingClipIndex = 0;
+      const abortTransaction = (error: unknown) => {
+        clipWriteError ??= error instanceof Error ? error : Error(String(error));
+        try {
+          transaction.abort();
+        } catch {
+          reject(clipWriteError);
+        }
+      };
+      const finalize = () => {
+        if (finalizationQueued || clipWriteError || !currentManifest || !pendingManifest) return;
+        finalizationQueued = true;
+        try {
+          const retained = referencedRecoveryClips(pendingManifest);
+          for (const key of referencedRecoveryClips(currentManifest))
+            if (!retained.has(key)) store.delete(key);
+          store.put(pendingManifest, recoveryManifestKey);
+          for (const clip of legacyClipIdsForCleanup) store.delete(legacyClipKey(clip));
+          store.delete(recoveryIndex);
+          store.delete(RECOVERY);
+          committedManifest = pendingManifest;
+        } catch (error) {
+          abortTransaction(error);
+        }
+      };
+      const queueClipBatch = () => {
+        if (clipWriteError || finalizationQueued) return;
+        if (pendingClipIndex >= pendingClipWrites.length) {
+          finalize();
+          return;
+        }
+        let lastRequest: IDBRequest<IDBValidKey> | undefined;
+        let queued = 0;
+        const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+        const started = now();
+        try {
+          while (
+            pendingClipIndex < pendingClipWrites.length &&
+            queued < 8 &&
+            (queued === 0 || now() - started < 8)
+          ) {
+            const pending = pendingClipWrites[pendingClipIndex];
+            const request = store.put(pending.value, pending.key);
+            request.onerror = () => {
+              clipWriteError ??= request.error ?? Error('Recovery clip write failed.');
+            };
+            lastRequest = request;
+            pendingClipIndex++;
+            queued++;
+          }
+        } catch (error) {
+          abortTransaction(error);
+          return;
+        }
+        if (!lastRequest) {
+          abortTransaction(Error('Recovery clip write batch was empty.'));
+          return;
+        }
+        lastRequest.onsuccess = () => {
+          if (clipWriteError || finalizationQueued) return;
+          if (pendingClipIndex < pendingClipWrites.length) queueClipBatch();
+          else finalize();
+        };
+      };
       const commit = () => {
         if (
           manifestRequest.readyState !== 'done' ||
@@ -865,6 +1109,7 @@ export function writeRecovery(data: AnimationLibrary): Promise<void> {
           holdRequest.readyState !== 'done'
         )
           return;
+        if (currentManifest) return;
         try {
           const catalog = normalizeArchiveCatalog(archiveRequest.result);
           if (catalog.items.some((item) => !item.resolved) || holdRequest.result !== undefined) {
@@ -874,6 +1119,7 @@ export function writeRecovery(data: AnimationLibrary): Promise<void> {
             return;
           }
           const current = normalizeRecoveryManifest(manifestRequest.result);
+          currentManifest = current;
           const latest = current.sessions.find((item) => item.id === sessionId)?.generations[0];
           committedDocumentId = documentRecoveryId(clips, latest, committedDocumentId);
           const oldReferences = new Map(latest?.clips.map((clip) => [clip.id, clip.key]) ?? []);
@@ -882,29 +1128,22 @@ export function writeRecovery(data: AnimationLibrary): Promise<void> {
             const key = changed
               ? clipKey(sessionId, generationId, clip.id)
               : (oldReferences.get(clip.id) ?? clipKey(sessionId, generationId, clip.id));
-            if (changed || !oldReferences.has(clip.id)) store.put(clip, key);
+            if (changed || !oldReferences.has(clip.id))
+              pendingClipWrites.push({ value: canonicalRecoveryClip(clip, context), key });
             return { id: clip.id, key };
           });
-          const generation: RecoveryGeneration = {
+          pendingManifest = addRecoveryGeneration(current, {
             id: generationId,
             sessionId,
             documentId: committedDocumentId,
             createdAt,
             metadata,
             clips: references,
-          };
-          const next = addRecoveryGeneration(current, generation);
-          const retained = referencedRecoveryClips(next);
-          for (const key of referencedRecoveryClips(current))
-            if (!retained.has(key)) store.delete(key);
-          store.put(next, recoveryManifestKey);
-          for (const clip of legacyClipIdsForCleanup) store.delete(legacyClipKey(clip));
-          store.delete(recoveryIndex);
-          store.delete(RECOVERY);
-          committedManifest = next;
+          });
+          if (pendingClipWrites.length) queueClipBatch();
+          else finalize();
         } catch (error) {
-          transaction.abort();
-          reject(error);
+          abortTransaction(error);
         }
       };
       manifestRequest.onsuccess = commit;
@@ -951,14 +1190,16 @@ export function writeRecovery(data: AnimationLibrary): Promise<void> {
         publishRecoveryState();
         resolve();
       };
-      transaction.onerror = () => reject(transaction.error);
+      transaction.onerror = () =>
+        reject(clipWriteError ?? transaction.error ?? Error('Recovery write failed.'));
       transaction.onabort = () => {
         if (blockedError)
           void refreshRecoveryHoldState(blockedCatalog).then(
             () => reject(blockedError),
             () => reject(blockedError),
           );
-        else reject(transaction.error ?? Error('Recovery write was interrupted.'));
+        else
+          reject(clipWriteError ?? transaction.error ?? Error('Recovery write was interrupted.'));
       };
     });
   const next = recoveryQueue.then(run);

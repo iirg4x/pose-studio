@@ -3,11 +3,12 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { Matrix4, Quaternion, Vector3, SkinnedMesh } from 'three';
+import { Matrix4, Quaternion, Vector3, SkinnedMesh, Group } from 'three';
+import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { rigLoader } from './rig-loader';
 import { MannyRig } from '../src/scene/rig';
 import { RetargetRig } from '../src/scene/RetargetRig';
-import { MannyCharacter } from '../src/scene/MannyCharacter';
+import { MannyCharacter, mannyPreviewConfig } from '../src/scene/MannyCharacter';
 import { maskedGeometry } from '../src/scene/meshMask';
 import {
   autoMapBones,
@@ -53,6 +54,54 @@ beforeAll(async () => {
   };
 });
 describe('humanoid retargeting', () => {
+  it('borrows Manny rest resources without mutating or disposing the loaded model', () => {
+    const sourceState = [...source.bones].map(([name, bone]) => ({
+        name,
+        position: bone.position.clone(),
+        quaternion: bone.quaternion.clone(),
+        scale: bone.scale.clone(),
+        world: bone.matrixWorld.clone(),
+      })),
+      sourceMesh = (() => {
+        let result: SkinnedMesh | undefined;
+        source.root.traverse((o) => {
+          if (!result && o instanceof SkinnedMesh) result = o;
+        });
+        return result!;
+      })(),
+      material = Array.isArray(sourceMesh.material) ? sourceMesh.material[0] : sourceMesh.material;
+    let geometryDisposed = false,
+      materialDisposed = false;
+    sourceMesh.geometry.addEventListener('dispose', () => (geometryDisposed = true));
+    material.addEventListener('dispose', () => (materialDisposed = true));
+    const rig = new RetargetRig(cloneSkeleton(source.root) as Group, { ownsResources: false });
+    rig.configure(source, mannyPreviewConfig(source));
+    rig.apply(true);
+    rig.dispose();
+    expect(geometryDisposed).toBe(false);
+    expect(materialDisposed).toBe(false);
+    for (const state of sourceState) {
+      const bone = source.bones.get(state.name)!;
+      expect(bone.position).toEqual(state.position);
+      expect(bone.quaternion.toArray()).toEqual(state.quaternion.toArray());
+      expect(bone.scale).toEqual(state.scale);
+      expect(bone.matrixWorld.elements).toEqual(state.world.elements);
+    }
+  });
+
+  it('disposes resources for an owning imported retarget rig', async () => {
+    const rig = new RetargetRig(await load('example-fantasy-male')),
+      mesh = rig.meshes[0],
+      material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+    let geometryDisposed = false,
+      materialDisposed = false;
+    mesh.geometry.addEventListener('dispose', () => (geometryDisposed = true));
+    material.addEventListener('dispose', () => (materialDisposed = true));
+    rig.dispose();
+    expect(geometryDisposed).toBe(true);
+    expect(materialDisposed).toBe(true);
+  });
+
   it('restores a camera-centered arms skeleton to the floor origin without changing proportions', async () => {
     const model = await load('manny');
     model.traverse((o) => {

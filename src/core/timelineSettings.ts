@@ -5,11 +5,45 @@ import {
   explicitLoopCurve,
   CHANNEL_LABELS,
 } from './curves';
-import type { CurveKey, HandleMode } from './curves';
+import type { Channel, CurveKey, HandleMode } from './curves';
 import { clone } from './model';
 import type { ControlId, Project, Track } from './model';
+import { motionOptions } from './interpolation';
 import type { MotionOptions } from './interpolation';
 import type { TimelineKey } from './timelineKeys';
+
+const DISPLAY_UNIT_CHANNELS = new Set([
+  'px',
+  'py',
+  'pz',
+  'thumb',
+  'index',
+  'middle',
+  'ring',
+  'pinky',
+]);
+const channelUnitScale = (channel: Channel) => (DISPLAY_UNIT_CHANNELS.has(channel) ? 100 : 1);
+
+/**
+ * Curve keys use the graph's display units (cm/percent), while pose keys and
+ * track settings use native pose units (metres/fractions). Keep this boundary
+ * explicit when a shared interpolation setting is copied between them.
+ */
+export function curveMotionOptions(options: MotionOptions, channel: Channel): MotionOptions {
+  const next = motionOptions(options),
+    scale = channelUnitScale(channel);
+  if (next.elastic && scale !== 1)
+    next.elastic = { ...next.elastic, amplitude: next.elastic.amplitude * scale };
+  return next;
+}
+
+function poseMotionOptions(options: MotionOptions, channel: Channel): MotionOptions {
+  const next = motionOptions(options),
+    scale = channelUnitScale(channel);
+  if (next.elastic && scale !== 1)
+    next.elastic = { ...next.elastic, amplitude: next.elastic.amplitude / scale };
+  return next;
+}
 
 export type KeySettings = MotionOptions & {
   interpolation?: CurveKey['interpolation'];
@@ -19,11 +53,21 @@ export type KeySettings = MotionOptions & {
 export type SegmentKind = CurveKey['interpolation'] | 'hold' | 'mixed';
 export const INTERPOLATION_NAMES: Record<SegmentKind, string> = {
   loop: 'Loop',
-  bezier: 'Bézier / smooth',
+  bezier: 'Bézier',
   linear: 'Linear',
-  step: 'Stepped',
+  step: 'Constant',
+  sine: 'Sinusoidal',
+  quad: 'Quadratic',
+  cubic: 'Cubic',
+  quart: 'Quartic',
+  quint: 'Quintic',
+  expo: 'Exponential',
+  circ: 'Circular',
+  back: 'Back',
+  blenderBounce: 'Bounce',
+  elastic: 'Elastic',
   spring: 'Spring',
-  bounce: 'Bounce',
+  bounce: 'Bounce (legacy)',
   hold: 'Hold',
   mixed: 'Mixed channels',
 };
@@ -42,17 +86,32 @@ export function applyKeySettings(
   const next = clone(project);
   for (const id of new Set(selection.map((k) => k.id))) {
     const track = next.tracks[id],
-      frames = new Set(selection.filter((k) => k.id === id).map((k) => k.frame));
+      frames = new Set(selection.filter((k) => k.id === id).map((k) => k.frame)),
+      channels = channelsFor(id, track),
+      poseChannel = channels.find((channel) =>
+        readCurve(track, channel).keys.some((key) => frames.has(key.frame)),
+      );
     const { handle, interpolation, loop, ...motion } = settings,
       closing = interpolation === 'loop' || loop === true;
-    const { loop: _, ...keySettings } = settings;
+    // Motion options are interpreted in the display units of the first
+    // selected curve (for example, centimetres for a position curve). The
+    // pose key and each destination curve may use different native units, so
+    // keep only the non-motion key settings here and project the motion
+    // options separately for every channel below.
+    const keySettings = {
+      ...(handle !== undefined ? { handle } : {}),
+      ...(interpolation !== undefined ? { interpolation } : {}),
+    };
+    const nativeMotion = poseChannel
+      ? poseMotionOptions(motion, poseChannel)
+      : motionOptions(motion);
     for (const key of track.keys)
       if (frames.has(key.frame)) {
-        Object.assign(key, clone(motion));
+        Object.assign(key, clone(nativeMotion));
         if (interpolation && interpolation !== 'loop')
           key.interpolation = interpolation === 'bezier' ? 'smooth' : interpolation;
       }
-    for (const channel of channelsFor(id, track)) {
+    for (const channel of channels) {
       // Pose interpolation stays on the pose key, retaining quaternion slerp on
       // untouched segments. Only explicit tangent edits create new channel curves.
       if (!track.curves?.[channel] && !handle && !closing) continue;
@@ -72,8 +131,10 @@ export function applyKeySettings(
           curve.keys = explicitLoopCurve(curve).keys;
           delete curve.loop;
         }
+        const projectedMotion = curveMotionOptions(nativeMotion, channel);
         for (const key of curve.keys)
-          if (frames.has(key.frame)) Object.assign(key, clone(keySettings));
+          if (frames.has(key.frame))
+            Object.assign(key, clone({ ...projectedMotion, ...keySettings }));
       }
     }
   }

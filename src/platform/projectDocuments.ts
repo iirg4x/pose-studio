@@ -3,6 +3,7 @@ import { validateLibrary } from '../core/library';
 import type { AnimationLibrary } from '../core/library';
 import { collectPropControlIds, commitPropControls } from '../core/controls';
 import { restoreAssets } from './portableAssets';
+import type { AssetBatchWriter } from './portableAssets';
 
 // Only fresh file bytes can create a prepared document. The opening UI consumes
 // the receipt once; subsequent uses validate normally rather than trusting a
@@ -11,11 +12,12 @@ const prepared = new WeakSet<object>();
 export async function readProjectDocument(
   bytes: Uint8Array,
   writeAsset: (id: string, data: Uint8Array) => Promise<void>,
+  writeAssets?: AssetBatchWriter,
 ): Promise<AnimationLibrary> {
   const parsed = await decodeProject(bytes);
   const propControls = collectPropControlIds(parsed);
   const library = validateLibrary(parsed, { takeOwnership: true, commitPropControls: false });
-  await restoreAssets(parsed, writeAsset);
+  await restoreAssets(parsed, writeAsset, writeAssets);
   commitPropControls(propControls);
   prepared.add(library);
   return library;

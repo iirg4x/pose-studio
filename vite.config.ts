@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { readFileSync } from 'node:fs';
 import { posePwa } from './shared/pwa-build.mjs';
 export default defineConfig(({ mode }) => ({
   publicDir: mode === 'pwa' ? false : 'public',
@@ -10,6 +11,13 @@ export default defineConfig(({ mode }) => ({
     {
       name: 'production-csp',
       apply: 'build',
+      generateBundle() {
+        this.emitFile({
+          type: 'asset',
+          fileName: 'THIRD-PARTY-NOTICES.txt',
+          source: readFileSync(new URL('./THIRD-PARTY-NOTICES.txt', import.meta.url), 'utf8'),
+        });
+      },
       transformIndexHtml(html) {
         return html.replace(
           '<head>',

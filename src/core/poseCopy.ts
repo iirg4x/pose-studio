@@ -8,5 +8,7 @@ export function copyPose<T extends Pose>(value: T): T {
     copy = { ...source, p: [...source.p], q: [...source.q], grip: [...source.grip] };
   if (source.spring) copy.spring = { ...source.spring };
   if (source.bounce) copy.bounce = { ...source.bounce };
+  if (source.elastic) copy.elastic = { ...source.elastic };
+  if (source.back) copy.back = { ...source.back };
   return copy as T;
 }

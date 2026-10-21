@@ -35,6 +35,13 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
+  max-height: min(360px, 42vh);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-color: var(--timing-border) transparent;
+  touch-action: pan-y;
 }
 
 .interpolation-choices .interpolation-choice {
@@ -100,20 +107,6 @@
 
 .interpolation-choice[aria-pressed='true'] .interpolation-choice-check {
   opacity: 1;
-}
-
-.interpolation-choices .interpolation-choice:last-child {
-  grid-column: 1 / -1;
-  min-height: 44px;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
-  padding: 7px 9px;
-}
-
-.interpolation-choices .interpolation-choice:last-child .interpolation-choice-line {
-  width: 78px;
 }
 
 .interpolation-settings .interpolation-loop {

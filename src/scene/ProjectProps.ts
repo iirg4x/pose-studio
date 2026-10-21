@@ -1,11 +1,11 @@
 import { propControlShape } from './propControlShape';
 import * as T from 'three';
-import { fullSkinLoader } from './skinInfluences';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { projectProps } from '../core/assets';
 import type { PropAsset } from '../core/assets';
 import { matrix, evaluate } from '../core/model';
 import type { ControlId, Pose, Project, Track, RigLayer } from '../core/model';
+import { PropAssetCache, type PropAssetLease } from './PropAssetCache';
 
 type Instance = {
   first: T.Group;
@@ -16,6 +16,7 @@ type Instance = {
   loaded: boolean;
   version: number;
   resources?: T.Group;
+  lease?: PropAssetLease;
   asset: PropAsset;
   pending?: Promise<void>;
   error?: Error;
@@ -23,26 +24,12 @@ type Instance = {
   outline?: number[];
   placementKey?: string;
 };
-export function disposeProp(root: T.Object3D) {
-  const textures = new Set<T.Texture>(),
-    geometries = new Set<T.BufferGeometry>(),
-    materials = new Set<T.Material>();
-  root.traverse((o) => {
-    if (o instanceof T.Mesh) {
-      geometries.add(o.geometry);
-      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
-        materials.add(m);
-        for (const value of Object.values(m)) if (value instanceof T.Texture) textures.add(value);
-      }
-    }
-  });
-  for (const g of geometries) g.dispose();
-  for (const m of materials) m.dispose();
-  for (const t of textures) t.dispose();
-}
+export { disposeProp } from './PropAssetCache';
 export class ProjectProps {
   entries = new Map<ControlId, Instance>();
   private disposed = false;
+  private readonly ownsCache: boolean;
+  private readonly cache: PropAssetCache;
   private gunOutline?: { key: string; rifle: Track; magazine: Track; positions: number[] };
   constructor(
     private scene: T.Scene,
@@ -50,7 +37,11 @@ export class ProjectProps {
     private worldMaterials: Set<T.Material>,
     private report: (error: string) => void,
     private changed: () => void = () => {},
-  ) {}
+    cache?: PropAssetCache,
+  ) {
+    this.cache = cache ?? new PropAssetCache();
+    this.ownsCache = !cache;
+  }
   private entry(id: ControlId, asset: PropAsset) {
     let e = this.entries.get(id);
     if (!e) {
@@ -134,8 +125,10 @@ export class ProjectProps {
   }
 
   private clear(e: Instance) {
+    const skeletons = new Set<T.Skeleton>();
     for (const g of this.groups(e)) {
       g.traverse((o) => {
+        if (o instanceof T.SkinnedMesh) skeletons.add(o.skeleton);
         if (o instanceof T.Mesh)
           for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
             this.worldMaterials.delete(m);
@@ -144,7 +137,9 @@ export class ProjectProps {
       });
       g.clear();
     }
-    if (e.resources) disposeProp(e.resources);
+    for (const skeleton of skeletons) skeleton.dispose();
+    e.lease?.release();
+    e.lease = undefined;
     e.resources = undefined;
     e.bounds = undefined;
     e.outline = undefined;
@@ -173,23 +168,17 @@ export class ProjectProps {
       this.clear(e);
       e.error = undefined;
       e.pending = (async () => {
+        let lease: PropAssetLease | undefined;
         try {
-          const bytes = await window.studioDesktop!.readCharacter(asset.asset),
-            gltf = await fullSkinLoader().parseAsync(
-              bytes.buffer.slice(
-                bytes.byteOffset,
-                bytes.byteOffset + bytes.byteLength,
-              ) as ArrayBuffer,
-              '',
-            );
-          const source = gltf.scene;
+          lease = await this.cache.acquire(asset.asset);
           if (this.disposed || e.version !== version) {
-            disposeProp(source);
+            lease.release();
             return;
           }
-          e.resources = source;
-          e.bounds = new T.Box3().setFromObject(source);
-          if (e.bounds.isEmpty()) throw Error('No mesh found.');
+          e.lease = lease;
+          e.resources = lease.source;
+          e.bounds = lease.bounds;
+          const source = lease.source;
           for (const [g, world] of [
             [e.first, false],
             [e.world, true],
@@ -220,6 +209,8 @@ export class ProjectProps {
           e.loaded = true;
           this.changed();
         } catch (error) {
+          if (lease && e.lease === lease) this.clear(e);
+          else lease?.release();
           if (e.version === version) {
             e.error = error as Error;
             this.report('Could not load ' + asset.name + ': ' + e.error.message);
@@ -286,5 +277,6 @@ export class ProjectProps {
       for (const g of this.groups(e)) g.removeFromParent();
     }
     this.entries.clear();
+    if (this.ownsCache) this.cache.dispose();
   }
 }

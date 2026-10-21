@@ -1,7 +1,14 @@
 import { copyPose } from './poseCopy';
 import { loopBoundarySlope, normalizeLoopKeys, syncLoopSeam } from './loopInterpolation';
 import { randomId } from './crypto';
-import { motionProgress, motionOptions, validateMotionOptions } from './interpolation';
+import {
+  INTERPOLATION_MODES,
+  blenderInterpolationValue,
+  isBlenderInterpolation,
+  motionProgress,
+  motionOptions,
+  validateMotionOptions,
+} from './interpolation';
 import type { MotionOptions } from './interpolation';
 import { Euler, Quaternion } from 'three';
 import type { EulerOrder } from 'three';
@@ -33,7 +40,17 @@ export type HandleMode = 'flat' | 'auto' | 'clamped' | 'vector' | 'aligned' | 'f
 export interface CurveKey extends MotionOptions {
   frame: number;
   value: number;
-  interpolation: 'bezier' | 'linear' | 'step' | 'spring' | 'bounce' | 'loop';
+  interpolation:
+    | 'bezier'
+    | 'linear'
+    | 'step'
+    | 'spring'
+    | 'bounce'
+    | 'loop'
+    | Exclude<
+        (typeof INTERPOLATION_MODES)[number],
+        'smooth' | 'linear' | 'step' | 'spring' | 'bounce'
+      >;
   handle: HandleMode;
   left?: [number, number];
   right?: [number, number];
@@ -61,6 +78,15 @@ export interface Curve {
   modifiers: Modifier[];
   loop?: { start: number; end: number };
 }
+// Curve keys use `bezier` for the editable handle representation; `smooth` is
+// the project-level alias and is converted before it reaches a curve. Keep
+// this set outside validation so large imported tracks do not rebuild the
+// interpolation array for every key.
+const VALID_CURVE_INTERPOLATIONS: ReadonlySet<string> = new Set([
+  'bezier',
+  'loop',
+  ...INTERPOLATION_MODES.filter((mode) => mode !== 'smooth'),
+]);
 export const CHANNEL_LABELS: Record<Channel, string> = {
   ...BLEND_LABELS,
   px: 'Position X',
@@ -134,6 +160,40 @@ export function baseSample(track: Track, frame: number): Pose {
   let t = clamp((frame - a.frame) / (b.frame - a.frame), 0, 1);
   if (mode === 'smooth') t = t * t * (3 - 2 * t);
   else if (mode === 'spring' || mode === 'bounce') t = motionProgress(mode, t, { ...track, ...a });
+  else if (isBlenderInterpolation(mode)) {
+    const duration = b.frame - a.frame,
+      options = { ...track, ...a },
+      q = a.q.map((v, i) =>
+        blenderInterpolationValue(mode, frame - a.frame, v, b.q[i] - v, duration, options),
+      ) as Pose['q'];
+    return {
+      p: a.p.map((v, i) =>
+        blenderInterpolationValue(mode, frame - a.frame, v, b.p[i] - v, duration, options),
+      ) as Pose['p'],
+      q: new Quaternion(...q).normalize().toArray() as Pose['q'],
+      grip: a.grip.map((v, i) =>
+        clamp(
+          blenderInterpolationValue(mode, frame - a.frame, v, b.grip[i] - v, duration, options),
+          track.additive ? -2 : -1,
+          track.additive ? 2 : 1,
+        ),
+      ),
+      fov: track.additive
+        ? blenderInterpolationValue(mode, frame - a.frame, a.fov, b.fov - a.fov, duration, options)
+        : clamp(
+            blenderInterpolationValue(
+              mode,
+              frame - a.frame,
+              a.fov,
+              b.fov - a.fov,
+              duration,
+              options,
+            ),
+            20,
+            120,
+          ),
+    };
+  }
   return {
     p: a.p.map((v, i) => v + (b.p[i] - v) * t) as Pose['p'],
     q: new Quaternion(...a.q)
@@ -145,6 +205,25 @@ export function baseSample(track: Track, frame: number): Pose {
     ),
     fov: track.additive ? a.fov + (b.fov - a.fov) * t : clamp(a.fov + (b.fov - a.fov) * t, 20, 120),
   };
+}
+
+/**
+ * Project motion settings from native pose units into curve display units.
+ * Pose positions and grip values are stored as metres/fractions, while their
+ * editable channels are centimetres/percent. Quaternion components and FOV
+ * already use the same units in both representations. Euler channels are
+ * derived from a quaternion, so there is no fixed native-to-degree scale that
+ * can preserve an elastic amplitude for every orientation; leave those values
+ * in their authored channel units.
+ */
+function projectedMotionOptions(track: Track, key: Track['keys'][number], channel: Channel) {
+  const options = motionOptions({ ...track, ...key });
+  const scale = ['px', 'py', 'pz', 'thumb', 'index', 'middle', 'ring', 'pinky'].includes(channel)
+    ? 100
+    : 1;
+  if (options.elastic && scale !== 1)
+    options.elastic = { ...options.elastic, amplitude: options.elastic.amplitude * scale };
+  return options;
 }
 export function readCurve(track: Track, c: Channel): Curve {
   if (track.curves?.[c]) return track.curves[c]!;
@@ -162,7 +241,7 @@ export function readCurve(track: Track, c: Channel): Curve {
       previous = value;
       const mode = k.interpolation ?? track.interpolation;
       return {
-        ...motionOptions({ ...track, ...k }),
+        ...projectedMotionOptions(track, k, c),
         frame: k.frame,
         value,
         interpolation: mode === 'smooth' ? 'bezier' : mode,
@@ -276,6 +355,15 @@ export function baseCurve(curve: Curve, frame: number): number {
       a.value +
       (b.value - a.value) *
         motionProgress(a.interpolation, (frame - a.frame) / (b.frame - a.frame), a)
+    );
+  if (isBlenderInterpolation(a.interpolation))
+    return blenderInterpolationValue(
+      a.interpolation,
+      frame - a.frame,
+      a.value,
+      b.value - a.value,
+      b.frame - a.frame,
+      a,
     );
   const h1 = handles(curve, i).right,
     h2 = handles(curve, i + 1).left;
@@ -561,7 +649,7 @@ export function validateCurves(track: Track) {
         k.frame > 2400 ||
         k.frame <= last ||
         !finite(k.value) ||
-        !['bezier', 'linear', 'step', 'spring', 'bounce', 'loop'].includes(k.interpolation) ||
+        !VALID_CURVE_INTERPOLATIONS.has(k.interpolation) ||
         !['flat', 'auto', 'clamped', 'vector', 'aligned', 'free'].includes(k.handle)
       )
         throw Error('Invalid curve key.');

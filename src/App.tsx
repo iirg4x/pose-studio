@@ -69,6 +69,7 @@ import { Inspector } from './components/Inspector';
 import { Timeline } from './components/Timeline';
 import { AnimationBar } from './components/AnimationBar';
 import { ExportDialog } from './components/ExportDialog';
+import { interpolationChoicesFor } from './components/interpolationOptions';
 import type { StudioScene } from './scene/StudioScene';
 export default function App() {
   useSurfaceOcclusion();
@@ -109,7 +110,7 @@ export default function App() {
   }, []);
   const s = useStudioChrome({ frame: 'none' }),
     runtime = useRef<StudioScene | null>(null),
-    [thumbs, setThumbs] = useState<string[]>([]),
+    [inspectorRuntime, setInspectorRuntime] = useState<StudioScene | null>(null),
     [menu, setMenu] = useState(false),
     [titleSlot, setTitleSlot] = useState<HTMLDivElement | null>(null),
     [desktopLayout, setDesktopLayout] = useDesktopLayout(),
@@ -289,6 +290,7 @@ export default function App() {
   }, []);
   const setRuntime = useCallback((r: StudioScene | null) => {
     runtime.current = r;
+    setInspectorRuntime(r);
     if (import.meta.env.DEV) {
       window.__studio = studio;
       window.__scene = r;
@@ -317,7 +319,7 @@ export default function App() {
   const file = useProjectFile(
       s.ready,
       exporting || recording || characterExport || importing || assets || !!newAction,
-      async () => runtime.current?.settled(),
+      async (shouldCancel) => runtime.current?.settled(30000, shouldCancel),
     ),
     save = file.save;
   const importMode = useRef(false);
@@ -360,7 +362,9 @@ export default function App() {
     else setNewAction(layer);
   };
   useEffect(() => {
-    if (!s.project) return;
+    // Opening commits its validated snapshot explicitly. Let it finish before
+    // a background autosave serializes the same large library again.
+    if (!s.project || s.opening) return;
     setSaved('Saving…');
     const t = setTimeout(async () => {
       try {
@@ -377,7 +381,7 @@ export default function App() {
       }
     }, 650);
     return () => clearTimeout(t);
-  }, [s.project, s.workspace, s.drafts]);
+  }, [s.project, s.workspace, s.drafts, s.opening]);
   const updateBlocked = useRef(false);
   updateBlocked.current =
     exporting ||
@@ -722,12 +726,11 @@ export default function App() {
         if (isAndroid) setTabletPanel(null);
         setDesktopLayout({ properties: false });
       }}
-      runtime={runtime.current}
+      runtime={inspectorRuntime}
       attach={(target, position, rotation) =>
         runtime.current?.setAttachment(target, position, rotation)
       }
       pick={() => runtime.current?.pickAttachment()}
-      thumbs={thumbs}
       switchLimb={(limb, mode) => runtime.current?.switchLimb(limb, mode)}
     />
   );
@@ -747,6 +750,12 @@ export default function App() {
   const busy = !s.ready || recording || exporting,
     selected = s.selection.length > 0,
     keyLocked = selected && !!s.project && s.selection.every((id) => s.project!.tracks[id].keyLock);
+  const activeInterpolation = s.project?.tracks[s.selected]?.interpolation,
+    interpolationChoices = interpolationChoicesFor(
+      activeInterpolation === undefined || activeInterpolation === 'smooth'
+        ? 'bezier'
+        : activeInterpolation,
+    );
   const closePoseMenu = useCallback(() => setPoseMenu(null), []);
   const desktopMenus: Menu[] = [
     {
@@ -904,9 +913,9 @@ export default function App() {
           run: () => studio.setControlKeyLock(s.selection, !keyLocked),
         },
         'separator',
-        ...(['smooth', 'linear', 'step', 'spring', 'bounce'] as const).map((v) => ({
-          label: 'Interpolation: ' + v[0].toUpperCase() + v.slice(1),
-          run: () => studio.setInterpolation(v),
+        ...interpolationChoices.map(({ value, label }) => ({
+          label: 'Interpolation: ' + label,
+          run: () => studio.setInterpolation(value === 'bezier' ? 'smooth' : value),
           disabled: !s.project,
         })),
       ],
@@ -1214,7 +1223,7 @@ export default function App() {
       )}
       {!isAndroid ? (
         <DesktopWorkspace
-          scene={<Viewport onRuntime={setRuntime} onThumbs={setThumbs} />}
+          scene={<Viewport onRuntime={setRuntime} />}
           controls={controls}
           inspector={inspector}
           controllerTools={
@@ -1246,7 +1255,7 @@ export default function App() {
         />
       ) : (
         <div className="workspace">
-          <Viewport onRuntime={setRuntime} onThumbs={setThumbs} />
+          <Viewport onRuntime={setRuntime} />
         </div>
       )}
       {isAndroid && (

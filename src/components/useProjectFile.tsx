@@ -14,7 +14,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { studio } from '../core/store';
 import { consumeProjectDocument } from '../platform/projectDocuments';
 import type { AnimationLibrary } from '../core/library';
-import { projectSaveSignature } from '../core/projectSaving';
+import {
+  projectMatchesSaveSignature,
+  projectMatchesSaveSignatureAsync,
+  projectSaveSignature,
+  projectSaveSignatureAsync,
+} from '../core/projectSaving';
 import { activateDocument, linkedDocument, openedDocument } from '../platform/linkedDocuments';
 import type { LinkedDocument } from '../platform/linkedDocuments';
 import { checkLinkedProject } from '../platform/android';
@@ -29,7 +34,7 @@ const nextPaint = () =>
 export function useProjectFile(
   ready: boolean,
   blocked = false,
-  settled: () => Promise<void> = async () => {},
+  settled: (shouldCancel?: () => boolean) => Promise<void> = async () => {},
 ) {
   const saved = useRef<string | null>(null),
     [pending, setPending] = useState<Pending | null>(null),
@@ -38,6 +43,8 @@ export function useProjectFile(
     [recoveryError, setRecoveryError] = useState(''),
     [recoveryBusy, setRecoveryBusy] = useState(false);
   const busyRef = useRef(false),
+    openGeneration = useRef(0),
+    openRequestGeneration = useRef(0),
     recoveredReload = useRef(false),
     recoveryBusyRef = useRef(false),
     hadRecovery = useRef(false),
@@ -94,15 +101,76 @@ export function useProjectFile(
       );
     } catch {}
   }, []);
-  const markSaved = useCallback((data: AnimationLibrary) => {
-    saved.current = projectSaveSignature(data);
+  const markSignatureSaved = useCallback((signature: string) => {
+    saved.current = signature;
     try {
       void writePreference(BASELINE, saved.current).catch(() => {});
     } catch {}
   }, []);
+  const markSaved = useCallback(
+    (data: AnimationLibrary) => markSignatureSaved(projectSaveSignature(data)),
+    [markSignatureSaved],
+  );
   const dirty = useCallback(() => {
     const data = studio.recoverySnapshot();
-    return !!data && projectSaveSignature(data) !== saved.current;
+    return !!data && !projectMatchesSaveSignature(data, saved.current);
+  }, []);
+  /**
+   * Compare the current workspace without monopolising the main thread.
+   *
+   * Opening a large library used to call the synchronous signature builder from
+   * the file chooser callback. That blocked the first paint for the whole
+   * library before the loading screen could appear. The asynchronous signature
+   * yields between clip batches, and a revision change cancels the attempt so
+   * an edit made while hashing can never be mistaken for a clean workspace.
+   * Legacy v3 baselines use their exact old payload with the same yielding
+   * comparison, so a dirty check never silently upgrades a saved baseline.
+   */
+  const dirtyAsync = useCallback(async (shouldCancel?: () => boolean) => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (shouldCancel?.()) return false;
+      const baseline = saved.current,
+        revision = studio.state.revision,
+        workspace = studio.state.workspace,
+        project = studio.state.project,
+        drafts = studio.state.drafts,
+        data = studio.recoverySnapshot();
+      if (!data) return false;
+      // A missing baseline is conservatively dirty, matching dirty().
+      if (!baseline) return true;
+      try {
+        const matches = await projectMatchesSaveSignatureAsync(
+          data,
+          baseline,
+          () =>
+            !!shouldCancel?.() ||
+            studio.state.revision !== revision ||
+            studio.state.workspace !== workspace ||
+            studio.state.project !== project ||
+            studio.state.drafts !== drafts,
+        );
+        if (shouldCancel?.()) return false;
+        // A save or edit may have happened while the signature yielded. Retry
+        // once against the newest state; after a continuously changing state,
+        // report dirty conservatively instead of opening over unsaved work.
+        if (
+          saved.current !== baseline ||
+          studio.state.revision !== revision ||
+          studio.state.workspace !== workspace ||
+          studio.state.project !== project ||
+          studio.state.drafts !== drafts
+        )
+          continue;
+        return !matches;
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          if (shouldCancel?.()) return false;
+          continue;
+        }
+        throw error;
+      }
+    }
+    return true;
   }, []);
   const recover = async () => {
     const data = studio.recoverySnapshot();
@@ -148,23 +216,39 @@ export function useProjectFile(
   }, [markSaved]);
   const open = useCallback(
     async (data: AnimationLibrary, source?: LinkedDocument) => {
+      // Invalidate a dirty check that has not reached the open step yet. This
+      // also makes direct linked-document updates safe while a file chooser
+      // request is still hashing the current library.
+      openRequestGeneration.current++;
+      const generation = ++openGeneration.current;
+      let current: AnimationLibrary | null = null;
       studio.patch({ opening: { name: data.name || 'project', stage: 'Building animations' } });
       try {
         await nextPaint();
+        if (generation !== openGeneration.current) return;
         studio.openValidated(data);
-        await settled();
+        current = studio.recoverySnapshot();
+        // Hash bounded clip batches while models and shaders prepare. Opening
+        // remains busy until both the exact saved baseline and viewport finish.
+        const [, signature] = await Promise.all([
+          settled(() => generation !== openGeneration.current),
+          current
+            ? projectSaveSignatureAsync(current, () => generation !== openGeneration.current)
+            : Promise.resolve(null),
+        ]);
+        if (generation !== openGeneration.current) return;
+        if (signature) markSignatureSaved(signature);
       } catch (e) {
+        if (generation !== openGeneration.current) return;
         const message = 'Could not open project: ' + (e as Error).message;
         setError(message);
         studio.patch({ message });
         reportFailure(message);
         return;
       } finally {
-        studio.patch({ opening: null });
+        if (generation === openGeneration.current) studio.patch({ opening: null });
       }
-      const current = studio.recoverySnapshot();
       if (current) {
-        markSaved(current);
         void writeRecovery(current).catch((e) => {
           const message =
             'Project opened, but local recovery could not be saved: ' + (e as Error).message;
@@ -176,27 +260,36 @@ export function useProjectFile(
       setPending(null);
       setError('');
     },
-    [markSaved, settled],
+    [markSignatureSaved, settled],
   );
   const requestOpen = useCallback(
-    (data: unknown) => {
+    async (data: unknown) => {
+      const requestGeneration = ++openRequestGeneration.current;
       try {
         const source = openedDocument(data),
           validated = consumeProjectDocument(data);
-        if (dirty()) {
+        studio.patch({
+          opening: { name: validated.name || 'project', stage: 'Checking unsaved changes' },
+        });
+        const hasChanges = await dirtyAsync(
+          () => requestGeneration !== openRequestGeneration.current,
+        );
+        if (requestGeneration !== openRequestGeneration.current) return;
+        if (hasChanges) {
           // The unsaved-changes prompt comes first; the loading screen returns on open.
           studio.patch({ opening: null });
           setPending({ kind: 'open', data: validated, source });
           setError('');
           setRecoveryError('');
-        } else void open(validated, source);
+        } else await open(validated, source);
       } catch (e) {
+        if (requestGeneration !== openRequestGeneration.current) return;
         const message = (e as Error).message;
         studio.patch({ opening: null, message });
         reportFailure('Could not open project: ' + message);
       }
     },
-    [dirty, open],
+    [dirtyAsync, open],
   );
   const checkProject = useCallback(
     async (manual = false) => {
@@ -320,10 +413,13 @@ export function useProjectFile(
     let consumed = false;
     void window.studioDesktop
       .takeProject()
-      .then((data) => {
+      .then(async (data) => {
         if (data) {
           consumed = true;
-          requestOpen(data);
+          // Keep the queue gate closed until the asynchronous dirty check and
+          // open have settled. Otherwise a second queued file can begin while
+          // the first library is still being hashed.
+          await requestOpen(data);
         }
       })
       .catch((e) => {

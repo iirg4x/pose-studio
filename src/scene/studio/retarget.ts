@@ -10,6 +10,7 @@ import { bakeSharedSkeleton } from '../sharedSkeletonExport';
 import type { SharedExportPlan, SharedExportItem } from '../../core/sharedExport';
 import { fullSkinLoader } from '../skinInfluences';
 import { clone } from '../../core/model';
+import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { SceneCore } from './core';
 
 /** Preview characters: loading, retarget preview and baking onto them. */
@@ -133,13 +134,17 @@ export abstract class RetargetScene extends SceneCore {
         if (!window.studioDesktop) throw Error('Open the desktop app to load characters.');
         const rig =
           asset === 'manny'
-            ? new RetargetRig(
-                (
-                  await fullSkinLoader().loadAsync(
-                    new URL('assets/manny.glb', document.baseURI).href,
-                  )
-                ).scene,
-              )
+            ? this.mannySource
+              ? new RetargetRig(cloneSkeleton(this.mannySource) as T.Group, {
+                  ownsResources: false,
+                })
+              : new RetargetRig(
+                  (
+                    await fullSkinLoader().loadAsync(
+                      new URL('assets/manny.glb', document.baseURI).href,
+                    )
+                  ).scene,
+                )
             : await this.parseCharacter(await window.studioDesktop.readCharacter(asset));
         if (generation !== this.targetLoad || this.disposed) {
           rig.dispose();

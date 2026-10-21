@@ -16,7 +16,7 @@ import * as T from 'three';
 import { fullSkinLoader } from './skinInfluences';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { MannyRig } from './rig';
+import { MannyRig, poseRig } from './rig';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { maskedGeometry } from './meshMask';
 import { setMainProp } from './props';
@@ -185,6 +185,7 @@ export class StudioScene extends ExportScene {
         this.forcePose = true;
         this.drawDirty = true;
       },
+      this.propAssetCache,
     );
     this.previewObjects = new ProjectProps(
       this.scene,
@@ -195,6 +196,7 @@ export class StudioScene extends ExportScene {
         this.forcePose = true;
         this.drawDirty = true;
       },
+      this.propAssetCache,
     );
     this.camera.position.set(1.0, 1.65, 1.8);
     this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
@@ -348,7 +350,10 @@ export class StudioScene extends ExportScene {
       });
       this.bodyRoot = gltf.scene;
       this.bodyRig = new MannyRig(gltf.scene);
-      this.canonicalRig = new MannyRig(cloneSkeleton(gltf.scene) as T.Group);
+      // Keep a rest-pose template for the default preview, sharing resources
+      // owned by this scene rather than loading and parsing Manny a second time.
+      this.mannySource = cloneSkeleton(gltf.scene) as T.Group;
+      this.canonicalRig = poseRig(this.bodyRig);
       this.scene.add(gltf.scene);
       const basisRig = new MannyRig(cloneSkeleton(gltf.scene) as T.Group);
       this.store.restPose = new RestPoseSampler(this.canonicalRig).sample;
@@ -862,7 +867,11 @@ export class StudioScene extends ExportScene {
     }
     this.raf = requestAnimationFrame(this.loop);
   };
-  private drawFrame() {
+  private drawFrame(allowOpening = false) {
+    // The loading surface covers the viewport until both the rig and document
+    // exist. Rendering the incomplete scene here stalls model preparation on
+    // shader compilation and GPU uploads that the first ready frame replaces.
+    if (!this.store.state.ready || !this.rig || (this.store.state.opening && !allowOpening)) return;
     if (this.recording || document.hidden) {
       this.lastActiveDraw = 0;
       this.cadence.reset();
@@ -938,12 +947,18 @@ export class StudioScene extends ExportScene {
     } else this.lastActiveDraw = 0;
   }
   /** Resolves once the open project's props and characters are loaded, its shaders
-   * compiled and a frame drawn: when opening a project has visibly finished. */
-  async settled(timeout = 30000) {
+   * prepared by drawing a frame: when opening a project has visibly finished. */
+  async settled(timeout = 30000, shouldCancel: () => boolean = () => false) {
+    let timedOut = false;
+    const cancelled = () => timedOut || this.disposed || shouldCancel();
     const frame = () => new Promise((done) => requestAnimationFrame(done)),
       work = (async () => {
+        if (cancelled()) return;
         await frame();
+        if (cancelled()) return;
         const project = this.store.state.project;
+        // Start preview-character and prop loads before waiting for readiness.
+        this.apply(this.store.state.frame);
         if (project) {
           this.store.patch({
             opening: this.store.state.opening && {
@@ -951,21 +966,49 @@ export class StudioScene extends ExportScene {
               stage: 'Loading props and characters',
             },
           });
-          await this.projectObjects.ready(project).catch(() => {});
+          await Promise.all([
+            this.projectObjects.ready(project),
+            this.previewProject
+              ? this.previewObjects.ready(this.previewProject)
+              : Promise.resolve(),
+          ]).catch(() => {});
         }
-        while (this.store.state.retargetLoading && !this.disposed)
+        if (cancelled() || this.store.state.project !== project) return;
+        while (this.store.state.retargetLoading && !cancelled())
           await new Promise((done) => setTimeout(done, 50));
+        if (cancelled() || this.store.state.project !== project) return;
         this.store.patch({
           opening: this.store.state.opening && {
             ...this.store.state.opening,
             stage: 'Preparing the viewport',
           },
         });
-        await this.renderer.compileAsync(this.scene, this.camera).catch(() => {});
+        // Rendering prepares exactly the visible materials, textures and shadow
+        // passes. compileAsync(scene) also compiles every hidden editor/preview
+        // mesh and can block opening on shaders the current view never uses.
+        if (cancelled()) return;
+        // The loading surface suppresses intermediate GPU work. Draw the fully
+        // prepared scene once before revealing the usable editor.
+        this.forcePose = true;
+        this.drawDirty = true;
+        this.drawFrame(true);
         await frame();
         await frame();
       })();
-    await Promise.race([work, new Promise((done) => setTimeout(done, timeout))]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        work,
+        new Promise((done) => {
+          timer = setTimeout(() => {
+            timedOut = true;
+            done(undefined);
+          }, timeout);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
   toggleTrail() {
     this.trails.toggle();
@@ -988,10 +1031,15 @@ export class StudioScene extends ExportScene {
     setBodySourceResolver(undefined);
     this.projectObjects.dispose();
     this.previewObjects.dispose();
+    this.propAssetCache.dispose();
     this.disposed = true;
     this.targetLoad++;
     this.clearPreview();
     this.retargetRig?.dispose();
+    this.mannySource?.traverse((object) => {
+      if (object instanceof T.SkinnedMesh) object.skeleton.dispose();
+    });
+    this.mannySource = undefined;
     cancelAnimationFrame(this.raf);
     this.unsubscribe();
     this.observer.disconnect();
