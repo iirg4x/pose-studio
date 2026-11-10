@@ -550,11 +550,22 @@ export function keyCurveFromPose(
   value: Pose,
   channels: readonly Channel[] = CHANNELS,
 ) {
+  // q and -q are one rotation, but the four quaternion curves are interpolated
+  // separately. A key on the far side of its neighbours makes the frames between
+  // them sweep through poses that belong to neither, so key the nearer of the two.
+  const quaternion = ['qx', 'qy', 'qz', 'qw'] as const,
+    opposite =
+      quaternion.every((c) => track.curves?.[c]) &&
+      quaternion.reduce(
+        (dot, c, i) => dot + sampleCurve(track.curves![c]!, frame) * value.q[i],
+        0,
+      ) < 0;
   for (const c of channels) {
     if (isBlendChannel(c)) continue;
     const curve = track.curves?.[c];
     if (!curve) continue;
     let v = channelValue(value, c, track.rotationOrder);
+    if (opposite && (quaternion as readonly string[]).includes(c)) v = -v;
     if (['rx', 'ry', 'rz'].includes(c))
       v += Math.round((sampleCurve(curve, frame) - v) / 360) * 360;
     // Invert additive modifiers so a viewport edit keys the visible pose once.
