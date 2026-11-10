@@ -85,6 +85,10 @@ export function importMotion(
   p.end = data.end;
   p.editing = type;
   p.actionType = type;
+  // Every limb arrives as authored FK. Switching one to IK later, which selecting
+  // an IK control does, must start from that pose: solving from the rest pose keeps
+  // the hand in place but rolls the upper arm and forearm around their own length.
+  p.ikReference = 'fk';
   p.limbModes = {
     [type]: Object.fromEntries(
       ['arm_l', 'arm_r', 'leg_l', 'leg_r'].map((limb) => [limb, [{ frame: 0, mode: 'fk' }]]),
