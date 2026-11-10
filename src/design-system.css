@@ -90,7 +90,11 @@
 
   /* Surface alpha is part of the component contract, not a container opacity. */
   --surface-quick: rgb(18 29 40 / 70%);
-  --surface-menu: rgb(18 29 40 / 70%);
+  /* Menus, popovers and floating panels carry text over a bright, detailed
+   * scene and have no blurred backdrop, so they are close to opaque. */
+  --surface-menu: rgb(18 29 40 / 97%);
+  /* Dialogs sit on a dimmed, blurred backdrop and need no transparency. */
+  --surface-dialog: #16222e;
   --surface-timeline: rgb(18 29 40 / 70%);
   --surface-ruler: rgb(18 29 40 / 70%);
   /* Fine-pointer desktop docks reserve space for the scene, so their shared
@@ -532,6 +536,92 @@ body {
 :root .modal,
 :root dialog {
   box-shadow: var(--shadow-dialog);
+}
+
+/* Dialog contract. Every task dialog has the same frame: 16px padding, a
+ * header row as tall as one control with the title on the left and a square
+ * close button on the right, then content, then right-aligned actions. The
+ * older sheets pulled the close button outwards with negative margins, which
+ * pushed it against the border, or past it, in dialogs with their own padding. */
+:root :is(.modal, .delete-animation-dialog) {
+  padding: var(--space-4);
+  overflow: hidden auto;
+  background: var(--surface-dialog);
+}
+/* The header stays in view while a tall dialog scrolls, so the title and the
+ * close button are always reachable. */
+:root :is(.modal, .delete-animation-dialog) > header {
+  position: sticky;
+  z-index: 2;
+  top: calc(-1 * var(--space-4));
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) var(--space-3);
+  padding: var(--space-4) var(--space-4) 0;
+  border: 0;
+  background: var(--surface-dialog);
+}
+:root :is(.modal, .delete-animation-dialog) > header > svg {
+  flex: none;
+  height: var(--control-height);
+  color: var(--accent);
+}
+:root :is(.modal, .delete-animation-dialog) > header :is(h2, h3) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+}
+:root :is(.modal, .delete-animation-dialog) > header > h2 {
+  flex: 1;
+  min-width: 0;
+}
+:root :is(.modal, .delete-animation-dialog) > header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+:root :is(.modal, .delete-animation-dialog) > header > button {
+  flex: none;
+  margin: 0 -6px 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--secondary);
+}
+:root :is(.modal, .delete-animation-dialog) > header > button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+/* Touch close buttons are taller than one control, so the title row grows
+ * with them and stays centred against the button. */
+:root.android :is(.modal, .delete-animation-dialog) > header :is(h2, h3) {
+  min-height: 48px;
+}
+:root:not(.android) :is(.modal, .delete-animation-dialog) > header > button {
+  width: var(--control-height);
+  min-width: var(--control-height);
+  height: var(--control-height);
+  min-height: var(--control-height);
+}
+:root :is(.modal, .delete-animation-dialog) > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+:root:not(.android) :is(.modal, .delete-animation-dialog) > footer button {
+  height: var(--control-height);
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
 }
 :root .context-flair {
   border-radius: var(--radius-flair);
@@ -1014,4 +1104,76 @@ body {
     min-height: 44px;
     touch-action: manipulation;
   }
+}
+
+/* Floating panels use the dialog's close button and title sizes, so a panel
+ * and a dialog opened side by side read as the same family. */
+:root:not(.android) :is(.asset-library, .loop-panel) > header button {
+  flex: none;
+  width: var(--control-height);
+  min-width: var(--control-height);
+  height: var(--control-height);
+  min-height: var(--control-height);
+  margin: 0 -6px 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--secondary);
+}
+:root:not(.android) :is(.asset-library, .loop-panel) > header button:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+}
+:root:not(.android) .asset-library > header {
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-4);
+}
+:root :is(.asset-library > header strong, .loop-panel > header h3) {
+  font-size: 15px;
+  font-weight: 600;
+}
+:root:not(.android) .loop-panel {
+  padding: var(--space-4);
+}
+:root:not(.android) .loop-panel > header {
+  min-height: var(--control-height);
+  margin-bottom: var(--space-2);
+}
+
+/* Choice cards read from the left like every other list row. */
+:root .android-export-options button {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+/* Shortcut list: keys and descriptions never touch. */
+:root .shortcuts > div {
+  column-gap: var(--space-3);
+}
+
+/* Form contract for dialogs and floating panels on desktop. Fields, their
+ * labels and text buttons had drifted to four heights and three type sizes
+ * between dialogs; they share one here. Touch layouts keep their own sizes. */
+:root:not(.android) :is(.modal, .loop-panel, .delete-animation-dialog) label {
+  font-size: 12px;
+}
+:root:not(.android)
+  :is(.modal, .loop-panel)
+  :is(input:not([type='checkbox'], [type='radio'], [type='range'], [type='color']), select) {
+  height: var(--control-height);
+  min-height: var(--control-height);
+  font-size: 13px;
+}
+:root:not(.android) :is(.modal, .loop-panel, .delete-animation-dialog) button {
+  font-size: 13px;
+}
+:root:not(.android) .modal :is(.segmented, .joined, .export-modes) > button {
+  height: calc(var(--control-height) - 2px);
+  min-height: calc(var(--control-height) - 2px);
+}
+:root:not(.android) :is(.modal, .loop-panel, .delete-animation-dialog) :is(p, small) {
+  font-size: 12px;
+}
+:root:not(.android) :is(.modal, .delete-animation-dialog) > p:not(.help-text) {
+  font-size: 13px;
 }

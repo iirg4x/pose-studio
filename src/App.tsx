@@ -1608,7 +1608,7 @@ export default function App() {
             <header>
               <h2>Make your first animation</h2>
               <button aria-label="Close help" onClick={() => setHelp(false)}>
-                <X size={20} />
+                <X size={18} />
               </button>
             </header>
             <p>

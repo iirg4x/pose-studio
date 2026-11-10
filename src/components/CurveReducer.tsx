@@ -251,7 +251,7 @@ export function CurveReducer({
             </p>
           </div>
           <button aria-label="Close keyframe reducer" onClick={close}>
-            <X size={20} />
+            <X size={18} />
           </button>
         </header>
         <div className="reducer-scroll">

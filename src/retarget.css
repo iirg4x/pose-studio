@@ -61,7 +61,7 @@
 }
 .retarget-intro p,
 .retarget-note {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.6;
   color: var(--muted);
 }
@@ -76,7 +76,7 @@
 }
 .retarget-examples > span,
 .retarget-source > small {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   color: var(--muted);
 }
@@ -101,7 +101,7 @@
 }
 .retarget-source span,
 .retarget-source p {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   line-height: 1.6;
 }
@@ -115,14 +115,14 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .character-panel > footer {
   margin-top: auto;
   padding: 12px;
 }
 .character-panel > footer button {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .retarget-tabs {
@@ -135,7 +135,7 @@
   border-radius: 0;
   color: var(--muted);
   border-bottom: 2px solid transparent;
-  font-size: 11px;
+  font-size: 12px;
 }
 .retarget-tabs button[aria-selected='true'] {
   color: var(--cyan);
@@ -157,7 +157,7 @@
   padding: 12px;
 }
 .retarget-error {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.6;
   color: var(--red);
   padding: 12px;
@@ -182,12 +182,12 @@
   flex: 1;
 }
 .mapping-health strong {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
 }
 .mapping-health small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 .mapping-health button {
   color: var(--cyan);
@@ -202,7 +202,7 @@
   grid-template-columns: 105px 1fr;
   padding: 4px 8px 8px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 .mapping-row {
   display: grid;
@@ -210,7 +210,7 @@
   align-items: center;
   gap: 8px;
   margin: 4px 0;
-  font-size: 11px;
+  font-size: 12px;
 }
 .mapping-row > span {
   overflow: hidden;
@@ -224,7 +224,7 @@
 }
 .mapping-row select {
   height: 28px;
-  font-size: 11px;
+  font-size: 12px;
   width: 100%;
 }
 .mapping-row select.missing {
@@ -235,7 +235,7 @@
   align-items: center;
   gap: 8px;
   padding: 7px 4px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .mesh-visibility input {
   flex: none;
@@ -261,7 +261,7 @@
   position: absolute;
   left: 9px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   pointer-events: none;
 }
 .retarget-axes input {
@@ -270,7 +270,7 @@
 }
 .correction-bone {
   width: 100%;
-  font-size: 11px;
+  font-size: 12px;
 }
 .retarget-export {
   padding: 12px;
@@ -278,13 +278,12 @@
 }
 .retarget-export > button {
   width: 100%;
-  font-size: 11px;
 }
 .retarget-export-path {
   display: block;
   overflow-wrap: anywhere;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   padding: 16px 0;
 }
 .retarget-inspector .modal-backdrop {

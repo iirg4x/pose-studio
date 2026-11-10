@@ -38,7 +38,7 @@
   border-bottom: 1px solid #627e941f;
 }
 .animation-mirror-panel header small {
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: #9faec2;
@@ -115,7 +115,7 @@
   font-size: 13px;
 }
 .mirror-timing small {
-  font-size: 10px;
+  font-size: 11px;
   color: #b5c3d3;
 }
 .mirror-link-description {
@@ -136,7 +136,7 @@
 .mirror-link-description small {
   display: block;
   margin-top: 3px;
-  font-size: 10px;
+  font-size: 11px;
   color: #8fa3bb;
 }
 .mirror-existing {
@@ -155,7 +155,7 @@
   color: #93d3c0;
 }
 .mirror-existing button {
-  font-size: 10px;
+  font-size: 11px;
   padding: 5px 8px;
 }
 .animation-mirror-panel > footer {
@@ -193,7 +193,7 @@
 }
 .mirror-driver-notice small {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   color: #9caec2;
   margin-top: 3px;
 }

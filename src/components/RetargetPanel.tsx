@@ -241,7 +241,9 @@ export function RetargetInspector({ runtime }: { runtime: StudioScene | null }) 
                         {slots.map((slot) => (
                           <label key={slot.bone} className="mapping-row">
                             <span title={slot.bone}>
-                              {slot.label.replace(/^(Left|Right) /, '')}
+                              {slot.label.replace(/^(Left|Right) (.)/, (_, _side, first: string) =>
+                                first.toUpperCase(),
+                              )}
                               {slot.required && <i title="Required">*</i>}
                             </span>
                             <select

@@ -106,7 +106,7 @@ export function AssetLibrary({
         <Box size={16} />
         <strong>Project assets</strong>
         <button aria-label="Close assets" onClick={close} disabled={!!busy}>
-          <X size={16} />
+          <X size={18} />
         </button>
       </header>
       <div className="asset-imports">

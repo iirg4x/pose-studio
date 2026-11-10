@@ -87,7 +87,10 @@
 .area-viewport .desktop-pose-context > .active-layer-control {
   display: none;
 }
-.area-viewport .pose-view-label {
+/* The title bar and the docked panels already name the workspace and the
+ * preview model. Character setup re-enabled this label, which then sat on top
+ * of the project title. */
+.app.desktop-workspace .area-viewport .pose-view-label {
   display: none;
 }
 .area-viewport .preview-border {
@@ -350,10 +353,7 @@
   width: 420px;
   max-width: calc(100vw - 32px);
   max-height: calc(100dvh - 32px);
-  overflow: auto;
-  padding: 20px;
   color: var(--text);
-  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-shared);
   box-shadow: var(--shadow-panel, 0 12px 48px #0008);
@@ -362,25 +362,10 @@
   background: #080d1470;
   backdrop-filter: blur(3px);
 }
-.delete-animation-dialog header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-.delete-animation-dialog h2 {
-  font-size: 17px;
-}
+/* Frame, header and footer come from the dialog contract in design-system.css. */
 .delete-animation-dialog p {
   line-height: 1.6;
   overflow-wrap: anywhere;
-}
-.delete-animation-dialog footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 20px;
 }
 .delete-animation-dialog .danger {
   background: color-mix(in srgb, var(--red) 18%, var(--panel));
@@ -721,6 +706,13 @@
 }
 .app.desktop-workspace > .statusbar > span:last-child {
   display: none;
+}
+/* In Character setup the left edge belongs to the character list, so the
+ * status message is centred between the two panels instead of covering the
+ * list's heading. */
+.app.desktop-workspace:has(> .animate-layout.setup-layout) > .statusbar {
+  left: 50%;
+  translate: -50% 0;
 }
 
 /* Fine-pointer desktop uses one dock frame at every window size. The scene
