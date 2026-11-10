@@ -1,6 +1,8 @@
 import type { StudioStore } from './core/store';
 import type { StudioScene } from './scene/StudioScene';
 declare global {
+  /** The package version, injected at build time. */
+  const __APP_VERSION__: string;
   interface Window {
     studioDesktop?: {
       platform?: 'android' | 'desktop' | 'web';

@@ -120,7 +120,8 @@ function createCharacters(directory, assets, backend) {
       };
     },
     async embed(project) {
-      const data = structuredClone(project),
+      // Only characterAssets is added, so the library itself is not cloned.
+      const data = { ...project },
         characterAssets = {};
       let total = 0;
       for (const c of [

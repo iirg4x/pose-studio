@@ -162,7 +162,7 @@ export function Updates({
             <section className="update-section">
               <div className="update-heading">
                 <strong>Pose for Android</strong>
-                <span>{release?.currentVersion ?? '0.8.22'}</span>
+                <span>{release?.currentVersion ?? __APP_VERSION__}</span>
               </div>
               <div className="update-state">
                 {busy ? (

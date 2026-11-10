@@ -51,9 +51,16 @@ export async function encodeProject(project) {
   }
   const iterator = records(),
     encoder = new TextEncoder();
-  let total = 0;
+  let total = 0,
+    slice = Date.now();
   const input = new ReadableStream({
-    pull(controller) {
+    async pull(controller) {
+      // Serializing and compressing a large library takes many seconds. Yield
+      // between records so the caller's event loop keeps handling input.
+      if (Date.now() - slice > 40) {
+        await new Promise((resolve) => setTimeout(resolve));
+        slice = Date.now();
+      }
       const next = iterator.next();
       if (next.done) {
         controller.close();
