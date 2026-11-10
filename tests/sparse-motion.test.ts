@@ -208,3 +208,73 @@ it('retains holds and a sharp direction change', () => {
   for (let f = 0; f <= 40; f += 0.25)
     expect(Math.abs(sample(track, f).p[0] - sample(dense(keys), f).p[0])).toBeLessThan(0.000201);
 });
+
+const rotationError = (keys: Key[], result: ReturnType<typeof sparseMotion>) => {
+  const reference = { ...dense(keys), rotationMode: 'quaternion' as const },
+    track = { ...reference, ...result };
+  let worst = 0;
+  for (let f = keys[0].frame; f <= keys.at(-1)!.frame; f += 0.125)
+    worst = Math.max(
+      worst,
+      new Quaternion(...sample(track, f).q).angleTo(new Quaternion(...sample(reference, f).q)),
+    );
+  return (worst * 180) / Math.PI;
+};
+const turn = (degrees: number, axis = new Vector3(0, 1, 0)) =>
+  new Quaternion().setFromAxisAngle(axis, (degrees * Math.PI) / 180).toArray() as Key['q'];
+
+it('distills a pose snap between two frames instead of keeping the bone baked', () => {
+  for (const snap of [67, 98]) {
+    const keys = Array.from({ length: 60 }, (_, frame) => ({
+        ...pose([0, 0, 0], turn(frame < 30 ? 0 : snap)),
+        frame,
+      })),
+      result = sparseMotion(keys);
+    expect(result.keys.length).toBeLessThanOrEqual(2);
+    expect(Object.keys(result.curves ?? {})).toHaveLength(7);
+    for (const curve of Object.values(result.curves!)) expect(curve!.keys.length).toBeLessThan(12);
+    expect(rotationError(keys, result)).toBeLessThan(0.25);
+  }
+});
+it('converts every channel of a busy rotation instead of stopping part way', () => {
+  // Three independent axes with one fast frame: the case that used to leave a
+  // single quaternion component as a curve beside a full set of baked keys.
+  const keys = Array.from({ length: 90 }, (_, frame) => {
+    const q = new Quaternion()
+      .setFromAxisAngle(new Vector3(0, 1, 0), 0.9 * Math.sin(frame * 0.21))
+      .multiply(
+        new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), 0.5 * Math.sin(frame * 0.13)),
+      )
+      .multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), frame > 44 ? 0.8 : 0));
+    return { ...pose([0, 0, 0], q.normalize().toArray()), frame };
+  });
+  for (const degrees of [0.1, 0.25, 0.5]) {
+    const result = sparseMotion(keys, { position: 0.0002, rotation: (degrees * Math.PI) / 180 });
+    expect(Object.keys(result.curves ?? {})).toHaveLength(7);
+    expect(result.keys.length).toBeLessThanOrEqual(2);
+    for (const curve of Object.values(result.curves!))
+      expect(curve!.keys.length).toBeLessThan(keys.length);
+    expect(rotationError(keys, result)).toBeLessThan(degrees);
+  }
+});
+it('gives one key to channels that only carry retarget rounding noise', () => {
+  const keys = Array.from({ length: 40 }, (_, frame) => ({
+      ...pose(
+        [1 + 1e-8 * Math.sin(frame), 2 + 1e-8 * Math.cos(frame * 1.7), 3],
+        turn((frame / 39) * 40),
+      ),
+      frame,
+    })),
+    result = sparseMotion(keys);
+  for (const channel of ['px', 'py', 'pz'] as const)
+    expect(result.curves![channel]!.keys).toHaveLength(1);
+  expect(result.curves!.qy!.keys.length).toBeGreaterThan(1);
+});
+it('still keeps a real endpoint that is smaller than the tolerance', () => {
+  const keys = Array.from({ length: 20 }, (_, frame) => ({
+      ...pose([(frame / 19) * 0.0001, 0, 0]),
+      frame,
+    })),
+    track = { ...dense(keys), ...sparseMotion(keys) };
+  expect(sample(track, 19).p[0]).toBeCloseTo(0.0001, 9);
+});
