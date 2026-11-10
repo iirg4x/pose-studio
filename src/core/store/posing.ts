@@ -45,7 +45,14 @@ export class PosingStore extends LayerStore {
     const s = this.state,
       p = s.project,
       ids = this.selectedControls();
-    if (!p || !ids.length) return;
+    if (!p) return;
+    // With nothing usable selected (an imported clip opens on an IK hand its FK arm
+    // has switched off), copying used to do nothing and say nothing, and Paste then
+    // had nothing to paste. Copy the whole pose instead.
+    if (!ids.length) {
+      this.copyPose('rig');
+      return;
+    }
     if (ids.length === 1) {
       this.copyPose('control');
       return;
