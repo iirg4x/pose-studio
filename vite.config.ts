@@ -3,7 +3,9 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { readFileSync } from 'node:fs';
 import { posePwa } from './shared/pwa-build.mjs';
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 export default defineConfig(({ mode }) => ({
+  define: { __APP_VERSION__: JSON.stringify(version) },
   publicDir: mode === 'pwa' ? false : 'public',
   plugins: [
     ...(mode === 'pwa' ? [posePwa()] : []),

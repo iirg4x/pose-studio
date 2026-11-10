@@ -70,7 +70,9 @@ function assetIds(project: unknown) {
   ];
 }
 export async function embedAssets(project: unknown, read: (id: string) => Promise<Uint8Array>) {
-  const data = structuredClone(project) as Record<string, unknown>,
+  // A shallow copy is enough: only characterAssets is added, and cloning a large
+  // library here froze saving for many seconds.
+  const data = { ...(project as Record<string, unknown>) },
     assets: Record<string, string> = {};
   let total = 0;
   for (const id of assetIds(data)) {

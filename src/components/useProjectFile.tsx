@@ -283,7 +283,9 @@ export function useProjectFile(
         // user's saved project for dirty-state purposes.
         studio.patch({ message: 'Download requested: ' + a.download });
       }
-      const signature = await markSaved(data);
+      // The yielding signature keeps the editor responsive after a large save.
+      const signature = await projectSaveSignatureAsync(data);
+      await markSignatureSaved(signature);
       rememberClean(signature, initial);
       return true;
     } catch (e) {
@@ -296,7 +298,7 @@ export function useProjectFile(
       busyRef.current = false;
       setBusy(false);
     }
-  }, [markSaved, rememberClean]);
+  }, [markSignatureSaved, rememberClean]);
   const open = useCallback(
     async (data: AnimationLibrary, source?: LinkedDocument) => {
       // Invalidate a dirty check that has not reached the open step yet. This

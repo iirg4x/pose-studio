@@ -872,8 +872,22 @@ export default function App() {
         { label: 'Open project…', run: () => void open(), disabled: !s.ready },
         { label: 'Save project', shortcut: 'Ctrl S', run: save, disabled: !s.ready },
         'separator',
-        { label: 'Import animation…', run: () => setImporting(true), disabled: !s.ready },
-        { label: 'Models, props and animations…', run: () => setAssets(true), disabled: !s.ready },
+        {
+          label: 'Import animation…',
+          run: () => {
+            setMenu(false);
+            setImporting(true);
+          },
+          disabled: !s.ready,
+        },
+        {
+          label: 'Models, props and animations…',
+          run: () => {
+            setMenu(false);
+            setAssets(true);
+          },
+          disabled: !s.ready,
+        },
         'separator',
         {
           // The browser build saves .pose (Unreal packaging needs the desktop app).
@@ -882,13 +896,30 @@ export default function App() {
             : portablePlatform
               ? 'Export…'
               : 'Export to Unreal…',
-          run: () => (characterPreview ? setCharacterExport(true) : setExporting(true)),
+          run: () => {
+            setMenu(false);
+            if (characterPreview) setCharacterExport(true);
+            else setExporting(true);
+          },
           disabled: busy,
         },
-        { label: 'Record video…', run: () => setRecording(true), disabled: busy },
+        {
+          label: 'Record video…',
+          run: () => {
+            setMenu(false);
+            setRecording(true);
+          },
+          disabled: busy,
+        },
         'separator',
         isPwaBuild
-          ? { label: 'Install app and offline status…', run: () => setInstallOpen(true) }
+          ? {
+              label: 'Install app and offline status…',
+              run: () => {
+                setMenu(false);
+                setInstallOpen(true);
+              },
+            }
           : { label: 'Open Axe studio example…', run: () => void openExample() },
       ],
       footer: (
@@ -1084,7 +1115,15 @@ export default function App() {
     },
     {
       label: 'Help',
-      items: [{ label: 'Keyboard shortcuts', run: () => setHelp(true) }],
+      items: [
+        {
+          label: 'Keyboard shortcuts',
+          run: () => {
+            setMenu(false);
+            setHelp(true);
+          },
+        },
+      ],
     },
   ];
   return (
@@ -1459,8 +1498,7 @@ export default function App() {
                 ? (s.workspace?.characters?.find((c) => c.id === s.workspace?.previewCharacterId)
                     ?.name ?? 'Manny') + ' · shared Manny rig'
                 : 'Loading'}
-          <i />
-          v0.8.24
+          <i />v{__APP_VERSION__}
         </span>
       </footer>
       <input
