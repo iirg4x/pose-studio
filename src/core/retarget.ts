@@ -105,7 +105,13 @@ export const RETARGET_SLOTS: RetargetSlot[] = [
         'Bip01 ' + letter + ' Toe0',
       ]),
     ];
-    for (const [i, digit] of ['thumb', 'index', 'middle', 'ring', 'pinky'].entries())
+    for (const [i, digit] of ['thumb', 'index', 'middle', 'ring', 'pinky'].entries()) {
+      // Palm bones carry the knuckles. A hand that spreads or cups by turning them
+      // loses that motion, and shifts every finger, when they have nowhere to go.
+      if (digit !== 'thumb')
+        bones.push(
+          slot(`${digit}_metacarpal_${side}`, `${word} ${digit} palm`, word + ' fingers', []),
+        );
       for (let joint = 1; joint <= 3; joint++)
         bones.push(
           slot(`${digit}_0${joint}_${side}`, `${word} ${digit} ${joint}`, word + ' fingers', [
@@ -115,6 +121,7 @@ export const RETARGET_SLOTS: RetargetSlot[] = [
             `Bip01 ${letter} Finger${i}${joint === 1 ? '' : joint - 1}`,
           ]),
         );
+    }
     for (const stem of ['upperarm', 'lowerarm', 'thigh', 'calf'])
       for (const j of [1, 2])
         bones.push(
