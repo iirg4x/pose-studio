@@ -91,8 +91,9 @@
   /* Surface alpha is part of the component contract, not a container opacity. */
   --surface-quick: rgb(18 29 40 / 70%);
   /* Menus, popovers and floating panels carry text over a bright, detailed
-   * scene and have no blurred backdrop, so they are close to opaque. */
-  --surface-menu: rgb(18 29 40 / 97%);
+   * scene and over other panels, with no blurred backdrop, so they are opaque:
+   * any transparency lets the text underneath show through as a ghost. */
+  --surface-menu: rgb(18 29 40);
   /* Dialogs sit on a dimmed, blurred backdrop and need no transparency. */
   --surface-dialog: #16222e;
   --surface-timeline: rgb(18 29 40 / 70%);
