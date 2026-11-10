@@ -23,7 +23,16 @@ export interface Menu {
 }
 
 /** Desktop menu bar following the WAI-ARIA menubar pattern. */
-export function MenuBar({ menus, disabled = false }: { menus: Menu[]; disabled?: boolean }) {
+export function MenuBar({
+  menus,
+  disabled = false,
+  onCommand,
+}: {
+  menus: Menu[];
+  disabled?: boolean;
+  /** Called when a command is chosen, so the surface holding the bar can close too. */
+  onCommand?: () => void;
+}) {
   const [open, setOpen] = useState<number | null>(null);
   const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
   const [submenuPosition, setSubmenuPosition] = useState({
@@ -233,7 +242,10 @@ export function MenuBar({ menus, disabled = false }: { menus: Menu[]; disabled?:
                     }
                     onKeyDown={onMenuKey}
                   >
-                    {renderItems(menu.items, () => close(true))}
+                    {renderItems(menu.items, () => {
+                      close(true);
+                      onCommand?.();
+                    })}
                     {menu.footer}
                   </div>
                 </MotionPresence>,

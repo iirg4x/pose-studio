@@ -203,7 +203,7 @@ This is a geometry example, not a replacement for semantic radio groups, tabs or
 | `--green`          | `#95ccb4` | Success; labelled Y axis                     |
 | `--axis-z`         | `#75b6f2` | Labelled Z axis                              |
 | `--surface-quick`  | `rgb(18 29 40 / 70%)` | Quick ribbon, inspector and tablet panel surfaces; 30% transparent |
-| `--surface-menu`   | `rgb(18 29 40 / 70%)` | Menus, dialogs and popovers; 30% transparent     |
+| `--surface-menu`   | `rgb(18 29 40)`       | Menus, popovers and floating panels; opaque      |
 | `--surface-timeline` | `rgb(18 29 40 / 70%)` | Timeline and curve data root surface; 30% transparent |
 | `--surface-ruler`  | `rgb(18 29 40 / 70%)` | Ruler and transport root surface; 30% transparent |
 | `--surface-dock`   | `var(--panel)` | Opaque fine-pointer desktop dock roots |

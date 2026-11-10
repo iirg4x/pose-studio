@@ -1158,7 +1158,11 @@ export default function App() {
           <MotionPresence show={menu}>
             {!isAndroid ? (
               <div className="desktop-command-menu" data-editor-overlay>
-                <MenuBar menus={desktopMenus} disabled={recording || exporting} />
+                <MenuBar
+                  menus={desktopMenus}
+                  disabled={recording || exporting}
+                  onCommand={() => setMenu(false)}
+                />
               </div>
             ) : (
               <div className="file-menu" data-editor-overlay>
