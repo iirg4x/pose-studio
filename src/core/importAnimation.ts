@@ -1,4 +1,5 @@
 import { Matrix4, Quaternion, Vector3 } from 'three';
+import { anatomicalFrame, palmFinger } from './anatomicalFrame';
 import { sparseMotion } from './sparseMotion';
 import type { MotionTolerance } from './sparseMotion';
 import { blankProject } from './assets';
@@ -103,67 +104,16 @@ export function importMotion(
         ? (position(targetHip).y / Math.abs(position(hip).y)) * scale
         : scale;
   const orientation = new Map<string, Quaternion>();
-  const anatomicalFrame = (name: string, worlds: Map<string, Matrix4>) => {
-    const current = worlds.get(name);
-    if (!current) return null;
-    const side = name.endsWith('_l') ? 'l' : 'r',
-      stem = name.slice(0, -2);
-    const next = (
-      {
-        clavicle: 'upperarm',
-        upperarm: 'lowerarm',
-        lowerarm: 'hand',
-        thigh: 'calf',
-        calf: 'foot',
-        foot: 'ball',
-        hand: 'middle_01',
-      } as Record<string, string>
-    )[stem];
-    const digit = /^(thumb|index|middle|ring|pinky)_0([123])_[lr]$/.exec(name);
-    let direction: Vector3 | undefined;
-    if (next && worlds.has(next + '_' + side))
-      direction = position(worlds.get(next + '_' + side)!).sub(position(current));
-    else if (digit) {
-      const joint = Number(digit[2]),
-        other = worlds.get(digit[1] + '_0' + (joint === 3 ? 2 : joint + 1) + '_' + side);
-      if (other) {
-        direction =
-          joint === 3
-            ? position(current).sub(position(other))
-            : position(other).sub(position(current));
-        if (joint === 3 && direction.lengthSq() > 1e-12) {
-          // A terminal phalanx has no child joint. Its predecessor describes the
-          // middle phalanx, not this bone's axis; using it transfers bind-pose curl.
-          const previous = direction.clone().normalize(),
-            axes = [0, 1, 2].map((i) => new Vector3().setFromMatrixColumn(current, i).normalize());
-          axes.sort((a, b) => Math.abs(b.dot(previous)) - Math.abs(a.dot(previous)));
-          if (Math.abs(axes[0].dot(previous)) > 0.85)
-            direction = axes[0].multiplyScalar(Math.sign(axes[0].dot(previous)));
-        }
-      }
-    }
-    if (!direction || direction.lengthSq() < 1e-12) return null;
-    const x = direction.normalize();
-    let up = new Vector3(0, 0, 1);
-    if (stem === 'hand' || digit) {
-      const hand = worlds.get('hand_' + side),
-        index = worlds.get('index_01_' + side),
-        pinky = worlds.get('pinky_01_' + side);
-      if (hand && index && pinky)
-        up = position(index)
-          .sub(position(hand))
-          .cross(position(pinky).sub(position(hand)))
-          .normalize();
-    }
-    if (Math.abs(up.dot(x)) > 0.98) up.set(0, 1, 0);
-    const z = up.addScaledVector(x, -up.dot(x)).normalize(),
-      y = z.clone().cross(x).normalize();
-    return new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(x, y, z));
-  };
   const targetWorlds = new Map([...rig.rest].map(([n, r]) => [n, r.world]));
   for (const [name] of mapped) {
-    const sourceFrame = anatomicalFrame(name, rest),
-      targetFrame = anatomicalFrame(name, targetWorlds),
+    const side = name.endsWith('_l') ? 'l' : 'r',
+      palm = palmFinger(
+        side,
+        (bone) => rest.has(bone),
+        (bone) => targetWorlds.has(bone),
+      ),
+      sourceFrame = anatomicalFrame(name, rest, palm),
+      targetFrame = anatomicalFrame(name, targetWorlds, palm),
       sr = rest.get(name)!,
       tr = rig.rest.get(name)!.world;
     // Align anatomical directions rather than transferring an A-pose/T-pose

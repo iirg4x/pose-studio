@@ -3,6 +3,7 @@ import * as T from 'three';
 import type { MannyRig } from './rig';
 import type { RetargetCharacter } from '../core/retarget';
 import { mappingIssues } from '../core/retarget';
+import { anatomicalFrame, palmFinger } from '../core/anatomicalFrame';
 
 type Rest = { p: T.Vector3; q: T.Quaternion; s: T.Vector3; world: T.Matrix4 };
 export type RetargetRigOptions = {
@@ -105,50 +106,6 @@ export class RetargetRig {
     }
     return false;
   }
-  private sourceRest(name: string) {
-    return this.source?.rest.get(name)?.world;
-  }
-  private direction(name: string, target: boolean): T.Vector3 | undefined {
-    const get = (n: string) =>
-      target
-        ? this.mapped(n)?.getWorldPosition(new T.Vector3())
-        : this.sourceRest(n)
-          ? position(this.sourceRest(n)!)
-          : undefined;
-    const start = get(name);
-    if (!start) return;
-    let end: string | undefined;
-    if (name.startsWith('clavicle_')) end = name.replace('clavicle_', 'upperarm_');
-    else if (name.startsWith('upperarm_')) end = name.replace('upperarm_', 'lowerarm_');
-    else if (name.startsWith('lowerarm_')) end = name.replace('lowerarm_', 'hand_');
-    else if (name.startsWith('thigh_')) end = name.replace('thigh_', 'calf_');
-    else if (name.startsWith('calf_')) end = name.replace('calf_', 'foot_');
-    else if (name.startsWith('foot_')) end = name.replace('foot_', 'ball_');
-    else if (name.startsWith('hand_')) end = 'middle_01_' + name.at(-1);
-    else if (/_0[12]_/.test(name))
-      end = name.replace(/_0([12])_/, (_, n) => '_0' + (Number(n) + 1) + '_');
-    else if (
-      this.config?.origin === 'skeleton' &&
-      /^(thumb|index|middle|ring|pinky)_03_/.test(name)
-    ) {
-      const previous = get(name.replace('_03_', '_02_')),
-        world = target ? this.mapped(name)?.matrixWorld : this.sourceRest(name);
-      if (previous && world) {
-        const direction = start.clone().sub(previous).normalize(),
-          axes = [0, 1, 2].map((i) => new T.Vector3().setFromMatrixColumn(world, i).normalize());
-        axes.sort((a, b) => Math.abs(b.dot(direction)) - Math.abs(a.dot(direction)));
-        return Math.abs(axes[0].dot(direction)) > 0.85
-          ? axes[0].multiplyScalar(Math.sign(axes[0].dot(direction)))
-          : direction;
-      }
-    }
-    // Torso joints describe different anatomical landmarks across skeletons.
-    // A neck can start behind (or below) its ribcage joint. Aiming that short
-    // offset at Manny's vertical spine rotates the entire chest by nearly 90°.
-    // Preserve the imported torso shape and transfer animation deltas instead.
-    const stop = end ? get(end) : undefined;
-    return stop && stop.distanceToSquared(start) > 1e-10 ? stop.sub(start).normalize() : undefined;
-  }
   configure(source: MannyRig, config: RetargetCharacter) {
     this.source = source;
     this.config = config;
@@ -202,42 +159,30 @@ export class RetargetRig {
       })
       .sort((a, b) => depth(a.target) - depth(b.target));
     this.calibrated.clear();
-    const soleRotations = new Map(
-      ['l', 'r'].flatMap((side) => {
-        const b = this.mapped('foot_' + side);
-        return b ? [['foot_' + side, b.getWorldQuaternion(new T.Quaternion())] as const] : [];
-      }),
-    );
-    // Match A/T pose geometrically rather than assuming identical bone axes.
+    // Match A/T pose by anatomy rather than assuming identical bone axes, with the
+    // same frames animation import uses. Every frame is measured on the untouched
+    // rest pose, so a bone's alignment does not depend on how its parents turned.
+    const characterRest = new Map<string, T.Matrix4>(),
+      mannyRest = new Map<string, T.Matrix4>();
+    for (const { source: name, target } of this.pairs) {
+      characterRest.set(name, target.matrixWorld.clone());
+      mannyRest.set(name, source.rest.get(name)!.world);
+    }
     for (const pair of this.pairs) {
       const { source: name, target: b } = pair;
-      const from = this.direction(name, true),
-        to = this.direction(name, false);
-      let q = b.getWorldQuaternion(new T.Quaternion());
-      if (soleRotations.has(name)) q.copy(soleRotations.get(name)!);
-      else if (from && to) q.premultiply(new T.Quaternion().setFromUnitVectors(from, to));
-      this.setWorldRotation(b, q);
-      if (name.startsWith('hand_')) {
-        const side = name.at(-1)!,
-          index = this.mapped('index_01_' + side),
-          pinky = this.mapped('pinky_01_' + side),
-          si = this.sourceRest('index_01_' + side),
-          sp = this.sourceRest('pinky_01_' + side);
-        const axis = this.direction(name, true);
-        if (index && pinky && si && sp && axis) {
-          const a = index
-              .getWorldPosition(new T.Vector3())
-              .sub(pinky.getWorldPosition(new T.Vector3())),
-            z = position(si).sub(position(sp));
-          a.addScaledVector(axis, -a.dot(axis)).normalize();
-          z.addScaledVector(axis, -z.dot(axis)).normalize();
-          if (a.lengthSq() > 0.1 && z.lengthSq() > 0.1) {
-            const angle = Math.atan2(axis.dot(a.clone().cross(z)), a.dot(z));
-            q.premultiply(new T.Quaternion().setFromAxisAngle(axis, angle));
-            this.setWorldRotation(b, q);
-          }
-        }
+      const q = rotation(characterRest.get(name)!);
+      // Fingertips of characters saved before skeleton origins keep their own rest.
+      if (config.origin === 'skeleton' || !/^(thumb|index|middle|ring|pinky)_03_/.test(name)) {
+        const palm = palmFinger(
+            name.endsWith('_l') ? 'l' : 'r',
+            (bone) => characterRest.has(bone),
+            (bone) => mannyRest.has(bone),
+          ),
+          from = anatomicalFrame(name, characterRest, palm),
+          to = anatomicalFrame(name, mannyRest, palm);
+        if (from && to) q.premultiply(to.multiply(from.invert()));
       }
+      this.setWorldRotation(b, q);
       const offset = config.offsets[name];
       if (offset) {
         q.multiply(
