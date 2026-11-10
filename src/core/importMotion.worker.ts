@@ -5,6 +5,7 @@ import type { Key, Track } from './model';
 export interface ImportMotionRequest {
   entries: { id: string; keys: Key[] }[];
   tolerance: MotionTolerance;
+  options?: { detectMotion?: boolean };
 }
 
 export type ImportedMotionResult = Pick<
@@ -19,11 +20,11 @@ export type ImportMotionReply =
 
 self.onmessage = (event: MessageEvent<ImportMotionRequest>) => {
   try {
-    const { entries, tolerance } = event.data;
+    const { entries, tolerance, options } = event.data;
     const results: Record<string, ImportedMotionResult> = {};
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
-      results[entry.id] = sparseMotion(entry.keys, tolerance);
+      results[entry.id] = sparseMotion(entry.keys, tolerance, options);
       self.postMessage({
         progress: (i + 1) / entries.length,
         id: entry.id,

@@ -1,8 +1,9 @@
 import { Quaternion, Vector3 } from 'three';
 import { reduceTrack } from './curveReduction';
 import { sample } from './model';
+import { readCurve } from './curves';
 import type { ControlId, Key, Track } from './model';
-import type { Channel, Curve } from './curves';
+import type { Channel, Curve, CurveKey } from './curves';
 
 export interface MotionTolerance {
   /** Position error in metres. */
@@ -17,6 +18,85 @@ const IMPORT_TOLERANCE: MotionTolerance = {
 };
 const channels: Channel[] = ['px', 'py', 'pz', 'qx', 'qy', 'qz', 'qw'];
 
+const rotationChannels: Channel[] = ['qx', 'qy', 'qz', 'qw'];
+/** Below this turn per sample, per-component interpolation and slerp agree to
+ * well under a thousandth of a degree, so plain linear segments are exact
+ * enough to describe the bake. */
+const LINEAR_TURN = (12 * Math.PI) / 180;
+/** A cubic follows a slerp arc of this size to within a hundredth of a degree. */
+const CUBIC_TURN = (45 * Math.PI) / 180;
+/** Channels whose whole excursion is below these floors carry only retarget
+ * rounding, not motion. Units match the curves: centimetres and quaternion
+ * components. */
+const POSITION_NOISE = 1e-4;
+const ROTATION_NOISE = 1e-6;
+
+/**
+ * Describe baked rotation as scalar curves that follow the same great-circle
+ * path the keys do. Pose keys interpolate with slerp while curves interpolate
+ * each component; for a slow turn the two agree, but a pose snap between two
+ * samples does not. Fast spans therefore become cubic segments (subdivided for
+ * very large turns) so the fitter and its validation see one consistent source.
+ */
+function rotationCurves(samples: Key[]): Record<string, Curve> {
+  type Node = { frame: number; q: Quaternion; left?: number[]; right?: number[]; third?: number };
+  const nodes: Node[] = [];
+  for (let i = 0; i < samples.length; i++) {
+    const a = new Quaternion(...samples[i].q),
+      node: Node =
+        nodes.at(-1)?.frame === samples[i].frame
+          ? nodes.at(-1)!
+          : { frame: samples[i].frame, q: a };
+    if (nodes.at(-1) !== node) nodes.push(node);
+    const next = samples[i + 1];
+    if (!next) break;
+    const b = new Quaternion(...next.q),
+      half = Math.acos(Math.max(-1, Math.min(1, a.dot(b))));
+    if (half * 2 <= LINEAR_TURN) continue;
+    const parts = Math.max(1, Math.ceil((half * 2) / CUBIC_TURN)),
+      length = (next.frame - samples[i].frame) / parts,
+      angle = half / parts,
+      cos = Math.cos(angle),
+      rate = angle / (length * Math.sin(angle)),
+      third = length / 3;
+    let from = node;
+    for (let part = 1; part <= parts; part++) {
+      const to: Node =
+        part === parts
+          ? { frame: next.frame, q: b }
+          : { frame: samples[i].frame + length * part, q: a.clone().slerp(b, part / parts) };
+      from.third = third;
+      from.right = [0, 1, 2, 3].map(
+        (c) => rate * (to.q.toArray()[c] - from.q.toArray()[c] * cos) * third,
+      );
+      to.left = [0, 1, 2, 3].map(
+        (c) => -rate * (to.q.toArray()[c] * cos - from.q.toArray()[c]) * third,
+      );
+      nodes.push(to);
+      from = to;
+    }
+  }
+  return Object.fromEntries(
+    rotationChannels.map((channel, c) => [
+      channel,
+      {
+        keys: nodes.map((node, i): CurveKey => {
+          const before = nodes[i - 1]?.third;
+          return {
+            frame: node.frame,
+            value: node.q.toArray()[c],
+            interpolation: node.right ? 'bezier' : 'linear',
+            handle: 'free',
+            ...(node.left && before ? { left: [-before, node.left[c]] as [number, number] } : {}),
+            ...(node.right ? { right: [node.third!, node.right[c]] as [number, number] } : {}),
+          };
+        }),
+        modifiers: [],
+      },
+    ]),
+  );
+}
+
 const copyKey = (key: Key): Key => ({
   ...key,
   p: [...key.p] as Key['p'],
@@ -30,6 +110,7 @@ const copyKey = (key: Key): Key => ({
 export function sparseMotion(
   keys: Key[],
   tolerance: MotionTolerance = IMPORT_TOLERANCE,
+  options: { detectMotion?: boolean } = {},
 ): Pick<Track, 'keys' | 'curves' | 'rotationMode' | 'interpolation'> {
   if (!keys.length) throw Error('Motion has no samples.');
   if (
@@ -104,29 +185,57 @@ export function sparseMotion(
   };
   const end = samples.at(-1)!.frame;
   const positionTolerance = tolerance.position * 100;
-  // Leave half the angular budget for quaternion normalization and the
-  // assembled-transform validation. reduceTrack maps this to a conservative
-  // per-component sin(theta / 4) bound.
-  const rotationTolerance = (tolerance.rotation * 180 * 0.5) / Math.PI;
-  const reduced = reduceTrack(
-    {
-      id: 'root' as ControlId,
-      label: 'Imported motion',
-      track: source,
-      channels,
+  // reduceTrack maps this to a per-component sin(theta / 4) bound, which keeps
+  // the assembled rotation within half of the value passed here. Passing 1.6
+  // times the requested tolerance therefore spends at most 80% of it and
+  // leaves the rest for the difference between curve and slerp evaluation.
+  const rotationTolerance = (tolerance.rotation * 180 * 1.6) / Math.PI;
+  // Fit from explicit curves rather than from the pose keys. Pose keys slerp
+  // and curves interpolate per component, so a track that is only partly
+  // converted would be judged against a different interpolation than the one
+  // it will finally use and good fits would be rejected channel by channel.
+  const fitSource: Track = {
+    ...source,
+    curves: {
+      ...Object.fromEntries(
+        (['px', 'py', 'pz'] as Channel[]).map((channel) => [channel, readCurve(source, channel)]),
+      ),
+      ...rotationCurves(samples),
     },
-    {
-      position: positionTolerance,
-      rotation: rotationTolerance,
-      scalar: positionTolerance,
-      fit: 'auto',
-      skimHandles: true,
-      preserveExtrema: true,
-      detectNoise: true,
-      detectMotion: true,
-    },
-    end,
-  ).track;
+  };
+  const dense = (): Pick<Track, 'keys' | 'curves' | 'rotationMode' | 'interpolation'> => ({
+    keys: samples,
+    rotationMode: 'quaternion',
+    interpolation: 'linear',
+  });
+  let reduced: Track;
+  try {
+    reduced = reduceTrack(
+      {
+        id: 'root' as ControlId,
+        label: 'Imported motion',
+        track: fitSource,
+        channels,
+      },
+      {
+        position: positionTolerance,
+        rotation: rotationTolerance,
+        scalar: positionTolerance,
+        fit: 'auto',
+        skimHandles: true,
+        preserveExtrema: true,
+        detectNoise: true,
+        // Spring, bounce and elastic inference is an exhaustive search that
+        // dominates import time and has nothing to find in sampled skeletal
+        // animation. It stays available in the curve reducer.
+        detectMotion: options.detectMotion === true,
+      },
+      end,
+    ).track;
+  } catch {
+    // One bone that cannot be fitted must not cancel the whole import.
+    return dense();
+  }
 
   // Keep a snapshot of the reduced result so any cleanup remains immutable to
   // the caller's source keys and to the reduction implementation.
@@ -151,10 +260,13 @@ export function sparseMotion(
     // the final value is exactly the authored start. A one-key curve replaces
     // the fallback at every frame, so never use it to erase a real endpoint.
     const firstValue = values[0],
-      lastValue = values.at(-1)!;
+      lastValue = values.at(-1)!,
+      excursion = Math.max(...values.map((value) => Math.abs(value - firstValue)));
     if (
-      lastValue === firstValue &&
-      Math.max(...values.map((value) => Math.abs(value - firstValue))) <= limit
+      (lastValue === firstValue && excursion <= limit) ||
+      // Retargeting leaves rounding noise on channels that never move. It is
+      // far below anything visible, so it must not become a pair of keys.
+      excursion <= Math.min(limit, channel.startsWith('q') ? ROTATION_NOISE : POSITION_NOISE)
     ) {
       const first = curve.keys[0];
       candidate.curves![channel] = {
@@ -196,11 +308,7 @@ export function sparseMotion(
         rotationMode: 'quaternion',
         interpolation: 'linear',
       };
-    return {
-      keys: samples,
-      rotationMode: 'quaternion',
-      interpolation: 'linear',
-    };
+    return dense();
   }
 
   const allFlat =

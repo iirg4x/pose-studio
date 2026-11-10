@@ -43,8 +43,13 @@ else:
             elif matches_rig(rig,action): result.append({'id':action.name,'name':action.name,'action':action.name,'start':float(action.frame_range[0]),'end':float(action.frame_range[1])})
         return result
     rigs.sort(key=lambda r:not bool(actions_for(r)))
+    # Unreal exports its root bone as the FBX skeleton's top node, which Blender
+    # turns into the armature object itself. Its motion then lives on the object
+    # and the bone list starts below it. Offer that object as a root bone again
+    # so root motion can be mapped instead of being folded into the pelvis.
+    def object_root(rig): return rig.name.lower()=='root' and not any(b.name.lower()=='root' for b in rig.data.bones)
     if mode=='inspect':
-        data={'fps':scene.render.fps/scene.render.fps_base,'rigs':[{'name':r.name,'bones':[b.name for b in r.data.bones],'actions':actions_for(r)} for r in rigs]}
+        data={'fps':scene.render.fps/scene.render.fps_base,'rigs':[{'name':r.name,'bones':([r.name] if object_root(r) else [])+[b.name for b in r.data.bones],'actions':actions_for(r)} for r in rigs]}
     else:
         rig=next((r for r in rigs if r.name==options.get('rig')),None)
         if rig is None: raise RuntimeError('Choose a skeleton from this file.')
@@ -63,10 +68,11 @@ else:
         C=Matrix.Rotation(-math.pi/2,4,'X')
         def arr(m): return [round(m[row][col],10) for col in range(4) for row in range(4)]
         bones=list(rig.data.bones)
-        data={'name':action['name'],'fps':fps,'end':count,'bones':[{'name':b.name,'parent':b.parent.name if b.parent else None,'rest':arr(C@rig.matrix_world@b.matrix_local)} for b in bones],'frames':[]}
+        top=rig.name if object_root(rig) else None
+        data={'name':action['name'],'fps':fps,'end':count,'bones':([{'name':top,'parent':None,'rest':arr(C@rig.matrix_world)}] if top else [])+[{'name':b.name,'parent':b.parent.name if b.parent else top,'rest':arr(C@rig.matrix_world@b.matrix_local)} for b in bones],'frames':[]}
         for i in range(count+1):
             f=start+i*original_fps/fps;scene.frame_set(math.floor(f),subframe=f-math.floor(f));bpy.context.view_layer.update()
             evaluated=rig.evaluated_get(bpy.context.evaluated_depsgraph_get())
-            data['frames'].append([arr(C@evaluated.matrix_world@evaluated.pose.bones[b.name].matrix) for b in bones])
+            data['frames'].append(([arr(C@evaluated.matrix_world)] if top else [])+[arr(C@evaluated.matrix_world@evaluated.pose.bones[b.name].matrix) for b in bones])
     with open(destination,'w',encoding='utf8') as stream: json.dump(data,stream,separators=(',',':'))
 print('ASSET_READY')

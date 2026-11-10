@@ -123,4 +123,45 @@ describe('reduceImportedMotion worker lifecycle', () => {
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
     expect(MockWorker.instances).toHaveLength(0);
   });
+
+  it('spreads bones over spare cores and merges progress and results', async () => {
+    vi.stubGlobal('navigator', { hardwareConcurrency: 4 });
+    const ids = ['root', 'pelvis', 'spine_01', 'spine_02', 'head'],
+      progress: [number, number][] = [],
+      pending = reduceImportedMotion(
+        Object.fromEntries(ids.map((id) => [id, track()])),
+        tolerance,
+        (completed, total) => progress.push([completed, total]),
+      );
+    expect(MockWorker.instances).toHaveLength(3);
+    expect(MockWorker.instances.flatMap((w) => w.posted!.entries.map((e) => e.id)).sort()).toEqual(
+      [...ids].sort(),
+    );
+    const result = { keys: track().keys, interpolation: 'linear' as const };
+    for (const worker of MockWorker.instances) {
+      for (const entry of worker.posted!.entries)
+        worker.onmessage?.({
+          data: { progress: 1, id: entry.id },
+        } as MessageEvent<ImportMotionReply>);
+      worker.onmessage?.({
+        data: { results: Object.fromEntries(worker.posted!.entries.map((e) => [e.id, result])) },
+      } as unknown as MessageEvent<ImportMotionReply>);
+    }
+    expect(Object.keys(await pending).sort()).toEqual([...ids].sort());
+    expect(progress).toEqual([1, 2, 3, 4, 5].map((n) => [n, 5]));
+    expect(MockWorker.instances.every((w) => w.terminated)).toBe(true);
+  });
+
+  it('stops every worker when one of them fails', async () => {
+    vi.stubGlobal('navigator', { hardwareConcurrency: 4 });
+    const pending = reduceImportedMotion(
+      { root: track(), pelvis: track(), head: track() },
+      tolerance,
+    );
+    MockWorker.instances[1].onmessage?.({
+      data: { error: 'fit failed' },
+    } as MessageEvent<ImportMotionReply>);
+    await expect(pending).rejects.toThrow('fit failed');
+    expect(MockWorker.instances.every((w) => w.terminated)).toBe(true);
+  });
 });

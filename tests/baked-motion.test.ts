@@ -294,11 +294,11 @@ it('keeps detection opt-in, preserves a primitive through reduceTrack, and enabl
   );
 });
 
-it('auto-enables baked motion detection through sparseMotion without mutating imported keys', () => {
+it('detects baked motion through sparseMotion on request without mutating imported keys', () => {
   const options = springOptions('out');
   const keys = bakedKeys('spring', options);
   const before = structuredClone(keys);
-  const reduced = sparseMotion(keys);
+  const reduced = sparseMotion(keys, undefined, { detectMotion: true });
   const curve = reduced.curves?.px;
 
   expect(curve?.keys.some((key) => key.interpolation === 'spring')).toBe(true);

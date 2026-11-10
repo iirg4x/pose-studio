@@ -35,6 +35,7 @@ export function AnimationImport({
     [error, setError] = useState(''),
     [query, setQuery] = useState(''),
     [detail, setDetail] = useState('balanced'),
+    [detectMotion, setDetectMotion] = useState(false),
     [placement, setPlacement] = useState<'scene' | 'camera'>('camera'),
     fitAbort = useRef<AbortController | null>(null),
     mounted = useRef(true);
@@ -107,20 +108,24 @@ export function AnimationImport({
         false,
         type === 'firstPerson' ? placement : 'scene',
       );
-      const tolerance = {
-        position: 0.0002,
-        rotation:
-          (({ precise: 0.1, balanced: 0.25, editable: 0.5 }[detail] ?? 0.25) * Math.PI) / 180,
-      };
+      const level = { precise: [0.0001, 0.1], balanced: [0.0002, 0.25], editable: [0.0005, 0.5] }[
+        detail
+      ] ?? [0.0002, 0.25];
+      const tolerance = { position: level[0], rotation: (level[1] * Math.PI) / 180 };
       setBusy('Fitting editable curves…');
       const reduced = await reduceImportedMotion(
         project.tracks,
         tolerance,
         (completed, total) => setBusy(`Fitting editable curves… ${completed}/${total}`),
         abortController.signal,
+        { detectMotion },
       );
+      let baked = 0;
       for (const [rawId, result] of Object.entries(reduced)) {
         const id = rawId as ControlId;
+        // A result without curves is the fitter's fallback: the bone could not
+        // be reduced inside the tolerance and keeps its sampled keys.
+        if (!result.curves && result.keys.length > 2) baked++;
         project.tracks[id] = { ...project.tracks[id], ...result };
       }
       // importMotion creates this mirror before reduction. Refresh it only
@@ -130,7 +135,15 @@ export function AnimationImport({
       if (/Unreal Take|Base Layer/i.test(data.name))
         project.name = file.filename.replace(/\.[^.]+$/, '');
       studio.addImportedAction(project);
-      studio.patch({ retargetMode: false, retargetRest: false });
+      studio.patch({
+        retargetMode: false,
+        retargetRest: false,
+        ...(baked
+          ? {
+              message: `Imported ${project.name} · ${baked} ${baked === 1 ? 'bone' : 'bones'} kept as sampled keys`,
+            }
+          : {}),
+      });
       close();
     } catch (e) {
       if ((e as Error).name !== 'AbortError' && mounted.current) setError((e as Error).message);
@@ -291,6 +304,18 @@ export function AnimationImport({
                     <option value="editable">Fewer keys</option>
                   </select>
                 </label>
+                <label>
+                  Springs and bounces
+                  <select
+                    aria-label="Import spring and bounce detection"
+                    disabled={!!busy}
+                    value={detectMotion ? 'on' : 'off'}
+                    onChange={(e) => setDetectMotion(e.target.value === 'on')}
+                  >
+                    <option value="off">Fit as curves</option>
+                    <option value="on">Detect (much slower)</option>
+                  </select>
+                </label>
                 {type === 'firstPerson' && (
                   <label>
                     Source origin
@@ -352,9 +377,11 @@ export function AnimationImport({
               </details>
               <p className="help-text">
                 Each channel is fitted independently with linear segments or editable Bézier
-                handles. Key detail sets the maximum sampled rotation error: High accuracy 0.1°,
-                Balanced 0.25°, Fewer keys 0.5°. Static channels keep one key. The target retains
-                its bone lengths; unmapped bones remain at rest.
+                handles. Key detail sets the largest allowed difference from the sampled motion:
+                High accuracy 0.1° and 0.1 mm, Balanced 0.25° and 0.2 mm, Fewer keys 0.5° and 0.5
+                mm. Channels that do not move keep one key. Detecting springs and bounces rebuilds
+                baked spring, bounce and elastic moves as editable segments, and takes many times
+                longer. The target retains its bone lengths; unmapped bones remain at rest.
               </p>
             </>
           )}
