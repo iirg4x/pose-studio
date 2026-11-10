@@ -19,6 +19,8 @@ import { studio } from '../core/store';
 import { usePresence, useStudioChrome, useStudioSelector } from '../hooks';
 import { Timeline, KeyLockButton, frameRateOptions } from './Timeline';
 import { ActiveLayer } from './PoseActions';
+import { ViewportMenu } from './ViewportMenu';
+import type { MenuItem } from './MenuBar';
 import { LoopControls } from './LoopControls';
 import { ScrubNumber } from './ScrubNumber';
 import { consumeSceneDismiss } from '../hooks/transientPopover';
@@ -69,6 +71,8 @@ export function DesktopWorkspace({
   resize,
   retarget,
   toolbarSlot,
+  preview,
+  viewItems,
   layout,
   openSettings,
   toggleProperties,
@@ -87,6 +91,10 @@ export function DesktopWorkspace({
   retarget: boolean;
   /** Title bar element that hosts the tool toolbars. */
   toolbarSlot?: HTMLElement | null;
+  /** The preview character picker, shown in the middle of the title bar while animating. */
+  preview?: ReactNode;
+  /** Scene presentation commands for the viewport's View menu. */
+  viewItems?: MenuItem[];
   layout: DesktopLayout;
   openSettings: () => void;
   toggleProperties: () => void;
@@ -152,6 +160,11 @@ export function DesktopWorkspace({
           </button>
         </nav>
       </div>
+      {preview && !retarget && (
+        <nav className="desktop-preview-nav" aria-label="Preview character">
+          {preview}
+        </nav>
+      )}
       <nav className="desktop-utilities" aria-label="Workspace utilities">
         {s.project && !retarget && <ActiveLayer />}
         <button
@@ -227,6 +240,7 @@ export function DesktopWorkspace({
         </>
       )}
       <div className="area area-viewport">{scene}</div>
+      {viewItems && <ViewportMenu items={viewItems} />}
       {editorsPresence.value && (
         <>
           <Splitter

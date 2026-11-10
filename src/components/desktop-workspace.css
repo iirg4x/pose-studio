@@ -715,6 +715,91 @@
   translate: -50% 0;
 }
 
+/* Viewport header: the scene's own View menu sits at its top-left corner, as
+ * in a Blender editor. The status message follows it on the same line. */
+.app.desktop-workspace .viewport-menu {
+  position: absolute;
+  z-index: 48;
+  top: 8px;
+  left: 12px;
+  display: flex;
+}
+.app.desktop-workspace .setup-layout > .viewport-menu {
+  top: 60px;
+  left: calc(clamp(280px, var(--setup-width), 380px) + 24px);
+}
+.app.desktop-workspace .viewport-menu > button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 24px;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-shared);
+  background: var(--surface-menu);
+  box-shadow: var(--shadow-tools, 0 2px 5px #060a1030, 0 6px 18px #060a1040);
+  color: var(--secondary);
+  font-size: 12px;
+  line-height: 1;
+}
+.app.desktop-workspace .viewport-menu > button:is(:hover, :focus-visible, [aria-expanded='true']) {
+  background: var(--selection);
+  color: var(--text);
+}
+.app.desktop-workspace:has(> .animate-layout:not(.setup-layout) > .viewport-menu) > .statusbar {
+  left: 84px;
+}
+
+/* The application menu button is a square with its mark centred. An older
+ * rule for a trailing chevron also matched the mark and pushed it off centre. */
+.app.desktop-workspace > .titlebar > .title-menu > .brand {
+  width: var(--chrome-control-height);
+  padding: 0;
+}
+.app.desktop-workspace > .titlebar > .title-menu > .brand > svg {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+/* Workspace switch: two labelled buttons beside the application menu. */
+.app.desktop-workspace > .titlebar > .workspace-switch {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+.app.desktop-workspace > .titlebar > .workspace-switch > button[aria-pressed='true'] {
+  color: var(--cyan);
+}
+
+/* Preview character: centred in the title bar between the clip and the utilities. */
+.app.desktop-workspace > .titlebar .desktop-preview-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  margin-inline: auto;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+.app.desktop-workspace > .titlebar .desktop-preview-nav .preview-model {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.app.desktop-workspace > .titlebar .desktop-preview-nav select {
+  width: 168px;
+  height: var(--chrome-control-height);
+  min-height: var(--chrome-control-height);
+}
+@media (max-width: 1180px) {
+  .app.desktop-workspace > .titlebar > .workspace-switch > button > span {
+    display: none;
+  }
+}
+
 /* Fine-pointer desktop uses one dock frame at every window size. The scene
  * owns the first grid row and receives the remaining cell dimensions, while
  * Properties and the editor/transport rows reserve their own space. */

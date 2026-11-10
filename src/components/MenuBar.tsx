@@ -5,7 +5,7 @@ import { Check } from 'lucide-react';
 import { consumeSceneDismiss } from '../hooks/transientPopover';
 import { MotionPresence } from './Motion';
 
-type MenuItem =
+export type MenuItem =
   | {
       label: string;
       run: () => void;

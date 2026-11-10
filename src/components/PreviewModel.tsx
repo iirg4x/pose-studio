@@ -10,7 +10,8 @@ export function PreviewModel({
   configure,
 }: {
   runtime: StudioScene | null;
-  configure: () => void;
+  /** Opens Character setup; the button is left out where the workspace switch is beside it. */
+  configure?: () => void;
 }) {
   const s = useStudioChrome({ frame: 'none', edits: 'live' }),
     [busy, setBusy] = useState(false),
@@ -54,9 +55,15 @@ export function PreviewModel({
           </option>
         ))}
       </select>
-      <button title="Set up preview models" aria-label="Set up preview models" onClick={configure}>
-        <SlidersHorizontal size={15} />
-      </button>
+      {configure && (
+        <button
+          title="Set up preview models"
+          aria-label="Set up preview models"
+          onClick={configure}
+        >
+          <SlidersHorizontal size={15} />
+        </button>
+      )}
     </div>
   );
 }
