@@ -15,6 +15,8 @@ Controller custom-shape geometry: extracted from the supplied Mr Mannequins Tool
 
 Axe geometry and Equip/Idle motion: extracted from the user-provided D:/Projects/FirstPersonAnims/UE5_Arms_Axe.blend for this personal project. Original asset rights remain with their owners; no external add-on code was run or bundled.
 
+FBX export layout: src/core/fbx/export.ts and templates.ts write the node layout, property templates and unit, axis and bone-orientation conventions of Blender's FBX exporter (scripts/addons_core/io_scene_fbx, Copyright Blender Authors, SPDX: GPL-2.0-or-later), so files stay compatible with assets imported from earlier exports. The glTF reading in src/core/fbx/gltfScene.ts follows the conventions of Blender's glTF importer (io_scene_gltf2, SPDX: Apache-2.0). Source: https://projects.blender.org/blender/blender
+
 Blender-compatible procedural noise: src/core/blenderNoise.ts adapts the 2D Perlin fBM and Jenkins hash implementation documented in Blender's source/blender/blenlib/intern/noise.cc and F-Curve modifier evaluation in source/blender/blenkernel/intern/fmodifier.cc. Copyright 2009–2010 Sony Pictures Imageworks Inc., et al.; Copyright 2011 Blender Authors. SPDX: GPL-2.0-or-later AND BSD-3-Clause. Source reference: https://github.com/blender/blender . This personal build's adapted source is supplied in src/core/blenderNoise.ts.
 
 Manny material textures: restored from the packed images and shader parameters in the user-supplied Mr Mannequins Tools Manny.blend. Converted locally to portable PBR maps; original Epic asset rights remain unchanged.

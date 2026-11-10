@@ -3,8 +3,8 @@ const { app, BrowserWindow, ipcMain, dialog, shell, session, screen } = require(
 const { createRecentProjects } = require('./recent-projects.cjs');
 const { createRecordingWriter } = require('./recording.cjs');
 const { createCharacters } = require('./characters.cjs');
-const { createSharedExporter } = require('./shared-export.cjs');
-const { createAssetImport } = require('./asset-import.cjs');
+const { createExportFolders } = require('./export-folder.cjs');
+const { createSourceFiles } = require('./source-files.cjs');
 const {
   PROJECT_FILTERS,
   projectFilename,
@@ -16,9 +16,7 @@ const {
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { runExport } = require('./backend.cjs');
 let win,
-  blender = null,
   exporting = false,
   closingAllowed = false;
 const exportedDirectories = new Set();
@@ -55,53 +53,6 @@ const recordings = createRecordingWriter(),
 let choosingRecording = false;
 const base = path.resolve(__dirname, '..'),
   entry = path.join(base, 'dist', 'index.html');
-const backend = () =>
-  app.isPackaged ? path.join(process.resourcesPath, 'backend') : path.join(base, 'backend');
-async function detectBlender() {
-  try {
-    const p = JSON.parse(
-      await fs.readFile(path.join(app.getPath('userData'), 'settings.json'), 'utf8'),
-    ).blender;
-    if (typeof p === 'string' && path.basename(p).toLowerCase() === 'blender.exe') {
-      await fs.access(p);
-      return p;
-    }
-  } catch {}
-  for (const version of ['5.2', '5.1', '5.0', '4.5', '4.4', '4.3', '4.2', '4.1']) {
-    const p = path.join(
-      process.env.ProgramFiles || 'C:/Program Files',
-      'Blender Foundation',
-      'Blender ' + version,
-      'blender.exe',
-    );
-    try {
-      await fs.access(p);
-      return p;
-    } catch {}
-  }
-  return null;
-}
-function trusted(event) {
-  if (
-    event.sender !== win?.webContents ||
-    event.senderFrame !== win.webContents.mainFrame ||
-    event.senderFrame.url !== pathToFileURL(entry).href
-  )
-    throw Error('Untrusted request.');
-}
-function handle(name, fn) {
-  ipcMain.handle('studio:' + name, async (event, ...args) => {
-    trusted(event);
-    return fn(...args);
-  });
-}
-function safeName(name) {
-  return (
-    String(name || 'animation')
-      .replace(/[^a-zA-Z0-9_-]+/g, '_')
-      .slice(0, 60) || 'animation'
-  );
-}
 app.whenReady().then(async () => {
   if (!app.hasSingleInstanceLock()) return;
   if (app.isPackaged)
@@ -112,14 +63,9 @@ app.whenReady().then(async () => {
   const characters = createCharacters(
     path.join(app.getPath('userData'), 'characters'),
     path.join(base, 'dist', 'assets'),
-    backend(),
   );
-  const shared = createSharedExporter(backend(), (id) => characters.filename(id));
-  const imports = createAssetImport(
-    path.join(app.getPath('userData'), 'imports'),
-    backend(),
-    characters,
-  );
+  const folders = createExportFolders();
+  const sources = createSourceFiles();
   const recents = createRecentProjects(path.join(app.getPath('userData'), 'recent-projects.json'));
   async function readProject(filename) {
     let stat;
@@ -141,7 +87,6 @@ app.whenReady().then(async () => {
     const filename = projectQueue.take();
     return filename ? readProject(filename) : null;
   });
-  blender = await detectBlender();
   session.defaultSession.setPermissionRequestHandler((_w, _p, cb) => cb(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
   const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workAreaSize;
@@ -167,28 +112,12 @@ app.whenReady().then(async () => {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.webContents.on('will-attach-webview', (e) => e.preventDefault());
-  handle('status', () => ({ blender, maximized: win.isMaximized() }));
+  handle('status', () => ({ maximized: win.isMaximized() }));
   const windowState = () =>
     win.webContents.send('studio:window-state', { maximized: win.isMaximized() });
   win.on('maximize', windowState);
   win.on('unmaximize', windowState);
   win.on('restore', windowState);
-  handle('choose-blender', async () => {
-    const r = await dialog.showOpenDialog(win, {
-      title: 'Choose Blender',
-      filters: [{ name: 'Blender executable', extensions: ['exe'] }],
-      properties: ['openFile'],
-    });
-    if (r.canceled) return null;
-    const p = r.filePaths[0];
-    if (path.basename(p).toLowerCase() !== 'blender.exe') throw Error('Select blender.exe.');
-    blender = p;
-    await fs.writeFile(
-      path.join(app.getPath('userData'), 'settings.json'),
-      JSON.stringify({ blender }),
-    );
-    return blender;
-  });
   handle('save', async (p) => {
     const text = await (await codec).encodeProject(await characters.embed(p));
     const r = await dialog.showSaveDialog(win, {
@@ -228,95 +157,57 @@ app.whenReady().then(async () => {
     return readProject(r.filePaths[0]);
   });
   handle('character-read', (id) => characters.read(id));
-  handle('shared-begin', async (plan) => {
+  // The window builds every export file itself; this side chooses the folder and writes them.
+  handle('export-begin', async (name, shared) => {
     if (exporting || recordings.busy || choosingRecording)
       throw Error('Wait for the current export.');
     exporting = true;
     try {
       const r = await dialog.showOpenDialog(win, {
-        title: 'Export shared Unreal skeleton',
+        title: shared === true ? 'Export shared Unreal skeleton' : 'Choose export destination',
         properties: ['openDirectory', 'createDirectory'],
       });
       if (r.canceled) {
         exporting = false;
         return null;
       }
-      return await shared.begin(r.filePaths[0], plan);
+      return await folders.begin(r.filePaths[0], name, shared === true);
     } catch (e) {
       exporting = false;
       throw e;
     }
   });
-  handle('shared-write', (id, item, bytes) => shared.write(id, item, bytes));
-  handle('shared-finish', async (id) => {
-    const result = await shared.finish(id, blender);
+  handle('export-write', (id, file, bytes) => folders.write(id, file, bytes));
+  handle('export-finish', async (id) => {
+    const result = await folders.finish(id);
     exporting = false;
     exportedDirectories.add(result.directory);
     return result;
   });
-  handle('shared-cancel', async (id) => {
-    await shared.cancel(id);
+  handle('export-cancel', async (id) => {
+    await folders.cancel(id);
     exporting = false;
   });
-  async function ensureBlender() {
-    if (blender) return blender;
+  // The window reads animation and model files itself; this side only opens them.
+  async function pickSource(title, name, extensions) {
+    if (exporting || recordings.busy) throw Error('Wait for the current export.');
     const r = await dialog.showOpenDialog(win, {
-      title: 'Choose Blender for FBX / Blender file conversion',
-      filters: [{ name: 'Blender', extensions: ['exe'] }],
+      title,
+      filters: [{ name, extensions }],
       properties: ['openFile'],
     });
-    if (r.canceled) throw Error('Conversion cancelled. Choose Blender to import this format.');
-    if (path.basename(r.filePaths[0]).toLowerCase() !== 'blender.exe')
-      throw Error('Select blender.exe.');
-    blender = r.filePaths[0];
-    await fs.writeFile(
-      path.join(app.getPath('userData'), 'settings.json'),
-      JSON.stringify({ blender }),
-    );
-    return blender;
+    return r.canceled ? null : sources.read(r.filePaths[0], extensions);
   }
-  handle('prop-import', async () => {
-    if (exporting || recordings.busy) throw Error('Wait for the current export.');
-    const r = await dialog.showOpenDialog(win, {
-      title: 'Import prop',
-      filters: [{ name: '3D prop', extensions: ['glb', 'gltf', 'fbx', 'obj', 'blend'] }],
-      properties: ['openFile'],
-    });
-    if (r.canceled) return null;
-    exporting = true;
-    try {
-      return await imports.prop(
-        r.filePaths[0],
-        path.extname(r.filePaths[0]).toLowerCase() === '.glb' ? blender : await ensureBlender(),
-      );
-    } finally {
-      exporting = false;
-    }
-  });
-  handle('animation-inspect', async () => {
-    if (exporting || recordings.busy) throw Error('Wait for the current export.');
-    const r = await dialog.showOpenDialog(win, {
-      title: 'Import animation',
-      filters: [{ name: 'Animation', extensions: ['fbx', 'glb', 'gltf', 'blend', 'bvh'] }],
-      properties: ['openFile'],
-    });
-    if (r.canceled) return null;
-    exporting = true;
-    try {
-      return await imports.inspect(r.filePaths[0], await ensureBlender());
-    } finally {
-      exporting = false;
-    }
-  });
-  handle('animation-sample', async (token, options) => {
-    if (exporting || recordings.busy) throw Error('Wait for the current export.');
-    exporting = true;
-    try {
-      return await imports.sample(token, options, await ensureBlender());
-    } finally {
-      exporting = false;
-    }
-  });
+  handle('animation-pick', () =>
+    pickSource('Import animation', 'Animation', ['fbx', 'glb', 'gltf', 'bvh']),
+  );
+  handle('model-pick', (kind) =>
+    kind === 'prop'
+      ? pickSource('Import prop', '3D prop', ['glb', 'gltf', 'fbx', 'obj'])
+      : pickSource('Import humanoid character', 'Rigged character', ['fbx', 'glb', 'gltf']),
+  );
+  handle('model-sidecar', (token, name) => sources.sidecar(token, name));
+  handle('model-store', (bytes) => characters.cache(bytes));
   handle('open-example', async () =>
     characters.restore(
       JSON.parse(
@@ -324,38 +215,9 @@ app.whenReady().then(async () => {
       ),
     ),
   );
-  handle('character-import', async () => {
-    if (exporting || recordings.busy) throw Error('Wait for the current export.');
-    const result = await dialog.showOpenDialog(win, {
-      title: 'Import humanoid character',
-      filters: [{ name: 'Rigged character', extensions: ['fbx', 'glb', 'gltf'] }],
-      properties: ['openFile'],
-    });
-    if (result.canceled) return null;
-    exporting = true;
-    try {
-      return await characters.importFile(
-        result.filePaths[0],
-        path.extname(result.filePaths[0]).toLowerCase() === '.glb'
-          ? blender
-          : await ensureBlender(),
-      );
-    } finally {
-      exporting = false;
-    }
-  });
   handle('character-export', async (bytes, options) => {
     if (exporting || recordings.busy) throw Error('Wait for the current export.');
-    if (
-      !options ||
-      !['glb', 'fbx'].includes(options.format) ||
-      !Number.isInteger(options.fps) ||
-      options.fps < 1 ||
-      options.fps > 120 ||
-      !Number.isInteger(options.end) ||
-      options.end < 1 ||
-      options.end > 2400
-    )
+    if (!options || !['glb', 'fbx'].includes(options.format))
       throw Error('Invalid character export.');
     const result = await dialog.showSaveDialog(win, {
       title: 'Export retargeted animation',
@@ -365,14 +227,7 @@ app.whenReady().then(async () => {
     if (result.canceled) return null;
     exporting = true;
     try {
-      const file = await characters.exportFile(
-        bytes,
-        result.filePath,
-        options.format,
-        blender,
-        options.fps,
-        options.end,
-      );
+      const file = await characters.exportFile(bytes, result.filePath, options.format);
       recordedFiles.add(file);
       return file;
     } finally {
@@ -411,38 +266,6 @@ app.whenReady().then(async () => {
   handle('recording-reveal', (filename) => {
     if (!recordedFiles.has(filename)) throw Error('Unknown recording.');
     shell.showItemInFolder(filename);
-  });
-  handle('export', async (payload, options) => {
-    if (exporting || recordings.busy || choosingRecording)
-      throw Error('An export is already running.');
-    if (!blender) throw Error('Select Blender first.');
-    const r = await dialog.showOpenDialog(win, {
-      title: 'Choose export destination',
-      properties: ['openDirectory', 'createDirectory'],
-    });
-    if (r.canceled) return { canceled: true, directory: '', files: [] };
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const directory = path.join(r.filePaths[0], safeName(payload?.name) + '_' + stamp);
-    exporting = true;
-    try {
-      payload.assetFiles = Object.fromEntries(
-        Object.entries(payload.project?.props ?? {}).map(([id, p]) => [
-          id,
-          characters.filename(p.asset),
-        ]),
-      );
-      const result = await runExport({
-        blender,
-        backend: backend(),
-        directory,
-        payload,
-        includeMesh: options?.includeMesh === true,
-      });
-      exportedDirectories.add(directory);
-      return result;
-    } finally {
-      exporting = false;
-    }
   });
   handle('folder', (directory) => {
     if (!exportedDirectories.has(directory)) throw Error('Unknown export folder.');

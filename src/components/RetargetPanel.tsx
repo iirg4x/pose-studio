@@ -1,5 +1,6 @@
 import { portablePlatform as isAndroid } from '../platform/storage';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Upload,
   Plus,
@@ -19,6 +20,8 @@ import { useStudio } from '../hooks';
 import { studio } from '../core/store';
 import { RETARGET_SLOTS, autoMapBones, mappingIssues } from '../core/retarget';
 import type { StudioScene } from '../scene/StudioScene';
+import { importModel, missingTextures } from '../platform/imports';
+import { retargetFbx } from '../core/fbx/unreal';
 import { PropertySection } from './PropertySection';
 import { ScrubNumber } from './ScrubNumber';
 import '../retarget.css';
@@ -39,8 +42,11 @@ export function CharacterPanel({ runtime }: { runtime: StudioScene | null }) {
       if (example)
         await runtime.addRetargetCharacter('example-fantasy-' + example, 'Fantasy ' + example);
       else {
-        const file = await window.studioDesktop?.importCharacter();
-        if (file) await runtime.addRetargetCharacter(file.asset, file.name, file.data);
+        const file = await importModel('character');
+        if (file) {
+          await runtime.addRetargetCharacter(file.asset, file.name, file.data);
+          setError(missingTextures(file.missing));
+        }
       }
     } catch (e) {
       setError((e as Error).message);
@@ -437,7 +443,13 @@ export function RetargetInspector({ runtime }: { runtime: StudioScene | null }) 
           </footer>
         </>
       )}
-      {exporting && c && <RetargetExport runtime={runtime} close={() => setExporting(false)} />}
+      {/* On the page itself: inside this panel the dialog would be clipped to the panel. */}
+      {exporting &&
+        c &&
+        createPortal(
+          <RetargetExport runtime={runtime} close={() => setExporting(false)} />,
+          document.body,
+        )}
     </aside>
   );
 }
@@ -450,7 +462,7 @@ export function RetargetExport({
 }) {
   const s = useStudio(),
     c = s.workspace?.characters?.find((c) => c.id === s.workspace?.activeCharacterId),
-    [format, setFormat] = useState<'fbx' | 'glb'>(isAndroid ? 'glb' : 'fbx'),
+    [format, setFormat] = useState<'fbx' | 'glb'>('fbx'),
     [busy, setBusy] = useState(false),
     [progress, setProgress] = useState(0),
     [error, setError] = useState(''),
@@ -460,9 +472,11 @@ export function RetargetExport({
     setBusy(true);
     setError('');
     try {
-      const data = await runtime.bakeRetarget((v) => setProgress(v * 0.8));
+      const name = c?.name + '_' + s.project.name,
+        glb = await runtime.bakeRetarget((v) => setProgress(v * 0.8)),
+        data = format === 'fbx' ? await retargetFbx(glb, s.project.fps, s.project.end, name) : glb;
       const result = await window.studioDesktop!.exportCharacter(data, {
-        name: c?.name + '_' + s.project.name,
+        name,
         format,
         fps: s.project.fps,
         end: s.project.end,
@@ -519,18 +533,16 @@ export function RetargetExport({
               Manny's source animation stays editable. Props can be exported separately with the
               source action.
             </p>
-            {!isAndroid && (
-              <button
-                className="check-row"
-                disabled={busy}
-                onClick={() => {
-                  close();
-                  window.dispatchEvent(new Event('pose-export-shared'));
-                }}
-              >
-                Export all characters on one shared skeleton…
-              </button>
-            )}
+            <button
+              className="check-row"
+              disabled={busy}
+              onClick={() => {
+                close();
+                window.dispatchEvent(new Event('pose-export-shared'));
+              }}
+            >
+              Export all characters on one shared skeleton…
+            </button>
             <label className="property-row">
               <span>Format</span>
               <select
@@ -539,7 +551,7 @@ export function RetargetExport({
                 value={format}
                 onChange={(e) => setFormat(e.target.value as 'fbx' | 'glb')}
               >
-                {!isAndroid && <option value="fbx">FBX</option>}
+                <option value="fbx">FBX</option>
                 <option value="glb">GLB</option>
               </select>
             </label>
@@ -561,7 +573,7 @@ export function RetargetExport({
                 Cancel
               </button>
               <button className="primary" disabled={busy} onClick={run}>
-                {busy ? 'Exporting…' : 'Choose file & export'}
+                {busy ? 'Exporting…' : isAndroid ? 'Export' : 'Choose file & export'}
               </button>
             </footer>
           </>

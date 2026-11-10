@@ -30,26 +30,12 @@ const asar = require('@electron/asar');
     ),
   );
   await fs.cp(path.join(root, 'node_modules', 'electron', 'dist'), out, { recursive: true });
-  await fs.mkdir(path.join(out, 'resources', 'backend'), { recursive: true });
+  await fs.mkdir(path.join(out, 'resources'), { recursive: true });
   await fs.copyFile(
     path.join(root, 'electron', 'refresh-file-associations.ps1'),
     path.join(out, 'resources', 'refresh-file-associations.ps1'),
   );
   await asar.createPackage(stage, path.join(out, 'resources', 'app.asar'));
-  for (const name of [
-    'export_fbx.py',
-    'export_shared.py',
-    'import_shared_unreal.py',
-    'import_asset.py',
-    'import_character.py',
-    'export_character.py',
-    'manny-clean.blend',
-    'skeleton.json',
-  ])
-    await fs.copyFile(
-      path.join(root, 'backend', name),
-      path.join(out, 'resources', 'backend', name),
-    );
   // Release notes ship as README.md beside the executable, as before.
   for (const [from, name] of [
     ['CHANGELOG.md', 'README.md'],

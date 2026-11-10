@@ -298,13 +298,13 @@ describe('humanoid retargeting', () => {
   it('embeds imported character assets in a project and restores their cache independently', async () => {
     const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'pose-character-'));
     try {
-      const first = createCharacters(path.join(temp, 'a'), 'public/assets', 'backend'),
+      const first = createCharacters(path.join(temp, 'a'), 'public/assets'),
         bytes = await fs.readFile('public/assets/example-fantasy-male.glb'),
         asset = await first.cache(bytes);
       const data = { characters: [{ ...config, asset }] };
       const saved = await first.embed(data);
       expect(saved.characterAssets[asset].length).toBeGreaterThan(100);
-      const other = createCharacters(path.join(temp, 'b'), 'public/assets', 'backend');
+      const other = createCharacters(path.join(temp, 'b'), 'public/assets');
       const restored = await other.restore(saved);
       expect(restored.characterAssets).toBeUndefined();
       expect(Buffer.from(await other.read(asset)).equals(bytes)).toBe(true);

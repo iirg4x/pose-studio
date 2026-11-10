@@ -6,24 +6,26 @@ declare global {
   interface Window {
     studioDesktop?: {
       platform?: 'android' | 'desktop' | 'web';
-      beginSharedExport: (
-        plan: import('./core/sharedExport').SharedExportPlan,
+      /** Choose a folder for an Unreal export. Null when the user cancels. */
+      beginExport: (
+        name: string,
+        shared?: boolean,
       ) => Promise<{ id: string; directory: string } | null>;
-      writeSharedExport: (
-        id: string,
-        item: import('./core/sharedExport').SharedExportItem,
-        data: Uint8Array,
-      ) => Promise<void>;
-      finishSharedExport: (id: string) => Promise<{ directory: string; files: string[] }>;
-      cancelSharedExport: (id: string) => Promise<void>;
-      importProp: () => Promise<{ asset: string; name: string; data: Uint8Array } | null>;
-      inspectAnimation: () => Promise<import('./core/importAnimation').AnimationInspection | null>;
-      sampleAnimation: (
-        token: string,
-        options: Record<string, unknown>,
-      ) => Promise<import('./core/importAnimation').MotionSource>;
+      /** Add one file, by its path inside the export folder. */
+      writeExport: (id: string, path: string, data: Uint8Array) => Promise<void>;
+      finishExport: (id: string) => Promise<{ directory: string; files: string[] }>;
+      cancelExport: (id: string) => Promise<void>;
+      /** Let the user choose an animation file; the app reads it itself. */
+      pickAnimation: () => Promise<import('./platform/imports').PickedFile | null>;
+      /** Let the user choose a character or prop file. */
+      pickModel: (
+        kind: 'character' | 'prop',
+      ) => Promise<import('./platform/imports').PickedFile | null>;
+      /** A texture or buffer stored beside a chosen model. Desktop only; null elsewhere. */
+      readSidecar: (token: string, name: string) => Promise<Uint8Array | null>;
+      /** Keep a converted GLB and return its asset id. */
+      storeModel: (data: Uint8Array) => Promise<string>;
       openExample: () => Promise<unknown>;
-      importCharacter: () => Promise<{ asset: string; name: string; data: Uint8Array } | null>;
       readCharacter: (id: string) => Promise<Uint8Array>;
       exportCharacter: (
         data: Uint8Array,
@@ -39,8 +41,7 @@ declare global {
       revealRecording: (filename: string) => Promise<void>;
       confirmClose: () => Promise<void>;
       onCloseRequest: (callback: () => void) => () => void;
-      status: () => Promise<{ blender: string | null; maximized: boolean }>;
-      chooseBlender: () => Promise<string | null>;
+      status: () => Promise<{ maximized: boolean }>;
       saveProject: (p: unknown) => Promise<string | null>;
       openProject: (options?: { recovery?: boolean }) => Promise<unknown | null>;
       takeProject: () => Promise<unknown | null>;
@@ -48,10 +49,6 @@ declare global {
       recentProjects: () => Promise<{ path: string; name: string; openedAt: string }[]>;
       openRecentProject: (path: string) => Promise<unknown>;
       clearRecentProjects: () => Promise<void>;
-      exportAnimation: (
-        payload: unknown,
-        options: { includeMesh: boolean },
-      ) => Promise<{ canceled?: boolean; directory: string; files: string[] }>;
       showFolder: (path: string) => Promise<void>;
       onWindowState: (callback: (state: { maximized: boolean }) => void) => () => void;
       windowAction: (action: 'minimize' | 'maximize' | 'close') => void;

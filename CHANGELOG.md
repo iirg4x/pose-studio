@@ -1,3 +1,13 @@
+## 0.8.42 — no Blender needed
+
+Pose Studio now reads and writes every file itself. Blender is no longer installed, located or started for anything, and the **Choose Blender** prompts are gone.
+
+- **Import:** FBX, glTF, GLB, OBJ and BVH files are read inside the app, on desktop, web and Android alike. FBX textures stored beside the model as PNG, JPG, TGA, BMP or PSD are packed into the project. `.blend` files can no longer be imported; export them from Blender as FBX or GLB first.
+- **Export to Unreal:** the current-animation package, the shared-skeleton package and the retargeted character FBX are written by the app's own FBX writer. Files use the same layout, bone orientation, units and names as before, so existing Unreal skeletons and animation assets stay compatible. The web and Android apps offer the same packages as one .zip download.
+- **Packaging:** the desktop build no longer ships the Blender scripts or the 36 MB `manny-clean.blend`; the Manny mesh comes from the bundled `manny.glb`.
+
+The new writer was compared with Blender's own output for each export path: bones, bind poses, skin weights, geometry, materials, UVs, colours and every animation key. Remaining differences are deliberate: a base colour texture is kept when the material also has a tint or vertex colours, texture files always carry their extension, and normals at the cut edges of the arms, body and legs meshes keep their full-mesh values. FBX metadata still names Blender as the authoring application because Unreal uses that to drop the extra armature root bone. Exports were not opened in Unreal Engine for this release.
+
 ## 0.8.41 — faster complete project opening and recovery
 
 Full weapon-project opening, including committed recovery saving and responsive input, falls from a 16.15-second median to 10.94 seconds across three local production-PWA observations per build. Reload and recovery fall from 10.49 to 8.53 seconds. All 627 animations and 79 embedded assets are included. See [loading-performance.md](docs/loading-performance.md) for ranges and the complete endpoint.

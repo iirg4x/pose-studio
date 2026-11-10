@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Save, Video, X } from 'lucide-react';
+import { Boxes, Save, Video, X } from 'lucide-react';
 import type { StudioScene } from '../scene/StudioScene';
 import { RecordingDialog } from './RecordingDialog';
+import { ExportDialog } from './ExportDialog';
 export function AndroidExportDialog({
   runtime,
   save,
@@ -12,11 +13,13 @@ export function AndroidExportDialog({
   close: () => void;
 }) {
   const [record, setRecord] = useState(false),
+    [unreal, setUnreal] = useState(false),
     [busy, setBusy] = useState(false),
     first = useRef<HTMLButtonElement>(null);
   // Focus starts inside the dialog, so Escape and the keyboard work immediately.
   useEffect(() => first.current?.focus(), [record]);
   if (record) return <RecordingDialog runtime={runtime} close={close} />;
+  if (unreal) return <ExportDialog runtime={runtime} close={close} />;
   return (
     <div className="modal-backdrop">
       <section
@@ -58,10 +61,15 @@ export function AndroidExportDialog({
               Video recording<small>60 fps · choose your camera and loop count</small>
             </span>
           </button>
+          <button disabled={busy} onClick={() => setUnreal(true)}>
+            <Boxes size={24} />
+            <span>
+              Unreal package<small>FBX meshes, animations and props · .zip</small>
+            </span>
+          </button>
         </div>
         <p className="help-text">
-          For a character GLB, select a preview model and use Export. FBX and shared Unreal
-          packaging are available when you open this same .pose project in desktop Pose.
+          For one character's animation as GLB or FBX, select a preview model and use Export.
         </p>
       </section>
     </div>

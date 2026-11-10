@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { X, Check, FolderOpen, AlertCircle, Layers } from 'lucide-react';
 import { useStudio } from '../hooks';
 import { studio } from '../core/store';
 import { sharedExportPlan } from '../core/sharedExport';
+import { portablePlatform } from '../platform/storage';
+import { SharedPackage } from '../core/fbx/sharedPackage';
+import script from '../unreal/import_shared_unreal.py?raw';
 import type { StudioScene } from '../scene/StudioScene';
 export function SharedExportDialog({
   runtime,
@@ -16,45 +19,43 @@ export function SharedExportDialog({
   const s = useStudio(),
     [all, setAll] = useState(true),
     [busy, setBusy] = useState(false),
-    [status, setStatus] = useState<{ blender: string | null }>(),
     [progress, setProgress] = useState(0),
     [label, setLabel] = useState(''),
     [error, setError] = useState(''),
     [result, setResult] = useState<{ directory: string; files: string[] } | null>(null);
-  useEffect(() => {
-    window.studioDesktop
-      ?.status()
-      .then(setStatus)
-      .catch((e) => setError(e.message));
-  }, []);
   const workspace = studio.documentSnapshot(),
     plan = workspace ? sharedExportPlan(workspace, all) : null;
   async function run() {
-    if (!runtime || !plan || !window.studioDesktop) return;
+    const desktop = window.studioDesktop;
+    if (!runtime || !plan || !desktop) return;
     setBusy(true);
     setError('');
     let id: string | undefined;
     try {
-      const session = await window.studioDesktop.beginSharedExport(plan);
+      const session = await desktop.beginExport(plan.name, true);
       if (!session) return;
       id = session.id;
+      const folder = id,
+        pack = new SharedPackage(plan, (path, data) => desktop.writeExport(folder, path, data));
       await runtime.bakeShared(
         plan,
-        (item, bytes) => window.studioDesktop!.writeSharedExport(id!, item, bytes),
+        (item, bytes) => pack.add(item, bytes),
         (v, text) => {
-          setProgress(v * 0.75);
+          setProgress(v * 0.9);
           setLabel(text);
         },
       );
-      setProgress(0.75);
-      setLabel('Writing FBX meshes, animations and sockets…');
-      setResult(await window.studioDesktop.finishSharedExport(id));
+      setProgress(0.9);
+      setLabel('Writing props, sockets and the import script…');
+      await pack.finish(desktop.readCharacter, script);
+      const finished = await desktop.finishExport(id);
       id = undefined;
+      setResult(finished);
       setProgress(1);
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      if (id) await window.studioDesktop.cancelSharedExport(id).catch(() => {});
+      if (id) await desktop.cancelExport(id).catch(() => {});
       setBusy(false);
     }
   }
@@ -94,13 +95,15 @@ export function SharedExportDialog({
               {plan?.characters.length} characters · body, arms and legs · one shared animation set
             </p>
             <code>{result.directory}</code>
-            <button
-              className="primary"
-              onClick={() => window.studioDesktop?.showFolder(result.directory)}
-            >
-              <FolderOpen size={16} />
-              Open folder
-            </button>
+            {!portablePlatform && (
+              <button
+                className="primary"
+                onClick={() => window.studioDesktop?.showFolder(result.directory)}
+              >
+                <FolderOpen size={16} />
+                Open folder
+              </button>
+            )}
             <p className="help-text">
               In Unreal, enable the Python Editor Script Plugin, then use Tools → Execute Python
               Script to run <strong>import_shared_unreal.py</strong>. It assigns one Skeleton,
@@ -151,20 +154,6 @@ export function SharedExportDialog({
               each mesh keeps its own proportions. Exact two-hand grips across different proportions
               may need hand IK in Unreal.
             </p>
-            {!window.studioDesktop ? (
-              <p className="notice">Open the desktop app to export FBX.</p>
-            ) : status && !status.blender ? (
-              <div className="notice">
-                Choose Blender to write the FBX package.
-                <button
-                  onClick={async () => {
-                    setStatus({ blender: await window.studioDesktop!.chooseBlender() });
-                  }}
-                >
-                  Choose Blender
-                </button>
-              </div>
-            ) : null}
             {busy && (
               <div className="export-progress" aria-live="polite">
                 <span>{label || 'Choose an export folder…'}</span>
@@ -181,12 +170,8 @@ export function SharedExportDialog({
               <button disabled={busy} onClick={close}>
                 Cancel
               </button>
-              <button
-                className="primary"
-                disabled={busy || !status?.blender || !s.ready}
-                onClick={run}
-              >
-                {busy ? 'Exporting…' : 'Choose folder & export'}
+              <button className="primary" disabled={busy || !s.ready} onClick={run}>
+                {busy ? 'Exporting…' : portablePlatform ? 'Export zip' : 'Choose folder & export'}
               </button>
             </footer>
           </>

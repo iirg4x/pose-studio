@@ -3,7 +3,6 @@
   "ignore": ["electron/preload.cjs", "shared/*.d.mts"],
   "ignoreDependencies": ["playwright"],
   "ignoreIssues": {
-    "electron/project-files.cjs": ["exports"],
-    "electron/shared-export.cjs": ["exports"]
+    "electron/project-files.cjs": ["exports"]
   }
 }

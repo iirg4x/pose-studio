@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { AndroidAnimationImport } from './androidAnimation';
+import { AnimationFileImport } from './animationFiles';
 
 // A two-joint GLB with a one-second linear translation, in metres/Y-up.
 function motionGLB() {
@@ -80,9 +80,9 @@ beforeAll(() => {
     );
 });
 afterAll(() => vi.unstubAllGlobals());
-describe('Android animated GLB import', () => {
+describe('animated GLB import', () => {
   it('samples hierarchy, metre translations and interpolation without contaminating the rest pose', async () => {
-    const importer = new AndroidAnimationImport(async () => ({
+    const importer = new AnimationFileImport(async () => ({
         name: 'Reach.glb',
         data: motionGLB(),
       })),
@@ -109,8 +109,8 @@ describe('Android animated GLB import', () => {
     expect(repeat).toEqual(motion);
   });
   it('handles cancellation and rejects invalid sample requests', async () => {
-    expect(await new AndroidAnimationImport(async () => null).inspect()).toBeNull();
-    const importer = new AndroidAnimationImport(async () => ({
+    expect(await new AnimationFileImport(async () => null).inspect()).toBeNull();
+    const importer = new AnimationFileImport(async () => ({
         name: 'Reach.glb',
         data: motionGLB(),
       })),
