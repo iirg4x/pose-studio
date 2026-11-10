@@ -73,12 +73,16 @@ export function posePwa() {
     name: 'pose-installable-app',
     apply: 'build',
     transformIndexHtml(html) {
-      return html
-        .replace('<title>Pose</title>', '<title>Pose Studio</title>')
-        .replace(
-          '</head>',
-          '<link rel="manifest" href="./manifest.webmanifest"/><link rel="apple-touch-icon" href="./icons/apple-touch-icon.png"/><link rel="icon" type="image/png" href="./icons/icon-192.png"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black"/><meta name="apple-mobile-web-app-title" content="Pose"/></head>',
-        );
+      return (
+        html
+          // The installable build ships PNG icons beside its manifest instead.
+          .replace(/\s*<link rel="icon" type="image\/svg\+xml"[^>]*>/, '')
+          .replace('<title>Pose</title>', '<title>Pose Studio</title>')
+          .replace(
+            '</head>',
+            '<link rel="manifest" href="./manifest.webmanifest"/><link rel="apple-touch-icon" href="./icons/apple-touch-icon.png"/><link rel="icon" type="image/png" href="./icons/icon-192.png"/><meta name="apple-mobile-web-app-capable" content="yes"/><meta name="apple-mobile-web-app-status-bar-style" content="black"/><meta name="apple-mobile-web-app-title" content="Pose"/></head>',
+          )
+      );
     },
     async writeBundle(options) {
       const out = path.resolve(options.dir);

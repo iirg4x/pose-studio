@@ -16,7 +16,7 @@ import { getRecoveryState, readRecovery, subscribeRecoveryState } from './platfo
 import { useSurfaceOcclusion } from './hooks/surfaceOcclusion';
 import { DesktopWorkspace, useDesktopLayout } from './components/DesktopWorkspace';
 import { MenuBar, ContextMenu } from './components/MenuBar';
-import type { Menu } from './components/MenuBar';
+import type { Menu, MenuItem } from './components/MenuBar';
 import { PreviewModel } from './components/PreviewModel';
 import { InstallStudio } from './components/InstallStudio';
 import { PwaUpdateIndicator } from './components/PwaUpdateIndicator';
@@ -44,6 +44,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Box,
   Waypoints,
+  Clapperboard,
+  PersonStanding,
   Video,
   Upload,
   Check,
@@ -858,6 +860,43 @@ export default function App() {
         : activeInterpolation,
     );
   const closePoseMenu = useCallback(() => setPoseMenu(null), []);
+  // Scene presentation lives in the viewport's own View menu, as in Blender.
+  const viewItems: MenuItem[] = [
+    { label: 'Frame selected', shortcut: 'F', run: () => runtime.current?.frameSelected() },
+    { label: 'Reset view', shortcut: 'Home', run: () => runtime.current?.resetView() },
+    {
+      label: 'Player camera',
+      shortcut: 'Numpad 0',
+      checked: s.playerView,
+      disabled: retarget,
+      run: () => studio.patch({ playerView: !s.playerView }),
+    },
+    {
+      label: 'Game view',
+      shortcut: 'Shift G',
+      checked: s.gameView,
+      run: () => runtime.current?.toggleGameView(),
+    },
+    {
+      label: 'Cinematic lighting',
+      checked: s.cinematic,
+      run: () => studio.setCinematic(!s.cinematic),
+    },
+    {
+      label: 'Camera preview',
+      checked: s.cameraPreview,
+      run: () => studio.patch({ cameraPreview: !s.cameraPreview }),
+    },
+    {
+      label: 'Motion trail',
+      checked: trail,
+      disabled: retarget,
+      run: () => {
+        runtime.current?.toggleTrail();
+        setTrail(!trail);
+      },
+    },
+  ];
   const desktopMenus: Menu[] = [
     {
       label: 'File',
@@ -1053,11 +1092,8 @@ export default function App() {
       ],
     },
     {
-      label: 'View',
+      label: 'Window',
       items: [
-        { label: 'Animate workspace', checked: !retarget, run: () => setRetarget(false) },
-        { label: 'Character setup workspace', checked: retarget, run: () => setRetarget(true) },
-        'separator',
         {
           label: 'Dope sheet and graph editor',
           checked: desktopLayout.editors,
@@ -1070,48 +1106,7 @@ export default function App() {
           disabled: retarget,
           run: () => setDesktopLayout({ properties: !desktopLayout.properties }),
         },
-        'separator',
-        { label: 'Frame selected', shortcut: 'F', run: () => runtime.current?.frameSelected() },
-        { label: 'Reset view', shortcut: 'Home', run: () => runtime.current?.resetView() },
-        {
-          label: 'Player camera',
-          shortcut: 'Numpad 0',
-          checked: s.playerView,
-          disabled: retarget,
-          run: () => studio.patch({ playerView: !s.playerView }),
-        },
-        {
-          label: 'Game view',
-          shortcut: 'Shift G',
-          checked: s.gameView,
-          run: () => runtime.current?.toggleGameView(),
-        },
-        {
-          label: 'Cinematic lighting',
-          checked: s.cinematic,
-          run: () => studio.setCinematic(!s.cinematic),
-        },
-        {
-          label: 'Camera preview',
-          checked: s.cameraPreview,
-          run: () => studio.patch({ cameraPreview: !s.cameraPreview }),
-        },
-        {
-          label: 'Motion trail',
-          checked: trail,
-          disabled: retarget,
-          run: () => {
-            runtime.current?.toggleTrail();
-            setTrail(!trail);
-          },
-        },
       ],
-      footer: (
-        <div className="menu-field">
-          <span>Preview character</span>
-          <PreviewModel runtime={runtime.current} configure={() => setRetarget(true)} />
-        </div>
-      ),
     },
     {
       label: 'Help',
@@ -1298,6 +1293,32 @@ export default function App() {
             )}
           </MotionPresence>
         </div>
+        {!isAndroid && (
+          <nav className="workspace-switch" aria-label="Workspace">
+            <button
+              className="desktop-header-trigger"
+              title="Animate workspace"
+              aria-label="Animate"
+              aria-pressed={!retarget}
+              disabled={recording || exporting}
+              onClick={() => setRetarget(false)}
+            >
+              <Clapperboard size={15} />
+              <span>Animate</span>
+            </button>
+            <button
+              className="desktop-header-trigger"
+              title="Character setup workspace"
+              aria-label="Character setup"
+              aria-pressed={retarget}
+              disabled={recording || exporting}
+              onClick={() => setRetarget(true)}
+            >
+              <PersonStanding size={15} />
+              <span>Character setup</span>
+            </button>
+          </nav>
+        )}
         <span className="project-title" title={s.workspace?.name}>
           {s.workspace?.name}
         </span>
@@ -1388,6 +1409,8 @@ export default function App() {
           resize={panels.change}
           retarget={retarget}
           toolbarSlot={titleSlot}
+          preview={<PreviewModel runtime={runtime.current} />}
+          viewItems={viewItems}
           layout={{
             ...desktopLayout,
           }}
