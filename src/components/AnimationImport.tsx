@@ -36,6 +36,7 @@ export function AnimationImport({
     [query, setQuery] = useState(''),
     [detail, setDetail] = useState('balanced'),
     [detectMotion, setDetectMotion] = useState(false),
+    [grip, setGrip] = useState<'off' | 'left' | 'right'>('off'),
     [placement, setPlacement] = useState<'scene' | 'camera'>('camera'),
     fitAbort = useRef<AbortController | null>(null),
     mounted = useRef(true);
@@ -107,6 +108,7 @@ export function AnimationImport({
         1,
         false,
         type === 'firstPerson' ? placement : 'scene',
+        { followHand: grip === 'off' ? undefined : grip },
       );
       const level = { precise: [0.0001, 0.1], balanced: [0.0002, 0.25], editable: [0.0005, 0.5] }[
         detail
@@ -305,6 +307,19 @@ export function AnimationImport({
                   </select>
                 </label>
                 <label>
+                  Two-handed grip
+                  <select
+                    aria-label="Import two-handed grip"
+                    disabled={!!busy}
+                    value={grip}
+                    onChange={(e) => setGrip(e.target.value as 'off' | 'left' | 'right')}
+                  >
+                    <option value="off">Copy rotations only</option>
+                    <option value="left">Left hand follows right</option>
+                    <option value="right">Right hand follows left</option>
+                  </select>
+                </label>
+                <label>
                   Springs and bounces
                   <select
                     aria-label="Import spring and bounce detection"
@@ -381,7 +396,10 @@ export function AnimationImport({
                 High accuracy 0.1° and 0.1 mm, Balanced 0.25° and 0.2 mm, Fewer keys 0.5° and 0.5
                 mm. Channels that do not move keep one key. Detecting springs and bounces rebuilds
                 baked spring, bounce and elastic moves as editable segments, and takes many times
-                longer. The target retains its bone lengths; unmapped bones remain at rest.
+                longer. Two-handed grip moves one arm so that hand stays where the source held it
+                relative to the other hand, which keeps both hands on a weapon when the source has
+                different arm or hand proportions. The target retains its bone lengths; unmapped
+                bones remain at rest.
               </p>
             </>
           )}

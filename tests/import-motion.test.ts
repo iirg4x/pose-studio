@@ -1,6 +1,6 @@
 import { beforeAll, it, expect } from 'vitest';
 import fs from 'node:fs/promises';
-import { Quaternion, Vector3 } from 'three';
+import { Matrix4, Quaternion, Vector3 } from 'three';
 import { rigLoader } from './rig-loader';
 import { MannyRig } from '../src/scene/rig';
 import { importMotion } from '../src/core/importAnimation';
@@ -230,4 +230,134 @@ it('preserves distal finger direction when source and target have different fing
     expect(actual.angleTo(expected), name).toBeLessThan(0.0001);
   }
   source.reset();
+});
+
+/** A Manny-shaped source whose arms are longer than the target's, holding both
+ * hands close together in front of the chest for `close`, or at rest. */
+function longArmedSource(close: boolean, stretch = 0.12) {
+  const p = blankProject(source.restControls),
+    shoulderL = new Vector3().setFromMatrixPosition(source.rest.get('upperarm_l')!.world),
+    shoulderR = new Vector3().setFromMatrixPosition(source.rest.get('upperarm_r')!.world),
+    side = shoulderL.clone().sub(shoulderR).normalize(),
+    forward = new Vector3(0, 1, 0).cross(side).normalize(),
+    centre = shoulderL
+      .clone()
+      .lerp(shoulderR, 0.5)
+      .add(new Vector3(0, -0.15, 0));
+  p.end = 4;
+  for (let f = 0; f <= 4; f++)
+    for (const [hand, sign] of [
+      ['hand_l', 1],
+      ['hand_r', -1],
+    ] as const) {
+      const at = centre
+        .clone()
+        .addScaledVector(forward, 0.3 + f * 0.01)
+        .addScaledVector(side, sign * (0.08 + f * 0.005));
+      if (close)
+        putKey(p.tracks[hand], f, pose(at.toArray(), evaluate(p, 0)[hand].q, [0, 0, 0, 0, 0]));
+    }
+  const modes = close
+      ? ({ arm_l: 'ik', arm_r: 'ik' } as const)
+      : ({ arm_l: 'fk', arm_r: 'fk' } as const),
+    bones = [...source.bones].map(([name, b]) => ({
+      name,
+      parent: b.parent?.name ?? null,
+      rest: source.rest.get(name)!.world.toArray(),
+    })),
+    index = new Map(bones.map((b, i) => [b.name, i])),
+    below = (name: string, ancestor: string) => {
+      for (let b = source.bones.get(name); b; b = b.parent as typeof b)
+        if (b.name === ancestor) return true;
+      return false;
+    },
+    // Lengthen each arm segment in place: everything below the elbow moves
+    // out along the upper arm, everything below the wrist along the forearm too.
+    lengthen = (world: number[][]) => {
+      const out = world.map((m) => [...m]),
+        at = (name: string) =>
+          new Vector3().setFromMatrixPosition(new Matrix4().fromArray(world[index.get(name)!]));
+      for (const s of ['l', 'r']) {
+        const upper = at('lowerarm_' + s)
+            .sub(at('upperarm_' + s))
+            .multiplyScalar(stretch),
+          lower = at('hand_' + s)
+            .sub(at('lowerarm_' + s))
+            .multiplyScalar(stretch);
+        for (const b of bones) {
+          const shift = new Vector3();
+          if (b.name !== 'lowerarm_' + s && !below(b.name, 'lowerarm_' + s)) continue;
+          shift.add(upper);
+          if (below(b.name, 'hand_' + s)) shift.add(lower);
+          const m = out[index.get(b.name)!];
+          m[12] += shift.x;
+          m[13] += shift.y;
+          m[14] += shift.z;
+        }
+      }
+      return out;
+    },
+    rest = lengthen(bones.map((b) => b.rest)),
+    frames: number[][][] = [];
+  for (let f = 0; f <= 4; f++) {
+    source.apply(evaluate(validateProject(p), f), { ...modes, leg_l: 'fk', leg_r: 'fk' }, {}, true);
+    frames.push(lengthen(bones.map((b) => source.bones.get(b.name)!.matrixWorld.toArray())));
+  }
+  return {
+    data: {
+      name: 'Grip',
+      fps: 30,
+      end: 4,
+      bones: bones.map((b, i) => ({ ...b, rest: rest[i] })),
+      frames,
+    },
+    position: (f: number, name: string) =>
+      new Vector3().setFromMatrixPosition(new Matrix4().fromArray(frames[f][index.get(name)!])),
+  };
+}
+const FK_ALL = { arm_l: 'fk', arm_r: 'fk', leg_l: 'fk', leg_r: 'fk' } as const;
+it('keeps a two-handed grip when the source has longer arms than the target', () => {
+  const { data, position } = longArmedSource(true),
+    mapping = autoMapBones(data.bones.map((b) => b.name)),
+    palm = (at: (name: string) => Vector3) =>
+      at('hand_l').lerp(at('middle_01_l'), 0.5).sub(at('hand_r')),
+    gap = (imported: ReturnType<typeof importMotion>) => {
+      let worst = 0;
+      for (let f = 0; f <= 4; f++) {
+        target.apply(evaluate(imported, f), FK_ALL, {}, true);
+        worst = Math.max(
+          worst,
+          palm((name) => position(f, name)).distanceTo(
+            palm((name) => target.position(name).clone()),
+          ),
+        );
+      }
+      return worst;
+    },
+    world = (imported: ReturnType<typeof importMotion>, name: string) => {
+      target.apply(evaluate(imported, 2), FK_ALL, {}, true);
+      return {
+        p: target.position(name).clone(),
+        q: target.bones.get(name)!.getWorldQuaternion(new Quaternion()),
+      };
+    },
+    plain = importMotion(data, mapping, target, 'body', 0, 1, false),
+    gripped = importMotion(data, mapping, target, 'body', 0, 1, false, 'scene', {
+      followHand: 'left',
+    });
+  // Rotations alone leave the off hand centimetres away from where it held on.
+  expect(gap(plain)).toBeGreaterThan(0.01);
+  expect(gap(gripped)).toBeLessThan(0.001);
+  // The leading hand is untouched and the following hand keeps its orientation.
+  expect(world(gripped, 'hand_r').p.distanceTo(world(plain, 'hand_r').p)).toBeLessThan(1e-6);
+  expect(world(gripped, 'hand_l').q.angleTo(world(plain, 'hand_l').q)).toBeLessThan(1e-4);
+  expect(world(gripped, 'index_02_l').q.angleTo(world(plain, 'index_02_l').q)).toBeLessThan(1e-4);
+});
+it('leaves the arms alone when the hands are too far apart to share a grip', () => {
+  const { data } = longArmedSource(false),
+    mapping = autoMapBones(data.bones.map((b) => b.name));
+  expect(
+    importMotion(data, mapping, target, 'body', 0, 1, false, 'scene', { followHand: 'left' })
+      .tracks,
+  ).toEqual(importMotion(data, mapping, target, 'body', 0, 1, false).tracks);
 });
