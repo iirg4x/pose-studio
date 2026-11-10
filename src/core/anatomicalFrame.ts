@@ -30,6 +30,8 @@ export function palmFinger(side: string, ...has: ((bone: string) => boolean)[]) 
  * exactly as authored; two separate rules leave a constant twist on every bone
  * where they disagree.
  *
+ * Twist bones use the frame of the segment they belong to.
+ *
  * Bones without a frame (spine, neck, head, feet, toes) transfer their motion as
  * a plain difference from rest. A foot keeps its sole flat: its bone is tilted
  * differently in every skeleton, so pointing it along another skeleton's foot
@@ -40,6 +42,12 @@ export function anatomicalFrame(
   worlds: { get(bone: string): Matrix4 | undefined },
   palm?: string,
 ): Quaternion | null {
+  // A twist bone lies along its limb segment and has to turn with it. Left to a
+  // plain rest difference it keeps the other skeleton's arm angle: on an A-pose
+  // target driven from a T-pose source, every twist bone sat about 50 degrees
+  // away from the arm it deforms.
+  const twist = /^(upperarm|lowerarm|thigh|calf)_twist_\d+(_[lr])$/.exec(name);
+  if (twist) return worlds.get(name) ? anatomicalFrame(twist[1] + twist[2], worlds, palm) : null;
   const current = worlds.get(name);
   if (!current) return null;
   const side = name.endsWith('_l') ? 'l' : 'r',

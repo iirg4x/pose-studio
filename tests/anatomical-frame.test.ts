@@ -66,6 +66,21 @@ describe('anatomical frames', () => {
     }
   });
 
+  it('turns a twist bone with the limb segment it lies on', () => {
+    const joints = new Map([
+      ['upperarm_l', at(0.2, 1.4, 0)],
+      [
+        'upperarm_twist_01_l',
+        at(0.3, 1.4, 0, new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), 0.7)),
+      ],
+      ['lowerarm_l', at(0.5, 1.2, 0)],
+    ]);
+    const segment = anatomicalFrame('upperarm_l', joints)!;
+    expect(anatomicalFrame('upperarm_twist_01_l', joints)!.angleTo(segment)).toBeLessThan(1e-9);
+    joints.delete('upperarm_twist_01_l');
+    expect(anatomicalFrame('upperarm_twist_01_l', joints)).toBeNull();
+  });
+
   it('leaves feet and the torso to plain rest differences', () => {
     const joints = new Map([
       ['foot_l', at(0.1, 0.1, 0)],

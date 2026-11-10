@@ -364,8 +364,16 @@ export class MannyRig {
             b = this.bones.get(id),
             value = values[id];
           if (!b || !value) continue;
-          if (fkReference) this.applyOffset(id, value);
-          else {
+          if (fkReference) {
+            // A twist bone the source skeleton does not have was never keyed. That is
+            // not an authored zero: leave it the share of the roll computed above.
+            if (
+              value.p.some((v) => v !== 0) ||
+              value.q[3] !== 1 ||
+              value.q.slice(0, 3).some((v) => v !== 0)
+            )
+              this.applyOffset(id, value);
+          } else {
             b.position.add(new T.Vector3(...value.p));
             b.quaternion.multiply(new T.Quaternion(...value.q));
             b.updateMatrixWorld(true);
