@@ -42,6 +42,17 @@ export interface ImportMotionOptions {
 const GRIP_FAR = 0.6;
 /** Hands closer than this get the full correction. */
 const GRIP_NEAR = 0.35;
+/**
+ * Exporters that store one clip per file give every action the same
+ * placeholder name ("Unreal Take", "Armature|Take 001|BaseLayer"). The file
+ * name is the only thing that tells those clips apart.
+ */
+export function importedName(action: string, filename: string) {
+  const fromFile = filename.replace(/\.[^.]+$/, '');
+  return (
+    /Unreal Take|Base ?Layer|\bTake \d+\b/i.test(action) && fromFile ? fromFile : action
+  ).slice(0, 100);
+}
 /** Motion deltas are transferred through bind axes; target bone lengths stay native. */
 export function importMotion(
   data: MotionSource,
