@@ -110,9 +110,12 @@ export function AnimationImport({
         type === 'firstPerson' ? placement : 'scene',
         { followHand: grip === 'off' ? undefined : grip },
       );
-      const level = { precise: [0.0001, 0.1], balanced: [0.0002, 0.25], editable: [0.0005, 0.5] }[
-        detail
-      ] ?? [0.0002, 0.25];
+      const level = {
+        precise: [0.0001, 0.1],
+        balanced: [0.0002, 0.25],
+        editable: [0.0005, 0.5],
+        poses: [0.002, 2],
+      }[detail] ?? [0.0002, 0.25];
       const tolerance = { position: level[0], rotation: (level[1] * Math.PI) / 180 };
       setBusy('Fitting editable curves…');
       const reduced = await reduceImportedMotion(
@@ -120,7 +123,7 @@ export function AnimationImport({
         tolerance,
         (completed, total) => setBusy(`Fitting editable curves… ${completed}/${total}`),
         abortController.signal,
-        { detectMotion },
+        { detectMotion, shared: detail === 'poses' },
       );
       let baked = 0;
       for (const [rawId, result] of Object.entries(reduced)) {
@@ -301,6 +304,7 @@ export function AnimationImport({
                     <option value="precise">High accuracy</option>
                     <option value="balanced">Balanced</option>
                     <option value="editable">Fewer keys</option>
+                    <option value="poses">Shared pose keys</option>
                   </select>
                 </label>
                 <label>
@@ -391,12 +395,13 @@ export function AnimationImport({
                 Each channel is fitted independently with linear segments or editable Bézier
                 handles. Key detail sets the largest allowed difference from the sampled motion:
                 High accuracy 0.1° and 0.1 mm, Balanced 0.25° and 0.2 mm, Fewer keys 0.5° and 0.5
-                mm. Channels that do not move keep one key. Detecting springs and bounces rebuilds
-                baked spring, bounce and elastic moves as editable segments, and takes many times
-                longer. Two-handed grip moves one arm so that hand stays where the source held it
-                relative to the other hand, which keeps both hands on a weapon when the source has
-                different arm or hand proportions. The target retains its bone lengths; unmapped
-                bones remain at rest.
+                mm. Shared pose keys instead gives all channels of a bone the same few keys, each
+                one a whole pose, within 2° and 2 mm per bone. Channels that do not move keep one
+                key. Detecting springs and bounces rebuilds baked spring, bounce and elastic moves
+                as editable segments, and takes many times longer. Two-handed grip moves one arm so
+                that hand stays where the source held it relative to the other hand, which keeps
+                both hands on a weapon when the source has different arm or hand proportions. The
+                target retains its bone lengths; unmapped bones remain at rest.
               </p>
             </>
           )}

@@ -107,10 +107,105 @@ const copyKey = (key: Key): Key => ({
 /** Keep imported bakes editable without making every channel share one set of
  * split times. Position and quaternion channels are reduced independently by
  * the same continuous curve fitter used by the in-app curve reducer. */
+export interface MotionReduction {
+  detectMotion?: boolean;
+  /**
+   * Give every channel of a control the same few keys, as an animator would set
+   * poses, instead of fitting each channel with its own keys.
+   */
+  shared?: boolean;
+}
+
+/**
+ * Pick the fewest sampled poses that reproduce the motion within tolerance when
+ * every moving channel is keyed on them with automatic handles. Fitting each
+ * channel alone needs fewer keys per curve, but they fall on different frames:
+ * a control then shows a key on almost every frame and no single key is a pose.
+ */
+function sharedPoseKeys(
+  samples: Key[],
+  tolerance: MotionTolerance,
+): Pick<Track, 'keys' | 'curves' | 'rotationMode' | 'interpolation'> {
+  const value = (key: Key, index: number) => (index < 3 ? key.p[index] * 100 : key.q[index - 3]),
+    moving = channels.map((_, index) => {
+      let low = Infinity,
+        high = -Infinity;
+      for (const key of samples) {
+        const v = value(key, index);
+        low = Math.min(low, v);
+        high = Math.max(high, v);
+      }
+      return high - low > (index < 3 ? POSITION_NOISE : ROTATION_NOISE);
+    });
+  const build = (chosen: number[]): Track => ({
+    keys: chosen.map((i) => ({ ...copyKey(samples[i]), interpolation: undefined })),
+    spaces: [],
+    interpolation: 'smooth',
+    rotationMode: 'quaternion',
+    curves: Object.fromEntries(
+      channels.map((channel, index) => [
+        channel,
+        {
+          keys: (moving[index] ? chosen : [0]).map(
+            (i): CurveKey => ({
+              frame: samples[i].frame,
+              value: value(samples[i], index),
+              interpolation: 'bezier',
+              handle: 'auto',
+            }),
+          ),
+          modifiers: [],
+        },
+      ]),
+    ),
+  });
+  const error = (track: Track, i: number) => {
+    const fitted = sample(track, samples[i].frame);
+    return Math.max(
+      new Vector3(...samples[i].p).distanceTo(new Vector3(...fitted.p)) / tolerance.position,
+      new Quaternion(...samples[i].q).angleTo(new Quaternion(...fitted.q)) / tolerance.rotation,
+    );
+  };
+  /** The sample furthest outside tolerance between two of the chosen keys, if any. */
+  const worst = (chosen: number[], from = 0, to = samples.length - 1) => {
+    const track = build(chosen);
+    let most = 1,
+      at = -1;
+    for (let i = from; i <= to; i++) {
+      const e = error(track, i);
+      if (e > most) {
+        most = e;
+        at = i;
+      }
+    }
+    return at;
+  };
+  // Add the single worst sample until everything fits, so no key is spent on a
+  // stretch its neighbours already describe.
+  let chosen = [0, samples.length - 1];
+  for (let at = worst(chosen); at >= 0; at = worst(chosen))
+    chosen = [...chosen, at].sort((a, b) => a - b);
+  // Keys added early can become redundant once later ones surround them. A key's
+  // handles reach two keys to either side, so only that stretch needs rechecking.
+  for (let k = 1; k < chosen.length - 1; ) {
+    const without = chosen.filter((_, index) => index !== k);
+    if (worst(without, chosen[Math.max(0, k - 2)], chosen[Math.min(chosen.length - 1, k + 2)]) < 0)
+      chosen = without;
+    else k++;
+  }
+  const track = build(chosen);
+  return {
+    keys: track.keys,
+    curves: track.curves,
+    rotationMode: 'quaternion',
+    interpolation: 'smooth',
+  };
+}
+
 export function sparseMotion(
   keys: Key[],
   tolerance: MotionTolerance = IMPORT_TOLERANCE,
-  options: { detectMotion?: boolean } = {},
+  options: MotionReduction = {},
 ): Pick<Track, 'keys' | 'curves' | 'rotationMode' | 'interpolation'> {
   if (!keys.length) throw Error('Motion has no samples.');
   if (
@@ -176,6 +271,8 @@ export function sparseMotion(
       rotationMode: 'quaternion',
       interpolation: 'linear',
     };
+
+  if (options.shared) return sharedPoseKeys(samples, tolerance);
 
   const source: Track = {
     keys: samples,

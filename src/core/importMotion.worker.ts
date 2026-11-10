@@ -1,11 +1,11 @@
 import { sparseMotion } from './sparseMotion';
-import type { MotionTolerance } from './sparseMotion';
+import type { MotionReduction, MotionTolerance } from './sparseMotion';
 import type { Key, Track } from './model';
 
 export interface ImportMotionRequest {
   entries: { id: string; keys: Key[] }[];
   tolerance: MotionTolerance;
-  options?: { detectMotion?: boolean };
+  options?: MotionReduction;
 }
 
 export type ImportedMotionResult = Pick<

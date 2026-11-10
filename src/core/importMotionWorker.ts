@@ -1,5 +1,5 @@
 import type { Track } from './model';
-import type { MotionTolerance } from './sparseMotion';
+import type { MotionReduction, MotionTolerance } from './sparseMotion';
 import type {
   ImportedMotionResult,
   ImportMotionReply,
@@ -22,7 +22,7 @@ export function reduceImportedMotion(
   tolerance: MotionTolerance,
   onProgress?: (completed: number, total: number, id: string) => void,
   signal?: AbortSignal,
-  options: { detectMotion?: boolean } = {},
+  options: MotionReduction = {},
 ): Promise<Record<string, ImportedMotionResult>> {
   const entries: ImportMotionRequest['entries'] = Object.entries(tracks)
     .filter(([, track]) => track.keys.length > 1)
