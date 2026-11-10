@@ -83,6 +83,29 @@ export class MannyRig {
     this.footShapeCache.clear();
     this.reset();
   }
+  /**
+   * Where each IK limb stood as authored FK, just before it was solved, measured in
+   * the limb's parent bone. A preview character reads it to stay on its own FK pose
+   * until the IK target actually moves away from this one.
+   */
+  ikReference = new Map<
+    string,
+    { a: T.Quaternion; b: T.Quaternion; mid: T.Vector3; end: T.Vector3 }
+  >();
+  private rememberIkReference(side: string, limb: 'arm' | 'leg') {
+    const a = this.bones.get((limb === 'arm' ? 'upperarm_' : 'thigh_') + side)!,
+      b = this.bones.get((limb === 'arm' ? 'lowerarm_' : 'calf_') + side)!,
+      c = this.bones.get((limb === 'arm' ? 'hand_' : 'foot_') + side)!,
+      parent = a.parent!;
+    a.updateMatrixWorld(true);
+    const inverse = parent.getWorldQuaternion(new T.Quaternion()).invert();
+    this.ikReference.set(limb + '_' + side, {
+      a: inverse.clone().multiply(a.getWorldQuaternion(new T.Quaternion())),
+      b: inverse.clone().multiply(b.getWorldQuaternion(new T.Quaternion())),
+      mid: parent.worldToLocal(b.getWorldPosition(new T.Vector3())),
+      end: parent.worldToLocal(c.getWorldPosition(new T.Vector3())),
+    });
+  }
   private lastValues?: Record<ControlId, Pose>;
   private following: Partial<Record<ControlId, BoneFollowing>> = {};
   private rootMotion = new T.Matrix4();
@@ -279,6 +302,7 @@ export class MannyRig {
     this.rootMotion.copy(rootMotion);
     this.localInputs.clear();
     this.lastValues = values;
+    this.ikReference.clear();
     this.reset();
     // Body controls run parent before child, so each bone only needs its own world
     // matrix here; one subtree update follows instead of one per control.
@@ -297,19 +321,22 @@ export class MannyRig {
         b.updateMatrixWorld(true);
       }
     for (const side of ['l', 'r']) {
-      if (modes[('leg_' + side) as LimbId] === 'fk')
+      // As for the arms below: a reconstructed source pose is where IK starts from.
+      if (modes[('leg_' + side) as LimbId] === 'fk' || fkReference)
         for (const stem of ['thigh', 'shin', 'ankle'])
           this.applyOffset(
             (stem + '_' + side) as ControlId,
             values[(stem + '_' + side) as ControlId],
           );
-      else
+      if (modes[('leg_' + side) as LimbId] !== 'fk') {
+        if (fkReference) this.rememberIkReference(side, 'leg');
         this.solve(
           side,
           'leg',
           this.footTarget(side, values),
           new T.Vector3(...values[('knee_' + side) as ControlId].p),
         );
+      }
       this.applyOffset(('toe_' + side) as ControlId, values[('toe_' + side) as ControlId]);
       // A reconstructed source pose can supply authored roll and joint translation
       // while the hand and pole remain editable IK targets. Ordinary rigs retain
@@ -320,13 +347,15 @@ export class MannyRig {
             (stem + '_' + side) as ControlId,
             values[(stem + '_' + side) as ControlId],
           );
-      if (modes[('arm_' + side) as LimbId] !== 'fk')
+      if (modes[('arm_' + side) as LimbId] !== 'fk') {
+        if (fkReference) this.rememberIkReference(side, 'arm');
         this.solve(
           side,
           'arm',
           values[('hand_' + side) as ControlId],
           new T.Vector3(...values[('elbow_' + side) as ControlId].p),
         );
+      }
       this.updateTwists(side, 'arm');
       this.updateTwists(side, 'leg');
       for (const stem of ['upperarm', 'lowerarm', 'thigh', 'calf'])

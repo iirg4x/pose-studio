@@ -49,6 +49,39 @@ it('keeps authored arm roll and joint translations when reconstructing editable 
     'Invalid IK reference pose',
   );
 });
+it('keeps an authored leg in place when it becomes an IK limb', () => {
+  const p = blankProject(source.restControls);
+  p.ikReference = 'fk';
+  putKey(
+    p.tracks.thigh_l,
+    0,
+    pose([0, 0, 0], new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), 0.5).toArray()),
+  );
+  putKey(
+    p.tracks.shin_l,
+    0,
+    pose([0, 0, 0], new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), -0.6).toArray()),
+  );
+  const modes = { arm_l: 'fk', arm_r: 'fk', leg_l: 'fk', leg_r: 'fk' } as const;
+  source.apply(evaluate(p, 0), modes, {}, true);
+  expect(source.ikReference.size).toBe(0);
+  const names = ['thigh_l', 'calf_l', 'foot_l'],
+    before = names.map((n) => ({
+      p: source.position(n),
+      q: source.bones.get(n)!.getWorldQuaternion(new Quaternion()).normalize(),
+    }));
+  putKey(p.tracks.foot_l, 0, pose(before[2].p.toArray(), before[2].q.toArray(), [0, 0, 0, 0, 0]));
+  putKey(p.tracks.knee_l, 0, pose(before[1].p.toArray()));
+  source.apply(evaluate(validateProject(p), 0), { ...modes, leg_l: 'ik' }, {}, true);
+  for (const [i, n] of names.entries()) {
+    expect(source.position(n).distanceTo(before[i].p)).toBeLessThan(0.00001);
+    expect(
+      source.bones.get(n)!.getWorldQuaternion(new Quaternion()).normalize().angleTo(before[i].q),
+    ).toBeLessThan(0.0001);
+  }
+  // The preview reads this to keep a differently proportioned character on its own pose.
+  expect([...source.ikReference.keys()]).toEqual(['leg_l']);
+});
 beforeAll(async () => {
   const bytes = await fs.readFile('public/assets/manny.glb');
   const parse = async () =>

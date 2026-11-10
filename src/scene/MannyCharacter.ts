@@ -459,6 +459,44 @@ export class ProportionalRig extends MannyRig {
   private contact(id: ControlId) {
     return this.project ? retargetContact(this.project, id, this.frame) : undefined;
   }
+  /**
+   * A character with other proportions does not land exactly on a scaled IK target
+   * when it copies the authored FK pose. Without this correction, switching a limb
+   * to IK would pull it off that pose although nothing was edited. The offsets are
+   * zero for clips that do not solve IK from an authored pose.
+   */
+  private ikReferenceShift(
+    source: MannyRig,
+    side: string,
+    limb: 'arm' | 'leg',
+    scaled: (point: T.Vector3) => T.Vector3,
+  ) {
+    const reference = source.ikReference.get(limb + '_' + side),
+      names = (
+        limb === 'arm' ? ['upperarm_', 'lowerarm_', 'hand_'] : ['thigh_', 'calf_', 'foot_']
+      ).map((stem) => stem + side);
+    if (!reference) return { mid: new T.Vector3(), end: new T.Vector3() };
+    const parent = source.bones.get(names[0])!.parent!,
+      parentQ = parent.getWorldQuaternion(new T.Quaternion()),
+      own = (name: string, q: T.Quaternion) =>
+        parentQ
+          .clone()
+          .multiply(q)
+          .multiply(rot(source.rest.get(name)!.world).invert())
+          .multiply(rot(this.rest.get(name)!.world));
+    const mid = this.position(names[0]).add(
+        this.bones.get(names[1])!.position.clone().applyQuaternion(own(names[0], reference.a)),
+      ),
+      end = mid
+        .clone()
+        .add(
+          this.bones.get(names[2])!.position.clone().applyQuaternion(own(names[1], reference.b)),
+        );
+    return {
+      mid: mid.sub(scaled(parent.localToWorld(reference.mid.clone()))),
+      end: end.sub(scaled(parent.localToWorld(reference.end.clone()))),
+    };
+  }
   private shoulderPoint(point: T.Vector3, side: string) {
     return point
       .sub(this.source!.position('upperarm_' + side))
@@ -641,14 +679,17 @@ export class ProportionalRig extends MannyRig {
         config.handIK &&
         limbMode(project, ('arm_' + side) as 'arm_l' | 'arm_r', frame) !== 'fk'
       ) {
-        const dest = this.shoulderPoint(
+        const shift = this.ikReferenceShift(source, side, 'arm', (p) =>
+            this.shoulderPoint(p, side),
+          ),
+          dest = this.shoulderPoint(
             new T.Vector3(...values[('hand_' + side) as ControlId].p),
             side,
-          ),
+          ).add(shift.end),
           pole = this.shoulderPoint(
             new T.Vector3(...values[('elbow_' + side) as ControlId].p),
             side,
-          );
+          ).add(shift.mid);
         this.solve(
           side,
           'arm',
@@ -666,8 +707,12 @@ export class ProportionalRig extends MannyRig {
         config.footIK &&
         limbMode(project, ('leg_' + side) as 'leg_l' | 'leg_r', frame) !== 'fk'
       ) {
-        const dest = this.footPoint(source.position('foot_' + side), side),
-          pole = this.footPoint(new T.Vector3(...values[('knee_' + side) as ControlId].p), side);
+        const shift = this.ikReferenceShift(source, side, 'leg', (p) => this.footPoint(p, side)),
+          dest = this.footPoint(source.position('foot_' + side), side).add(shift.end),
+          pole = this.footPoint(
+            new T.Vector3(...values[('knee_' + side) as ControlId].p),
+            side,
+          ).add(shift.mid);
         this.solve(
           side,
           'leg',
