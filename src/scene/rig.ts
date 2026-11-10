@@ -11,6 +11,7 @@ import type { LimbId, LimbMode } from '../core/controls';
 import { followedBone, unfollowedBone } from '../core/boneFollowing';
 import type { BoneFollowing } from '../core/boneFollowing';
 import type { MotionRig } from '../core/motionRig';
+import { FLOATING_ARM_OFFSET } from '../core/motionRig';
 
 /** Lightweight pose solver: copy the rest skeleton, never its meshes/textures. */
 export function poseRig(reference: MannyRig) {
@@ -314,7 +315,7 @@ export class MannyRig {
       for (const side of ['l', 'r']) {
         const b = this.bones.get('clavicle_' + side)!;
         b.position.add(
-          new T.Vector3(0, 0.03, 0.225).applyQuaternion(
+          new T.Vector3(...FLOATING_ARM_OFFSET).applyQuaternion(
             b.parent!.getWorldQuaternion(new T.Quaternion()).invert(),
           ),
         );

@@ -1,5 +1,6 @@
 import { Matrix4, Quaternion, Vector3 } from 'three';
 import { anatomicalFrame, palmFinger } from './anatomicalFrame';
+import { FLOATING_ARM_OFFSET } from './motionRig';
 import { sparseMotion } from './sparseMotion';
 import type { MotionTolerance } from './sparseMotion';
 import { blankProject } from './assets';
@@ -38,7 +39,27 @@ export interface ImportMotionOptions {
    * relative to the other hand.
    */
   followHand?: 'left' | 'right';
+  /**
+   * Bring limbs in as IK: the hand (and foot) targets and their poles are keyed
+   * on every sampled pose, and the limb starts out in IK. The FK keys stay
+   * underneath as the pose the solver starts from, so roll and bend are kept.
+   */
+  ik?: 'arms' | 'all';
 }
+const IK_LIMBS = (['l', 'r'] as const).flatMap((side) => [
+  {
+    limb: 'arm_' + side,
+    bones: ['upperarm_' + side, 'lowerarm_' + side, 'hand_' + side],
+    target: ('hand_' + side) as ControlId,
+    pole: ('elbow_' + side) as ControlId,
+  },
+  {
+    limb: 'leg_' + side,
+    bones: ['thigh_' + side, 'calf_' + side, 'foot_' + side],
+    target: ('foot_' + side) as ControlId,
+    pole: ('knee_' + side) as ControlId,
+  },
+]);
 /** Hands further apart than this are not treated as sharing a grip. */
 const GRIP_FAR = 0.6;
 /** Hands closer than this get the full correction. */
@@ -154,6 +175,17 @@ export function importMotion(
     'root',
     ...mapped.flatMap(([bone]) => (byBone.has(bone) ? [byBone.get(bone)!] : [])),
   ]);
+  // A limb can only be an IK limb if the source animates all of it.
+  const ikLimbs = IK_LIMBS.filter(
+    (l) =>
+      (options.ik === 'all' || (options.ik === 'arms' && l.limb.startsWith('arm'))) &&
+      l.bones.every((bone) => rig.bones.has(bone) && source.has(mapping[bone])),
+  );
+  for (const l of ikLimbs) {
+    active.add(l.target);
+    active.add(l.pole);
+    p.limbModes[type]![l.limb as 'arm_l'] = [{ frame: 0, mode: 'ik' }];
+  }
   for (const id of active) p.tracks[id].keys = [];
   const follow = options.followHand === 'left' ? 'l' : options.followHand === 'right' ? 'r' : null,
     lead = follow === 'l' ? 'r' : 'l',
@@ -313,6 +345,48 @@ export function importMotion(
         interpolation: 'linear',
       });
       p.tracks[id].interpolation = 'linear';
+    }
+    if (ikLimbs.length) {
+      // IK targets live in the root control's space, like every rig-level control.
+      const rootBone = desired.get('root'),
+        toRoot = rootBone
+          ? rootBone.clone().multiply(rig.rest.get('root')!.world.clone().invert()).invert()
+          : new Matrix4();
+      for (const l of ikLimbs) {
+        const [start, mid, end] = l.bones.map((bone) => position(desired.get(bone)!)),
+          axis = end.clone().sub(start).normalize(),
+          bend = mid.clone().sub(start);
+        // Same pole placement as matching a limb by hand: off the middle joint, along the bend.
+        bend.addScaledVector(axis, -bend.dot(axis));
+        if (bend.lengthSq() < 1e-10) {
+          bend.set(0, 0, 1).addScaledVector(axis, -axis.z);
+          if (bend.lengthSq() < 1e-10) bend.set(1, 0, 0);
+        }
+        // An imported first-person clip has no body under it, so its arms float.
+        const carried =
+            type === 'firstPerson' && l.limb.startsWith('arm')
+              ? new Matrix4().makeTranslation(...FLOATING_ARM_OFFSET)
+              : new Matrix4(),
+          pole = mid
+            .clone()
+            .addScaledVector(bend.normalize(), 0.35)
+            .applyMatrix4(carried)
+            .applyMatrix4(toRoot);
+        p.tracks[l.target].keys.push({
+          ...fromMatrix(
+            toRoot.clone().multiply(carried).multiply(desired.get(l.bones[2])!),
+            pose([0, 0, 0], [0, 0, 0, 1], [0, 0, 0, 0, 0]),
+          ),
+          frame,
+          interpolation: 'linear',
+        });
+        p.tracks[l.pole].keys.push({
+          ...pose(pole.toArray() as V3, [0, 0, 0, 1], [0, 0, 0, 0, 0]),
+          frame,
+          interpolation: 'linear',
+        });
+        p.tracks[l.target].interpolation = p.tracks[l.pole].interpolation = 'linear';
+      }
     }
   }
   if (reduction !== false)

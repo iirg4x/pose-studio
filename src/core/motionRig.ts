@@ -10,6 +10,13 @@ export interface MotionRig {
   parents?: Record<string, string | null>;
 }
 
+/**
+ * A first-person action with no body under it shows floating arms, carried this far
+ * forward and up from where the skeleton has the shoulders so they sit in view.
+ * Anything placed for those arms, such as imported IK hand targets, moves with them.
+ */
+export const FLOATING_ARM_OFFSET: V3 = [0, 0.03, 0.225];
+
 export function validateMotionRig(value: MotionRig | undefined) {
   if (value === undefined) return;
   if (

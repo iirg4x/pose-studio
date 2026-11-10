@@ -153,6 +153,64 @@ it('imports sampled humanoid motion with native lengths, root movement and edita
     }
   }
 });
+it('can bring limbs in as IK without moving them', () => {
+  const p = blankProject(source.restControls);
+  p.end = 6;
+  for (const [id, axis, angle] of [
+    ['upperarm_l', [0, 0, 1], 0.5],
+    ['forearm_l', [1, 0, 0], 0.4],
+    ['wrist_l', [0, 1, 0], -0.3],
+    ['thigh_r', [0, 0, 1], 0.4],
+    ['shin_r', [0, 0, 1], -0.5],
+    ['hips', [0, 1, 0], 0.2],
+  ] as const)
+    putKey(
+      p.tracks[id],
+      6,
+      pose([0, 0, 0], new Quaternion().setFromAxisAngle(new Vector3(...axis), angle).toArray()),
+    );
+  putKey(p.tracks.root, 6, pose([0.2, 0, 0.1]));
+  const fk = { arm_l: 'fk', arm_r: 'fk', leg_l: 'fk', leg_r: 'fk' } as const,
+    bones = [...source.bones].map(([name, b]) => ({
+      name,
+      parent: b.parent?.name ?? null,
+      rest: source.rest.get(name)!.world.toArray(),
+    })),
+    frames: number[][][] = [];
+  for (let f = 0; f <= 6; f++) {
+    source.apply(evaluate(p, f), fk);
+    frames.push(bones.map((b) => source.bones.get(b.name)!.matrixWorld.toArray()));
+  }
+  const mapping = { root: 'root', ...autoMapBones(bones.map((b) => b.name)) },
+    data = { name: 'Test', fps: 30, end: 6, bones, frames },
+    arms = importMotion(data, mapping, target, 'body', 0, 1, false, 'scene', { ik: 'arms' }),
+    all = importMotion(data, mapping, target, 'body', 0, 1, false, 'scene', { ik: 'all' });
+  expect(arms.limbModes!.body).toMatchObject({
+    arm_l: [{ frame: 0, mode: 'ik' }],
+    leg_r: [{ frame: 0, mode: 'fk' }],
+  });
+  expect(all.limbModes!.body).toMatchObject({ leg_r: [{ frame: 0, mode: 'ik' }] });
+  expect(all.tracks.hand_l.keys.length).toBe(7);
+  expect(all.tracks.knee_r.keys.length).toBe(7);
+  const ik = { arm_l: 'ik', arm_r: 'ik', leg_l: 'ik', leg_r: 'ik' } as const;
+  for (const f of [0, 3, 6]) {
+    target.apply(evaluate(validateProject(all), f), ik, {}, true);
+    for (const name of ['upperarm_l', 'lowerarm_l', 'hand_l', 'thigh_r', 'calf_r', 'foot_r']) {
+      const original = new Matrix4().fromArray(frames[f][bones.findIndex((b) => b.name === name)]),
+        imported = target.bones.get(name)!.matrixWorld;
+      expect(
+        new Vector3()
+          .setFromMatrixPosition(imported)
+          .distanceTo(new Vector3().setFromMatrixPosition(original)),
+      ).toBeLessThan(0.0005);
+      expect(
+        new Quaternion()
+          .setFromRotationMatrix(imported)
+          .angleTo(new Quaternion().setFromRotationMatrix(original)),
+      ).toBeLessThan(0.01);
+    }
+  }
+});
 it('maps Auto-Rig Pro deform names independently of the bundled example', () => {
   expect(
     autoMapBones([

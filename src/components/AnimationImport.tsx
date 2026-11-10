@@ -37,6 +37,7 @@ export function AnimationImport({
     [detail, setDetail] = useState('balanced'),
     [detectMotion, setDetectMotion] = useState(false),
     [grip, setGrip] = useState<'off' | 'left' | 'right'>('off'),
+    [limbs, setLimbs] = useState<'fk' | 'arms' | 'all'>('fk'),
     [placement, setPlacement] = useState<'scene' | 'camera'>('camera'),
     fitAbort = useRef<AbortController | null>(null),
     mounted = useRef(true);
@@ -108,7 +109,7 @@ export function AnimationImport({
         1,
         false,
         type === 'firstPerson' ? placement : 'scene',
-        { followHand: grip === 'off' ? undefined : grip },
+        { followHand: grip === 'off' ? undefined : grip, ik: limbs === 'fk' ? undefined : limbs },
       );
       const level = {
         precise: [0.0001, 0.1],
@@ -321,6 +322,19 @@ export function AnimationImport({
                   </select>
                 </label>
                 <label>
+                  Limbs
+                  <select
+                    aria-label="Import limb controls"
+                    disabled={!!busy}
+                    value={limbs}
+                    onChange={(e) => setLimbs(e.target.value as 'fk' | 'arms' | 'all')}
+                  >
+                    <option value="fk">FK, as in the file</option>
+                    <option value="arms">IK hands</option>
+                    <option value="all">IK hands and feet</option>
+                  </select>
+                </label>
+                <label>
                   Springs and bounces
                   <select
                     aria-label="Import spring and bounce detection"
@@ -400,8 +414,10 @@ export function AnimationImport({
                 key. Detecting springs and bounces rebuilds baked spring, bounce and elastic moves
                 as editable segments, and takes many times longer. Two-handed grip moves one arm so
                 that hand stays where the source held it relative to the other hand, which keeps
-                both hands on a weapon when the source has different arm or hand proportions. The
-                target retains its bone lengths; unmapped bones remain at rest.
+                both hands on a weapon when the source has different arm or hand proportions. IK
+                limbs key the hand and foot targets on every pose, over the imported FK pose, so the
+                motion can be edited by moving a hand. The target retains its bone lengths; unmapped
+                bones remain at rest.
               </p>
             </>
           )}
