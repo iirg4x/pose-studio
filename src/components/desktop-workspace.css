@@ -1098,6 +1098,135 @@
   }
 }
 
+/* Character setup uses the same dock frame as Animate: the header keeps its
+ * own solid strip, the character list and bone mapping are docked columns,
+ * and the scene takes the space between them. */
+@media (pointer: fine) {
+  .app.desktop-workspace > .animate-layout.setup-layout {
+    --desktop-properties-column: 0px;
+    position: absolute;
+    inset: var(--desktop-dock-top) 0 0;
+    display: grid;
+    grid-template-columns:
+      clamp(280px, var(--setup-width), 380px)
+      minmax(0, 1fr)
+      var(--desktop-properties-column);
+    grid-template-rows: minmax(0, 1fr) 40px;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--canvas);
+  }
+  .app.desktop-workspace > .animate-layout.setup-layout[data-side='true'] {
+    --desktop-properties-column: clamp(280px, var(--side-width), 440px);
+  }
+  .app.desktop-workspace > .animate-layout.setup-layout > .area-setup {
+    position: relative;
+    inset: auto;
+    grid-column: 1;
+    grid-row: 1;
+    width: auto;
+    min-width: 0;
+    min-height: 0;
+    border: 0;
+    border-inline-end: 1px solid var(--border);
+    border-radius: var(--radius-flush);
+    background: var(--surface-dock);
+    box-shadow: none;
+  }
+  .app.desktop-workspace > .animate-layout.setup-layout > .area-setup > .character-panel {
+    height: 100%;
+    border: 0;
+    background: transparent;
+  }
+  .app.desktop-workspace > .animate-layout.setup-layout > .split-setup {
+    position: relative;
+    inset: auto;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: start;
+    align-self: stretch;
+    width: 8px;
+    height: auto;
+    border-radius: var(--radius-flush);
+  }
+  .app.desktop-workspace > .animate-layout.setup-layout > .area-viewport {
+    position: relative;
+    inset: auto;
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+  }
+  .app.desktop-workspace > .animate-layout.setup-layout > .viewport-menu {
+    grid-column: 2;
+    grid-row: 1;
+    top: 8px;
+    left: 12px;
+  }
+  .app.desktop-workspace > .animate-layout.setup-layout > .area-side {
+    position: relative;
+    inset: auto;
+    grid-column: 3;
+    grid-row: 1;
+    width: auto;
+    height: auto;
+    max-height: none;
+    min-width: 0;
+    min-height: 0;
+    border: 0;
+    border-inline-start: 1px solid var(--border);
+    border-radius: var(--radius-flush);
+    background: var(--surface-dock);
+    box-shadow: none;
+    opacity: 1;
+    translate: none;
+    transition: none;
+  }
+  .app.desktop-workspace > .animate-layout.setup-layout > .area-side > .properties-dock-shell {
+    flex: 1;
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+    background: transparent;
+  }
+  .app.desktop-workspace
+    > .animate-layout.setup-layout
+    > .area-side
+    > .properties-dock-shell
+    > .side-content {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    background: transparent;
+  }
+  .app.desktop-workspace > .animate-layout.setup-layout > .split-side {
+    position: relative;
+    inset: auto;
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: start;
+    align-self: stretch;
+    width: 8px;
+    height: auto;
+    border-radius: var(--radius-flush);
+  }
+  .app.desktop-workspace > .animate-layout.setup-layout > .time-slider {
+    position: relative;
+    inset: auto;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: auto;
+    height: auto;
+    min-height: 40px;
+    border-radius: var(--radius-flush);
+    background: var(--surface-dock);
+    box-shadow: none;
+  }
+}
+
 @media (pointer: fine) and (prefers-reduced-motion: reduce) {
   .app.desktop-workspace > .animate-layout:not(.setup-layout) {
     transition: none;
