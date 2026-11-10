@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { FolderOpen, X, Clapperboard, LoaderCircle } from 'lucide-react';
 import { studio } from '../core/store';
 import { autoMapBones, RETARGET_SLOTS } from '../core/retarget';
-import { importMotion } from '../core/importAnimation';
+import { importMotion, importedName } from '../core/importAnimation';
 import type { AnimationInspection } from '../core/importAnimation';
 import { clone } from '../core/model';
 import type { RigLayer } from '../core/model';
@@ -134,8 +134,7 @@ export function AnimationImport({
       // after all worker results have landed so both layer views share the
       // exact same editable curves and noise modifiers.
       project.otherTracks = clone(project.tracks);
-      if (/Unreal Take|Base Layer/i.test(data.name))
-        project.name = file.filename.replace(/\.[^.]+$/, '');
+      project.name = importedName(data.name, file.filename);
       studio.addImportedAction(project);
       studio.patch({
         retargetMode: false,

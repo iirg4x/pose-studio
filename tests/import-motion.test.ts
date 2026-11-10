@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import { Matrix4, Quaternion, Vector3 } from 'three';
 import { rigLoader } from './rig-loader';
 import { MannyRig } from '../src/scene/rig';
-import { importMotion } from '../src/core/importAnimation';
+import { importMotion, importedName } from '../src/core/importAnimation';
 import { blankProject } from '../src/core/assets';
 import { autoMapBones } from '../src/core/retarget';
 import { evaluate, pose, putKey, validateProject } from '../src/core/model';
@@ -360,4 +360,12 @@ it('leaves the arms alone when the hands are too far apart to share a grip', () 
     importMotion(data, mapping, target, 'body', 0, 1, false, 'scene', { followHand: 'left' })
       .tracks,
   ).toEqual(importMotion(data, mapping, target, 'body', 0, 1, false).tracks);
+});
+it('names a clip after its file when the action only has an exporter placeholder name', () => {
+  expect(importedName('Armature|Take 001|BaseLayer', 'Male 01@Pose Idle.FBX')).toBe(
+    'Male 01@Pose Idle',
+  );
+  expect(importedName('Unreal Take', 'A_Reload.fbx')).toBe('A_Reload');
+  expect(importedName('Armature|Base Layer', 'walk.glb')).toBe('walk');
+  expect(importedName('Reload Empty', 'weapons.blend')).toBe('Reload Empty');
 });
