@@ -2,17 +2,15 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld(
   'studioDesktop',
   Object.freeze({
-    beginSharedExport: (plan) => ipcRenderer.invoke('studio:shared-begin', plan),
-    writeSharedExport: (id, item, data) =>
-      ipcRenderer.invoke('studio:shared-write', id, item, data),
-    finishSharedExport: (id) => ipcRenderer.invoke('studio:shared-finish', id),
-    cancelSharedExport: (id) => ipcRenderer.invoke('studio:shared-cancel', id),
-    importProp: () => ipcRenderer.invoke('studio:prop-import'),
-    inspectAnimation: () => ipcRenderer.invoke('studio:animation-inspect'),
-    sampleAnimation: (token, options) =>
-      ipcRenderer.invoke('studio:animation-sample', token, options),
+    beginExport: (name, shared) => ipcRenderer.invoke('studio:export-begin', name, shared),
+    writeExport: (id, file, data) => ipcRenderer.invoke('studio:export-write', id, file, data),
+    finishExport: (id) => ipcRenderer.invoke('studio:export-finish', id),
+    cancelExport: (id) => ipcRenderer.invoke('studio:export-cancel', id),
+    pickAnimation: () => ipcRenderer.invoke('studio:animation-pick'),
+    pickModel: (kind) => ipcRenderer.invoke('studio:model-pick', kind),
+    readSidecar: (token, name) => ipcRenderer.invoke('studio:model-sidecar', token, name),
+    storeModel: (data) => ipcRenderer.invoke('studio:model-store', data),
     openExample: () => ipcRenderer.invoke('studio:open-example'),
-    importCharacter: () => ipcRenderer.invoke('studio:character-import'),
     readCharacter: (id) => ipcRenderer.invoke('studio:character-read', id),
     exportCharacter: (data, options) =>
       ipcRenderer.invoke('studio:character-export', data, options),
@@ -29,7 +27,6 @@ contextBridge.exposeInMainWorld(
       return () => ipcRenderer.removeListener('studio:request-close', listener);
     },
     status: () => ipcRenderer.invoke('studio:status'),
-    chooseBlender: () => ipcRenderer.invoke('studio:choose-blender'),
     saveProject: (p) => ipcRenderer.invoke('studio:save', p),
     openProject: () => ipcRenderer.invoke('studio:open'),
     takeProject: () => ipcRenderer.invoke('studio:take-project'),
@@ -41,7 +38,6 @@ contextBridge.exposeInMainWorld(
     recentProjects: () => ipcRenderer.invoke('studio:recents'),
     openRecentProject: (p) => ipcRenderer.invoke('studio:open-recent', p),
     clearRecentProjects: () => ipcRenderer.invoke('studio:clear-recents'),
-    exportAnimation: (payload, options) => ipcRenderer.invoke('studio:export', payload, options),
     showFolder: (directory) => ipcRenderer.invoke('studio:folder', directory),
     windowAction: (action) => ipcRenderer.send('studio:window', action),
     onWindowState: (callback) => {

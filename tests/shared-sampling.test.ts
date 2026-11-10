@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Bone, Group, Quaternion, Vector3 } from 'three';
 import { sampleSharedAnimation } from '../src/scene/sharedAnimationSampling';
-import { createRequire } from 'node:module';
-const { validateSampleRate } = createRequire(import.meta.url)('../electron/shared-export.cjs');
+import { validateSampleRate } from '../src/core/fbx/sharedPackage';
 function fixture() {
   const scene = new Group(),
     root = new Bone(),

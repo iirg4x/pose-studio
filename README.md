@@ -37,7 +37,7 @@ npm run dev
 | `npm run lint:unused` | Find unused files, exports and dependencies (knip)           |
 | `npm run format`      | Format with Prettier (`format:check` to verify)              |
 | `npm run build:pwa`   | Build the installable web app into `dist-pwa/`               |
-| `npm run package`     | Build the Windows desktop app (needs Blender for FBX export) |
+| `npm run package`     | Build the Windows desktop app                                |
 | `npm run android:apk` | Build the Android APK (needs the Android SDK)                |
 
 Every push to `main` runs the checks and tests, then deploys the web app to GitHub Pages.
@@ -47,13 +47,14 @@ Every push to `main` runs the checks and tests, then deploys the web app to GitH
 | Path             | Contents                                                       |
 | ---------------- | -------------------------------------------------------------- |
 | `src/core`       | Animation model, keys and curves, layers, store (no rendering) |
+| `src/core/fbx`   | FBX reader and writer, and the Unreal export packages          |
+| `src/unreal`     | Unreal import script and the Manny skeleton shipped in exports |
 | `src/scene`      | three.js scene, Manny rig, IK, attachments, retargeting        |
 | `src/components` | React UI: desktop workspace, timeline, graph editor, panels    |
 | `src/platform`   | Browser, Android and desktop storage and file access           |
 | `shared`         | Project file codec and the web app build plugin                |
 | `electron`       | Desktop app main process                                       |
 | `android`        | Capacitor Android project                                      |
-| `backend`        | Blender scripts for FBX import and export                      |
 | `tests`          | Vitest suites, including tests against the real Manny rig      |
 | `docs`           | Android and Unreal setup, QA reports                           |
 

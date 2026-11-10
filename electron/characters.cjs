@@ -1,7 +1,6 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { createHash, randomUUID } = require('node:crypto');
-const { spawn } = require('node:child_process');
 const MAX = 32 * 1024 * 1024;
 function glb(data) {
   const b = Buffer.from(data);
@@ -15,54 +14,17 @@ function glb(data) {
     throw Error('Choose a valid GLB character below 32 MB.');
   return b;
 }
-async function blenderJob(blender, script, args, logPath) {
-  if (!blender)
-    throw Error(
-      'Choose Blender in Export to Unreal before importing FBX or exporting a retargeted FBX.',
-    );
-  const log = await fs.open(logPath, 'w');
-  try {
-    await new Promise((resolve, reject) => {
-      const child = spawn(
-        blender,
-        [
-          '--background',
-          '--factory-startup',
-          '--disable-autoexec',
-          '--python-exit-code',
-          '1',
-          '--python',
-          script,
-          '--',
-          ...args,
-        ],
-        { windowsHide: true, stdio: ['ignore', log.fd, log.fd] },
-      );
-      const timer = setTimeout(() => {
-        child.kill();
-        reject(Error('Character conversion timed out.'));
-      }, 180000);
-      child.on('error', (e) => {
-        clearTimeout(timer);
-        reject(e);
-      });
-      child.on('exit', (code) => {
-        clearTimeout(timer);
-        code === 0
-          ? resolve()
-          : reject(
-              Error(
-                'Could not convert the character. Use one skinned humanoid armature. Details: ' +
-                  logPath,
-              ),
-            );
-      });
-    });
-  } finally {
-    await log.close();
-  }
+function fbx(data) {
+  const b = Buffer.from(data);
+  if (
+    b.length < 27 ||
+    b.length > 512 * 1024 * 1024 ||
+    b.toString('latin1', 0, 20) !== 'Kaydara FBX Binary  '
+  )
+    throw Error('Invalid FBX export.');
+  return b;
 }
-function createCharacters(directory, assets, backend) {
+function createCharacters(directory, assets) {
   const filename = (id) => {
     if (/^(example-fantasy-(male|female)|builtin-(axe|rifle|magazine|unreal-fp-gun))$/.test(id))
       return path.join(assets, id + '.glb');
@@ -92,33 +54,6 @@ function createCharacters(directory, assets, backend) {
     read,
     cache,
     filename,
-    async importFile(source, blender) {
-      if (!['.fbx', '.glb', '.gltf'].includes(path.extname(source).toLowerCase()))
-        throw Error('Choose an FBX, GLB or glTF character.');
-      let bytes;
-      if (path.extname(source).toLowerCase() === '.glb') bytes = await fs.readFile(source);
-      else {
-        await fs.mkdir(directory, { recursive: true });
-        const converted = path.join(directory, 'import-' + randomUUID() + '.glb');
-        try {
-          await blenderJob(
-            blender,
-            path.join(backend, 'import_character.py'),
-            [source, converted],
-            converted + '.log',
-          );
-          bytes = await fs.readFile(converted);
-        } finally {
-          await fs.unlink(converted).catch(() => {});
-        }
-      }
-      const asset = await cache(bytes);
-      return {
-        asset,
-        name: path.basename(source, path.extname(source)),
-        data: new Uint8Array(bytes),
-      };
-    },
     async embed(project) {
       // Only characterAssets is added, so the library itself is not cloned.
       const data = { ...project },
@@ -166,29 +101,15 @@ function createCharacters(directory, assets, backend) {
       }
       return project;
     },
-    async exportFile(bytes, destination, format, blender, fps = 24, end = 96) {
-      const data = glb(bytes);
-      await fs.mkdir(directory, { recursive: true });
+    /** Write an animation the window has already encoded as GLB or FBX. */
+    async exportFile(bytes, destination, format) {
+      const data = format === 'fbx' ? fbx(bytes) : glb(bytes);
       const temporary = path.join(
         path.dirname(destination),
         '.pose-' + randomUUID() + '.' + format,
       );
       try {
-        if (format === 'glb') await fs.writeFile(temporary, data);
-        else {
-          const input = path.join(directory, 'export-' + randomUUID() + '.glb');
-          try {
-            await fs.writeFile(input, data);
-            await blenderJob(
-              blender,
-              path.join(backend, 'export_character.py'),
-              [input, temporary, String(fps), String(end)],
-              input + '.log',
-            );
-          } finally {
-            await fs.unlink(input).catch(() => {});
-          }
-        }
+        await fs.writeFile(temporary, data);
         await fs.rename(temporary, destination);
       } finally {
         await fs.unlink(temporary).catch(() => {});
@@ -197,4 +118,4 @@ function createCharacters(directory, assets, backend) {
     },
   };
 }
-module.exports = { createCharacters, blenderJob };
+module.exports = { createCharacters };

@@ -48,12 +48,12 @@ The tablet renderer stops drawing while idle, coalesces pose input, bounds high-
 | Operation | Android |
 | --- | --- |
 | Open / save projects | Portable .pose, including embedded character and prop GLBs; existing JSON projects can be opened |
-| Import characters | Self-contained, skinned GLB; review bone mapping in Character setup |
-| Import props | Self-contained GLB |
-| Import animations | Animated skeletal GLB, or actions from a .pose project; the shared importer fits editable curves |
-| Export target character animation | GLB from the selected preview character |
+| Import characters | FBX, GLB or glTF; review bone mapping in Character setup |
+| Import props | GLB, glTF, FBX or OBJ |
+| Import animations | FBX, GLB, glTF or BVH, or actions from a .pose project; the shared importer fits editable curves |
+| Export target character animation | FBX or GLB from the selected preview character |
 | Export recording | WebM/VP9; MP4/H.264 if supported by the device |
-| FBX / Blender conversion and shared Unreal package | Desktop Pose; transfer the same editable .pose project |
+| Unreal package (current animation or shared skeleton) | One .zip holding the same files the desktop app writes into a folder |
 
 Pack textures and binary resources inside GLB files. Individual imported GLBs may be up to 32 MiB and a portable project's combined custom assets up to 64 MiB. Native input documents are limited to 128 MiB. Animated GLB source ranges are shown on a 30 fps time ruler because glTF stores seconds rather than an authored frame rate; sampling can use another rate without changing duration.
 

@@ -1,4 +1,4 @@
-import { portablePlatform as isAndroid } from '../platform/storage';
+import { importModel, missingTextures } from '../platform/imports';
 import { useState } from 'react';
 import {
   Box,
@@ -41,14 +41,15 @@ export function AssetLibrary({
       const desktop = window.studioDesktop;
       if (!desktop) throw Error('Use the desktop app to import local assets.');
       if (kind === 'character') {
-        const file = await desktop.importCharacter();
+        const file = await importModel('character');
         if (file) {
           await runtime.addRetargetCharacter(file.asset, file.name, file.data);
           characterSetup();
-          close();
+          if (file.missing.length) setError(missingTextures(file.missing));
+          else close();
         }
       } else {
-        const file = await desktop.importProp();
+        const file = await importModel('prop');
         if (file) {
           await runtime.validateProp(file.data);
           studio.addProp({
@@ -59,7 +60,8 @@ export function AssetLibrary({
             offset: [0, 0, 0],
             visible: true,
           });
-          close();
+          if (file.missing.length) setError(missingTextures(file.missing));
+          else close();
         }
       }
     } catch (e) {
@@ -113,14 +115,14 @@ export function AssetLibrary({
         <button disabled={!!busy} onClick={() => void add('character')}>
           <PersonStanding size={18} />
           <span>
-            Character<small>{isAndroid ? 'Rigged GLB' : 'Rigged FBX · glTF'}</small>
+            Character<small>Rigged FBX · glTF</small>
           </span>
           <Plus size={14} />
         </button>
         <button disabled={!!busy} onClick={() => void add('prop')}>
           <Box size={18} />
           <span>
-            Prop<small>{isAndroid ? 'Self-contained GLB' : 'FBX · glTF · OBJ · Blend'}</small>
+            Prop<small>FBX · glTF · OBJ</small>
           </span>
           <Plus size={14} />
         </button>
@@ -133,7 +135,7 @@ export function AssetLibrary({
         >
           <Clapperboard size={18} />
           <span>
-            Animation<small>{isAndroid ? 'Animated GLB · Pose' : 'FBX · glTF · Blend · BVH'}</small>
+            Animation<small>FBX · glTF · BVH · Pose</small>
           </span>
           <Plus size={14} />
         </button>

@@ -25,7 +25,6 @@ verification/
 
 # Editor/tool leftovers
 *.blend1
-backend/manny-source.blend
 NVIDIA Corporation/
 .DS_Store
 Thumbs.db

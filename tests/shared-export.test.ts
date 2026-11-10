@@ -28,9 +28,9 @@ import { library, entry, validateLibrary } from '../src/core/library';
 import { createProject, forLayer, putKey, pose, clone, evaluate, matrix } from '../src/core/model';
 import type { ControlId } from '../src/core/model';
 import { createRequire } from 'node:module';
-const { createSharedExporter, validatePlan, validateGLB } = createRequire(import.meta.url)(
-  '../electron/shared-export.cjs',
-);
+import { validatePlan } from '../src/core/fbx/sharedPackage';
+import { readGlb } from '../src/core/fbx/gltf';
+const { createExportFolders } = createRequire(import.meta.url)('../electron/export-folder.cjs');
 let source: MannyRig, male: MannyCharacter, female: MannyCharacter;
 async function load(name: string) {
   const b = await fs.readFile('public/assets/' + name + '.glb');
@@ -185,7 +185,7 @@ describe('shared Unreal skeleton export', () => {
     const p = sharedExportPlan(library(createProject({}, false)));
     p.sockets[0].bone = '../bad';
     expect(() => validatePlan(p)).toThrow();
-    expect(() => validateGLB(new Uint8Array(30))).toThrow();
+    expect(() => readGlb(new Uint8Array(30))).toThrow();
   });
   it('source-only sampling preserves source bones and prop motion independently of the preview character', async () => {
     const workspace = validateLibrary(
@@ -456,40 +456,43 @@ describe('shared Unreal skeleton export', () => {
     }
   });
 });
-it('stages every clip once regardless of character count and rejects mixed item identities', async () => {
+it('writes export files into one new folder and refuses paths that leave it', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'pose-shared-test-'));
   try {
-    const w = library(createProject({}, false));
-    w.characters = [male.config, female.config];
-    w.clips.push(entry(clone(w.clips[0].project)));
-    const plan = sharedExportPlan(w),
-      writer = createSharedExporter('', () => ''),
-      session = await writer.begin(directory, plan);
-    const bytes = Buffer.alloc(20);
-    bytes.writeUInt32LE(0x46546c67, 0);
-    bytes.writeUInt32LE(2, 4);
-    bytes.writeUInt32LE(20, 8);
-    for (const c of plan.characters) await writer.write(session.id, { characterId: c.id }, bytes);
-    await expect(writer.finish(session.id, null)).rejects.toThrow('shared animation is missing');
-    for (const c of plan.clips) await writer.write(session.id, { clipId: c.id }, bytes);
-    expect((await fs.readdir(path.join(session.directory, '.source'))).sort()).toEqual([
-      'animation_0.glb',
-      'animation_1.glb',
-      'mesh_0.glb',
-      'mesh_1.glb',
-      'mesh_2.glb',
-    ]);
-    await expect(
-      writer.write(session.id, { characterId: 'manny', clipId: plan.clips[0].id }, bytes),
-    ).rejects.toThrow('Unknown');
-    await expect(
-      writer.write(session.id, { clipId: plan.clips[0].id, sampleRate: 31 }, bytes),
-    ).rejects.toThrow('sample rate');
-    await expect(
-      writer.write(session.id, { characterId: 'manny', sampleRate: 120 }, bytes),
-    ).rejects.toThrow('animations only');
-    await expect(writer.finish(session.id, null)).rejects.toThrow('Choose Blender');
-    await writer.cancel(session.id);
+    const folders = createExportFolders(),
+      session = await folders.begin(directory, 'My project: one', true),
+      bytes = new Uint8Array([1, 2, 3]);
+    expect(folders.busy).toBe(true);
+    expect(path.dirname(session.directory)).toBe(path.resolve(directory));
+    expect(path.basename(session.directory)).toMatch(/^My_project_one_Shared_/);
+    await expect(folders.begin(directory, 'Other')).rejects.toThrow('already running');
+    await expect(folders.finish(session.id)).rejects.toThrow('no files');
+    await folders.write(session.id, 'Animations/A_Idle_0.fbx', bytes);
+    await folders.write(session.id, 'manifest.json', bytes);
+    for (const name of [
+      '../outside.fbx',
+      '/absolute.fbx',
+      'Animations/../../outside.fbx',
+      'C:\\outside.fbx',
+      'run.exe',
+      '.hidden.json',
+      'trailing.fbx.',
+    ])
+      await expect(folders.write(session.id, name, bytes), name).rejects.toThrow('Invalid');
+    await expect(folders.write(session.id, 'empty.json', new Uint8Array())).rejects.toThrow(
+      'Invalid',
+    );
+    await expect(folders.write('other', 'a.fbx', bytes)).rejects.toThrow('expired');
+    const result = await folders.finish(session.id);
+    expect(result.files).toEqual(['Animations/A_Idle_0.fbx', 'manifest.json']);
+    expect([
+      ...(await fs.readFile(path.join(result.directory, 'Animations', 'A_Idle_0.fbx'))),
+    ]).toEqual([1, 2, 3]);
+    expect(folders.busy).toBe(false);
+    const second = await folders.begin(directory, 'Clip');
+    await folders.cancel(second.id);
+    expect(await fs.readdir(second.directory)).toEqual(['incomplete-export.txt']);
+    expect(folders.busy).toBe(false);
   } finally {
     if (
       path.dirname(path.resolve(directory)) === path.resolve(os.tmpdir()) &&

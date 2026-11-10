@@ -1,6 +1,7 @@
 import { initializePwa } from './pwa';
 import { measureTouchViewport } from './touchViewport';
 import { randomId } from '../core/crypto';
+import { createZipExports } from './exportZip';
 import { encodeProject } from '../../shared/project-codec.mjs';
 import { readProjectDocument } from './projectDocuments';
 import { readAsset, writeAsset, writeAssets, isTouch } from './storage';
@@ -13,6 +14,13 @@ import {
   validateGLB,
 } from './portableAssets';
 import type { AssetBatchWriter } from './portableAssets';
+import type { PickedFile } from './imports';
+import {
+  ANIMATION_EXTENSIONS,
+  CHARACTER_EXTENSIONS,
+  MAX_SOURCE_BYTES,
+  PROP_EXTENSIONS,
+} from './sourceFiles';
 const noop = () => () => {};
 const writeProjectAssets: AssetBatchWriter = (entries) =>
   writeAssets(entries.map(([id, data]) => [`asset:${id}`, data] as const));
@@ -25,20 +33,56 @@ function download(data: Uint8Array, name: string, type = 'application/octet-stre
   setTimeout(() => URL.revokeObjectURL(url), 30000);
   return name;
 }
-function pick(accept: string): Promise<File | null> {
+function pickFiles(accept: string, multiple = false): Promise<File[]> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = accept;
-    input.onchange = () => resolve(input.files?.[0] ?? null);
-    input.oncancel = () => resolve(null);
+    input.multiple = multiple;
+    input.onchange = () => resolve([...(input.files ?? [])]);
+    input.oncancel = () => resolve([]);
     input.click();
   });
+}
+const pick = async (accept: string): Promise<File | null> => (await pickFiles(accept))[0] ?? null;
+const IMAGES = ['png', 'jpg', 'jpeg', 'tga', 'bmp', 'psd', 'webp', 'gif', 'bin'];
+const extensionOf = (name: string) => name.slice(name.lastIndexOf('.') + 1).toLowerCase();
+/**
+ * Choose a model, optionally with its textures selected alongside it: a page
+ * cannot look into the model's folder by itself.
+ */
+async function pickModelFiles(extensions: string[]) {
+  const files = await pickFiles([...extensions, ...IMAGES].map((e) => '.' + e).join(','), true),
+    main = files.find((f) => extensions.includes(extensionOf(f.name)));
+  if (!main) {
+    if (files.length) throw Error('Choose one of: ' + extensions.map((e) => '.' + e).join(', '));
+    return null;
+  }
+  const others = files.filter((f) => f !== main);
+  return {
+    ...(await readSourceFile(main)),
+    sidecar: async (wanted: string) => {
+      const name = (wanted.replace(/\\/g, '/').split('/').pop() ?? '').toLowerCase(),
+        png = name.replace(/\.[^.]+$/, '') + '.png';
+      const file =
+        others.find((f) => f.name.toLowerCase() === png) ??
+        others.find((f) => f.name.toLowerCase() === name);
+      return file && file.size <= 64 * 1024 * 1024
+        ? new Uint8Array(await file.arrayBuffer())
+        : null;
+    },
+  };
 }
 /** Read a user-selected GLB only after its metadata passes the shared limit. */
 export async function readGLBFile(file: Pick<File, 'size' | 'arrayBuffer'>) {
   assertGLBSize(file.size);
   return new Uint8Array(await file.arrayBuffer());
+}
+/** Read a chosen source file; GLB keeps its stricter limit, other formats are converted first. */
+async function readSourceFile(file: File): Promise<PickedFile> {
+  if (/\.glb$/i.test(file.name)) return { name: file.name, data: await readGLBFile(file) };
+  if (file.size > MAX_SOURCE_BYTES) throw Error('Choose a file below 256 MB.');
+  return { name: file.name, data: new Uint8Array(await file.arrayBuffer()) };
 }
 async function readCharacter(id: string) {
   if (!/^(?:[a-f0-9]{64}|builtin-[a-z-]+|example-fantasy-(?:male|female))$/.test(id))
@@ -52,13 +96,11 @@ async function readCharacter(id: string) {
   await writeAsset('asset:' + id, data);
   return data;
 }
-async function importModel() {
-  const file = await pick('.glb');
-  if (!file) return null;
-  const data = validateGLB(await readGLBFile(file)),
+async function storeModel(bytes: Uint8Array) {
+  const data = validateGLB(bytes),
     asset = await assetHash(data);
   await writeAsset('asset:' + asset, data);
-  return { asset, name: file.name.replace(/\.glb$/i, ''), data };
+  return asset;
 }
 /** Keep the touch layout inside the currently visible CSS viewport. */
 function initializeTouchViewport() {
@@ -102,15 +144,9 @@ export async function initializeBrowser() {
   }
   document.documentElement.classList.add('web');
   void initializePwa();
-  const { AndroidAnimationImport } = await import('./androidAnimation');
-  const animations = new AndroidAnimationImport(async () => {
-    const file = await pick('.glb');
-    return file ? { name: file.name, data: await readGLBFile(file) } : null;
-  });
-  const unsupported = async (): Promise<never> => {
-    throw Error(
-      'Use desktop Pose for FBX and Unreal export. Browser Pose supports GLB, project files and video.',
-    );
+  const choose = async (extensions: string[]) => {
+    const file = await pick(extensions.map((e) => '.' + e).join(','));
+    return file ? readSourceFile(file) : null;
   };
   const recordings = new Map<
     string,
@@ -119,10 +155,10 @@ export async function initializeBrowser() {
   window.studioDesktop = {
     platform: 'web',
     readCharacter,
-    importCharacter: importModel,
-    importProp: importModel,
-    inspectAnimation: () => animations.inspect(),
-    sampleAnimation: (token, options) => animations.sample(token, options),
+    pickAnimation: () => choose(ANIMATION_EXTENSIONS),
+    pickModel: (kind) => pickModelFiles(kind === 'prop' ? PROP_EXTENSIONS : CHARACTER_EXTENSIONS),
+    readSidecar: async () => null,
+    storeModel,
     openExample: async () => {
       const r = await fetch('examples/Axe%20studio.pose.json');
       if (!r.ok) throw Error('Example unavailable');
@@ -153,10 +189,12 @@ export async function initializeBrowser() {
     recentProjects: async () => [],
     openRecentProject: async () => null,
     clearRecentProjects: async () => {},
-    exportCharacter: async (data, o) => {
-      if (o.format !== 'glb') return unsupported();
-      return download(data, o.name + '.glb', 'model/gltf-binary');
-    },
+    exportCharacter: async (data, o) =>
+      download(
+        data,
+        o.name + '.' + o.format,
+        o.format === 'glb' ? 'model/gltf-binary' : 'application/octet-stream',
+      ),
     beginRecording: async (o) => {
       const id = randomId(),
         name = o.name + '.' + o.format;
@@ -183,16 +221,11 @@ export async function initializeBrowser() {
     },
     revealRecording: async () => {},
     showFolder: async () => {},
-    status: async () => ({ blender: null, maximized: true }),
-    chooseBlender: unsupported,
+    status: async () => ({ maximized: true }),
     confirmClose: async () => {},
     onCloseRequest: noop,
     onWindowState: noop,
     windowAction: () => {},
-    beginSharedExport: unsupported,
-    writeSharedExport: unsupported,
-    finishSharedExport: unsupported,
-    cancelSharedExport: unsupported,
-    exportAnimation: unsupported,
+    ...createZipExports(async (data, name) => download(data, name, 'application/zip')),
   };
 }

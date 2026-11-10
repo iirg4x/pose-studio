@@ -9,15 +9,21 @@ import {
   decode64,
   encode64,
   embedAssets,
-  MAX_GLB_BYTES,
   restoreAssets,
   validateGLB,
 } from './portableAssets';
 import type { AssetBatchWriter } from './portableAssets';
+import {
+  ANIMATION_EXTENSIONS,
+  CHARACTER_EXTENSIONS,
+  MAX_SOURCE_BYTES,
+  PROP_EXTENSIONS,
+} from './sourceFiles';
 import { activateDocument, documentIdentity, rememberDocument } from './linkedDocuments';
 import { validateLibrary } from '../core/library';
 import type { AnimationLibrary } from '../core/library';
 import { readProjectDocument } from './projectDocuments';
+import { createZipExports } from './exportZip';
 type Document = { id: string; name: string; uri: string; size: number };
 type Destination = { id: string; path: string; uri: string };
 interface Files {
@@ -87,21 +93,27 @@ async function readCharacter(id: string) {
     throw Error('Asset missing. Open a saved .pose project containing this model.');
   return validateGLB(data);
 }
-async function importModel() {
-  const doc = await native.open({ maxBytes: MAX_GLB_BYTES });
+/** Let the user choose a source file. The system picker cannot filter by extension, so check here. */
+async function pickSource(extensions: string[]) {
+  const doc = await native.open({ maxBytes: MAX_SOURCE_BYTES });
   if (!doc?.id) return null;
-  if (!/\.glb$/i.test(doc.name)) {
+  const type = doc.name.slice(doc.name.lastIndexOf('.') + 1).toLowerCase();
+  if (!extensions.includes(type)) {
     await native.close({ id: doc.id });
-    throw Error(
-      'Android imports self-contained GLB models. Convert FBX, OBJ or Blender models to GLB, or transfer them inside a desktop .pose project.',
-    );
+    throw Error('Choose one of: ' + extensions.map((e) => '.' + e).join(', ') + '.');
   }
-  const data = await bytes(doc, assertGLBSize);
-  if (!data) return null;
-  validateGLB(data);
-  const asset = await assetHash(data);
+  const data = await bytes(doc, (size) => {
+    if (type === 'glb') assertGLBSize(size);
+    else if (!Number.isSafeInteger(size) || size < 0 || size > MAX_SOURCE_BYTES)
+      throw Error('Choose a file below 256 MB.');
+  });
+  return data ? { name: doc.name, data } : null;
+}
+async function storeModel(bytes: Uint8Array) {
+  const data = validateGLB(bytes),
+    asset = await assetHash(data);
   await writeAsset('asset:' + asset, data);
-  return { asset, name: doc.name.replace(/\.glb$/i, ''), data };
+  return asset;
 }
 const recentKey = 'pose-android-recent';
 function recent(): { path: string; name: string; openedAt: string }[] {
@@ -177,29 +189,17 @@ function listen(event: string, fn: () => void) {
     void handle?.remove();
   };
 }
-const desktopOnly = async (): Promise<never> => {
-  throw Error(
-    'FBX / Unreal packaging requires desktop Pose. Save a .pose project to continue there. Android supports GLB and video export.',
-  );
-};
 export async function initializeAndroid() {
   await initializeStorage();
   if (!isAndroid) return;
   document.documentElement.classList.add('android');
-  const { AndroidAnimationImport } = await import('./androidAnimation');
-  const animations = new AndroidAnimationImport(async () => {
-    const doc = await native.open({ maxBytes: MAX_GLB_BYTES });
-    if (!doc?.id) return null;
-    const data = await bytes(doc, assertGLBSize);
-    return data ? { name: doc.name, data } : null;
-  });
   window.studioDesktop = {
     platform: 'android',
-    importCharacter: importModel,
-    importProp: importModel,
+    pickAnimation: () => pickSource(ANIMATION_EXTENSIONS),
+    pickModel: (kind) => pickSource(kind === 'prop' ? PROP_EXTENSIONS : CHARACTER_EXTENSIONS),
+    readSidecar: async () => null,
+    storeModel,
     readCharacter,
-    inspectAnimation: () => animations.inspect(),
-    sampleAnimation: (token, options) => animations.sample(token, options),
     openExample: async () => {
       const r = await fetch('examples/Axe%20studio.pose.json');
       if (!r.ok) throw Error('Example unavailable. Open your .pose project from Files.');
@@ -228,22 +228,19 @@ export async function initializeAndroid() {
     writeRecording: write,
     finishRecording: async (id) => (await native.finish({ id })).path,
     cancelRecording: async (id) => native.close({ id }),
-    exportCharacter: async (data, o) => {
-      if (o.format !== 'glb') return desktopOnly();
-      return saveAndroidFile(data, o.name + '.glb', 'model/gltf-binary');
-    },
+    exportCharacter: async (data, o) =>
+      saveAndroidFile(
+        data,
+        o.name + '.' + o.format,
+        o.format === 'glb' ? 'model/gltf-binary' : 'application/octet-stream',
+      ),
     revealRecording: async () => {},
     showFolder: async () => {},
-    status: async () => ({ blender: null, maximized: true }),
-    chooseBlender: desktopOnly,
+    status: async () => ({ maximized: true }),
     confirmClose: () => native.exit(),
     onCloseRequest: (fn) => listen('closeRequest', fn),
     onWindowState: () => () => {},
     windowAction: () => {},
-    beginSharedExport: desktopOnly,
-    writeSharedExport: desktopOnly,
-    finishSharedExport: desktopOnly,
-    cancelSharedExport: desktopOnly,
-    exportAnimation: desktopOnly,
+    ...createZipExports((data, name) => saveAndroidFile(data, name, 'application/zip')),
   };
 }

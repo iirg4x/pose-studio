@@ -1,10 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { SharedExportDialog } from './SharedExportDialog';
 import { X, Check, FolderOpen, AlertCircle } from 'lucide-react';
 import { projectProps } from '../core/assets';
 import { loopRange } from '../core/loops';
 import { useStudio } from '../hooks';
+import { portablePlatform } from '../platform/storage';
+import { clipExportFiles } from '../core/fbx/clip';
+import type { ClipBake } from '../core/fbx/clip';
+import skeleton from '../unreal/manny-skeleton.json';
 import type { StudioScene } from '../scene/StudioScene';
+async function mannyModel() {
+  const response = await fetch('assets/manny.glb');
+  if (!response.ok) throw Error('The Manny model is missing from this installation.');
+  return new Uint8Array(await response.arrayBuffer());
+}
 export function ExportDialog({
   runtime,
   close,
@@ -18,37 +27,45 @@ export function ExportDialog({
     [includeMesh, setIncludeMesh] = useState(true),
     [onlyLoop, setOnlyLoop] = useState(false),
     [extractRoot, setExtractRoot] = useState(false),
-    [status, setStatus] = useState<{ blender: string | null }>(),
     [busy, setBusy] = useState(false),
     [progress, setProgress] = useState(0),
     [error, setError] = useState(''),
     [result, setResult] = useState<{ directory: string; files: string[] } | null>(null);
-  useEffect(() => {
-    window.studioDesktop
-      ?.status()
-      .then(setStatus)
-      .catch((e) => setError(e.message));
-  }, []);
   async function run() {
-    if (!runtime || !s.project || !window.studioDesktop) return;
+    const desktop = window.studioDesktop;
+    if (!runtime || !s.project || !desktop) return;
     setBusy(true);
     setError('');
+    let id: string | undefined;
     try {
+      const session = await desktop.beginExport(s.project.name);
+      if (!session) return;
+      id = session.id;
       const data = await runtime.bake(
         s.project,
-        setProgress,
+        (v) => setProgress(v * 0.5),
         onlyLoop ? loopRange(s.project) : undefined,
         extractRoot ? 'extract' : 'keep',
       );
       setProgress(0.55);
-      const res = await window.studioDesktop.exportAnimation(data, { includeMesh });
-      if (!res.canceled) {
-        setProgress(1);
-        setResult(res);
-      } else setProgress(0);
+      const files = await clipExportFiles(data as unknown as ClipBake, {
+        includeMesh,
+        skeleton,
+        manny: mannyModel,
+        asset: desktop.readCharacter,
+      });
+      for (const [index, file] of files.entries()) {
+        await desktop.writeExport(id, file.path, file.data);
+        setProgress(0.55 + (0.45 * (index + 1)) / files.length);
+      }
+      const finished = await desktop.finishExport(id);
+      id = undefined;
+      setProgress(1);
+      setResult(finished);
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      if (id) await desktop.cancelExport(id).catch(() => {});
       setBusy(false);
     }
   }
@@ -95,12 +112,14 @@ export function ExportDialog({
             <h3>Animation exported</h3>
             <p>{result.files.length} files saved to:</p>
             <code>{result.directory}</code>
-            <button
-              className="primary"
-              onClick={() => window.studioDesktop?.showFolder(result.directory)}
-            >
-              <FolderOpen size={16} /> Open folder
-            </button>
+            {!portablePlatform && (
+              <button
+                className="primary"
+                onClick={() => window.studioDesktop?.showFolder(result.directory)}
+              >
+                <FolderOpen size={16} /> Open folder
+              </button>
+            )}
             <p className="help-text">
               Import the body and arms as separate skeletal meshes. Legs use the body pose; floating
               arms and player props attach to the camera. The JSON sidecar records component
@@ -160,24 +179,6 @@ export function ExportDialog({
               Include meshes for a first import. Manny PBR textures are included. Export the
               companion action separately for its matching arms or body motion.
             </p>
-            {!window.studioDesktop ? (
-              <p className="notice">
-                Open the desktop app to export FBX. Project saving and animation editing are
-                available in this browser preview.
-              </p>
-            ) : status && !status.blender ? (
-              <div className="notice">
-                Select your Blender installation to enable FBX export.
-                <button
-                  onClick={async () => {
-                    const b = await window.studioDesktop!.chooseBlender();
-                    setStatus({ blender: b });
-                  }}
-                >
-                  Choose Blender
-                </button>
-              </div>
-            ) : null}
             {busy && (
               <div className="export-progress">
                 <span>{progress < 0.5 ? 'Baking animation…' : 'Writing FBX files…'}</span>
@@ -194,12 +195,8 @@ export function ExportDialog({
               <button disabled={busy} onClick={close}>
                 Cancel
               </button>
-              <button
-                className="primary"
-                disabled={busy || !status?.blender || !s.ready}
-                onClick={run}
-              >
-                {busy ? 'Exporting…' : 'Choose folder & export'}
+              <button className="primary" disabled={busy || !s.ready} onClick={run}>
+                {busy ? 'Exporting…' : portablePlatform ? 'Export zip' : 'Choose folder & export'}
               </button>
             </footer>
           </>

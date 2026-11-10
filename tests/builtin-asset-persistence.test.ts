@@ -14,7 +14,7 @@ const require = createRequire(import.meta.url),
 describe('desktop bundled props', () => {
   it('resolves the new gun and existing props from application assets', () => {
     const assets = path.resolve('public/assets'),
-      service = createCharacters('unused-cache', assets, 'backend');
+      service = createCharacters('unused-cache', assets);
     for (const id of ['builtin-axe', 'builtin-rifle', 'builtin-magazine', 'builtin-unreal-fp-gun'])
       expect(service.filename(id)).toBe(path.join(assets, id + '.glb'));
     for (const id of ['builtin-unknown', 'builtin-unreal-fp-gun/../rifle'])
@@ -24,7 +24,7 @@ describe('desktop bundled props', () => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'pose-builtin-assets-'));
     try {
       const cache = path.join(directory, 'cache'),
-        service = createCharacters(cache, path.resolve('public/assets'), 'backend'),
+        service = createCharacters(cache, path.resolve('public/assets')),
         id = 'builtin-unreal-fp-gun',
         action = blankProject();
       action.props = {

@@ -1,4 +1,4 @@
-import { portablePlatform as isAndroid } from '../platform/storage';
+import { inspectAnimation, sampleAnimation } from '../platform/imports';
 import { useEffect, useRef, useState } from 'react';
 import { FolderOpen, X, Clapperboard, LoaderCircle } from 'lucide-react';
 import { studio } from '../core/store';
@@ -66,7 +66,7 @@ export function AnimationImport({
     setBusy('Reading file…');
     setError('');
     try {
-      const data = await window.studioDesktop?.inspectAnimation();
+      const data = await inspectAnimation();
       if (mounted.current && data) {
         setFile(data);
         setFps(Math.max(1, Math.min(120, Math.round(data.fps))));
@@ -87,7 +87,7 @@ export function AnimationImport({
     const abortController = new AbortController();
     fitAbort.current = abortController;
     try {
-      const data = await window.studioDesktop!.sampleAnimation(file.token, {
+      const data = await sampleAnimation(file.token, {
         rig: rig.name,
         action: action.id,
         start,
@@ -182,10 +182,8 @@ export function AnimationImport({
           {!file && (
             <>
               <p className="help-text">
-                {isAndroid
-                  ? 'Animated GLB, or import actions from a .pose project.'
-                  : 'FBX, GLB, glTF, Blender and BVH.'}{' '}
-                Choose a skeleton and action, then match its bones to the animation rig.
+                FBX, GLB, glTF and BVH. Choose a skeleton and action, then match its bones to the
+                animation rig.
               </p>
               <button
                 className="import-project-link"
