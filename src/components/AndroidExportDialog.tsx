@@ -31,7 +31,7 @@ export function AndroidExportDialog({
         <header>
           <h2>Take your animation with you</h2>
           <button aria-label="Close export" disabled={busy} onClick={close}>
-            <X size={20} />
+            <X size={18} />
           </button>
         </header>
         <div className="android-export-options">

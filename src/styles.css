@@ -600,7 +600,7 @@ hr {
   position: absolute;
   top: 0;
   transform: translateX(-50%);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--secondary);
   font-variant-numeric: tabular-nums;
 }
@@ -666,7 +666,7 @@ hr {
   top: 5px;
   height: 25px;
   min-height: 0;
-  font-size: 10px;
+  font-size: 11px;
   border: 1px solid var(--border);
   border-radius: 3px;
   background: var(--hover);
@@ -709,7 +709,7 @@ hr {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   padding: 0 14px;
   overflow: hidden;
@@ -897,7 +897,7 @@ hr {
     height: 58px;
   }
   .viewport-bottom > span {
-    font-size: 10px;
+    font-size: 11px;
   }
   .transport {
     gap: 5px;
@@ -1022,7 +1022,7 @@ hr {
   color: var(--library-secondary);
 }
 .animation-bar b {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   background: var(--library-hover);
   color: var(--library-secondary);
@@ -1179,10 +1179,10 @@ hr {
 }
 .library-item small {
   color: var(--library-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 .library-item em {
-  font-size: 10px;
+  font-size: 11px;
   font-style: normal;
   color: var(--library-secondary);
   padding-left: 8px;
@@ -1333,7 +1333,7 @@ hr {
   white-space: nowrap;
 }
 .curve-tools small {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--library-muted);
   margin-left: 5px;
 }
@@ -1624,7 +1624,7 @@ hr {
   display: grid;
   grid-template-columns: 1.3fr 1fr 1fr 0.6fr;
   gap: 8px 5px;
-  font-size: 10px;
+  font-size: 11px;
   margin: 14px 0;
 }
 .seam-table > div {
@@ -1833,7 +1833,7 @@ select optgroup {
   font-size: 11px;
 }
 .motion-setting-footer button {
-  font-size: 10px;
+  font-size: 11px;
   min-height: 24px;
   padding: 3px 6px;
   color: var(--library-secondary);
@@ -2122,7 +2122,7 @@ select optgroup {
     width: 42px;
   }
   .curve-help {
-    font-size: 10px;
+    font-size: 11px;
   }
 }
 
@@ -2254,7 +2254,7 @@ select optgroup {
   font-weight: 500;
 }
 .recent-project small {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .recent-projects p {
@@ -2311,7 +2311,7 @@ select optgroup {
   color: var(--text);
 }
 .key-edit-tools span {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   padding-left: 8px;
   white-space: nowrap;

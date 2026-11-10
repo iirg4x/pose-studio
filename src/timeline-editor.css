@@ -147,14 +147,14 @@
   font-size: 11px;
 }
 .timeline .active-layer-menu small {
-  font-size: 10px;
+  font-size: 11px;
 }
 .timeline .active-layer-menu footer button {
   width: auto;
   min-width: 0;
   height: auto;
   min-height: 40px;
-  font-size: 10px;
+  font-size: 11px;
   flex: 1;
   gap: 4px;
 }
@@ -368,7 +368,7 @@
 .timeline .time-ruler > span {
   top: 5px;
   color: #d3dde8;
-  font-size: 10px;
+  font-size: 11px;
 }
 .timeline .ruler-minors {
   height: 4px;
@@ -504,7 +504,7 @@
   bottom: -4px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 10px;
   font-weight: 500;
   letter-spacing: 0.02em;
@@ -553,7 +553,7 @@
 .keyframe-settings .key-setting-note {
   padding: 0 3px;
   color: #97a5b5;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
 }
 .keyframe-settings .keyframe-context-actions {
@@ -637,7 +637,7 @@
   margin-left: auto;
   flex: none;
   color: var(--track-muted);
-  font-size: 10px;
+  font-size: 11px;
   padding: 0;
 }
 .timeline-track-label .track-disclosure {
@@ -667,7 +667,7 @@
   padding: 0 5px;
   color: var(--track-muted);
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 11px;
   opacity: 0.65;
 }
 .timeline-track-label .track-children.folded {
@@ -801,7 +801,7 @@
 }
 .timeline .curve-tools strong small {
   color: var(--track-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 .curve-gesture-tools {
   display: flex;
@@ -902,7 +902,7 @@
 .timeline .curve-help {
   flex: 0 0 24px;
   height: 24px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--track-muted);
   padding: 5px 12px;
   border: 0;
@@ -931,7 +931,7 @@
   animation: timeline-reveal 180ms ease-out;
 }
 .curve-selection-count {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--track-key);
   white-space: nowrap;
 }
@@ -939,7 +939,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--track-muted);
 }
 .timeline .curve-selection-tools input {
@@ -983,7 +983,7 @@
 }
 .timeline .curve-field {
   color: #b5c0cc;
-  font-size: 10px;
+  font-size: 11px;
   margin-bottom: 10px;
 }
 .timeline .curve-field input,
@@ -997,7 +997,7 @@
 }
 .timeline .curve-note {
   color: var(--track-muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
 }
 .tangent-numbers {
@@ -1014,7 +1014,7 @@
 }
 .tangent-numbers > div > span {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   margin-bottom: 6px;
   color: var(--track-text);
 }
@@ -1028,7 +1028,7 @@
   grid-template-columns: minmax(160px, 1fr) 226px;
 }
 .curve-bone-flair {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--track-muted);
   margin-right: 4px;
   max-width: 140px;
@@ -1539,10 +1539,15 @@
   height: 36px;
   min-width: 36px;
 }
+/* The dialog contract supplies the outer padding; only the list scrolls, so
+ * the header and the actions stay in place. */
+:root .curve-reducer.modal {
+  overflow: hidden;
+}
 .reducer-scroll {
   overflow: auto;
   min-height: 0;
-  padding: 18px 20px;
+  padding: 0;
   overscroll-behavior: contain;
 }
 .reducer-settings,
@@ -1693,7 +1698,7 @@
   justify-content: center;
   gap: 16px;
   color: #9aaabc;
-  font-size: 10px;
+  font-size: 11px;
   padding: 6px 0 2px;
 }
 .curve-reducer table {
@@ -1726,7 +1731,7 @@
   background: #243448;
 }
 .curve-reducer footer {
-  padding: 12px 20px;
+  padding: 12px 0 0;
   display: flex;
   gap: 8px;
   justify-content: flex-end;
@@ -1775,7 +1780,7 @@
   }
   .reducer-graph figcaption {
     gap: 8px;
-    font-size: 10px;
+    font-size: 11px;
   }
   .curve-reducer footer {
     padding: 12px;

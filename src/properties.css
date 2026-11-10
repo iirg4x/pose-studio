@@ -56,7 +56,7 @@
 }
 .property-context-heading small {
   margin-left: 8px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -208,7 +208,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text);
   min-width: 0;
 }
@@ -220,7 +220,7 @@
   margin: 0;
 }
 .property-note {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
   color: var(--muted);
   margin: 7px 0 0;
@@ -240,7 +240,7 @@
   right: 10px;
   top: 7px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   pointer-events: none;
 }
 .property-vector {
@@ -316,7 +316,7 @@
   width: 100%;
   padding: 0 4px;
   margin-bottom: 7px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--green);
 }
 .property-edit-target > span {
@@ -327,7 +327,7 @@
 .property-edit-target small {
   margin-left: auto;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 .property-layer-editor {
   display: flex;
@@ -414,7 +414,7 @@
   margin-top: 5px;
   padding: 3px 5px;
   color: var(--cyan);
-  font-size: 10px;
+  font-size: 11px;
   border-top: 1px solid var(--line);
   border-radius: 0;
   justify-content: flex-start;
@@ -449,7 +449,7 @@
 .property-add-layer small {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   margin-top: 3px;
 }
 .property-mask-actions {
@@ -459,7 +459,7 @@
 }
 .property-mask-actions button {
   flex: 1;
-  font-size: 10px;
+  font-size: 11px;
   padding: 4px;
   min-height: 26px;
   background: var(--raised);
@@ -514,7 +514,7 @@
 .properties-editor .slider-row {
   margin: 7px 0;
   gap: 5px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .properties-editor .slider-row > label {
   min-width: 40px;
@@ -623,7 +623,7 @@
   display: flex;
   gap: 12px;
   align-items: center;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .attachment-inherit > div {
@@ -639,7 +639,7 @@
   padding: 0 6px;
   background: var(--inset);
   border: 1px solid var(--line);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .attachment-inherit button[aria-pressed='true'] {
@@ -654,7 +654,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 .attachment-key-status b {
@@ -706,7 +706,7 @@
 }
 .attachment-option-group {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   padding: 8px 8px 4px;
 }
 .attachment-options button {
@@ -781,7 +781,7 @@
   margin: 6px 0 8px;
 }
 .action-source-summary small {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 

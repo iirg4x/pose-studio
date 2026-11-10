@@ -76,7 +76,7 @@ export function ExportDialog({
             </p>
           </div>
           <button disabled={busy} aria-label="Close export" onClick={close}>
-            <X size={20} />
+            <X size={18} />
           </button>
         </header>
         {!result && (

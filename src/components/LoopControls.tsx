@@ -82,7 +82,7 @@ export function LoopControls() {
             <header>
               <h3>Animation loop</h3>
               <button aria-label="Close loop settings" onClick={() => setOpen(false)}>
-                <X size={15} />
+                <X size={18} />
               </button>
             </header>
             <div className="loop-range-fields">
