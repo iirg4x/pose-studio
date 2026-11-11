@@ -210,8 +210,12 @@ export function importMotion(
     facingMatrix.clone().multiply(new Matrix4().fromArray(sample[source.get(bone)!.index]));
   const palm = (hand: Vector3, knuckle?: Vector3) =>
     knuckle ? hand.clone().lerp(knuckle, 0.5) : hand.clone();
-  for (let frame = 0; frame <= data.end; frame++) {
-    const sample = data.frames[frame];
+  // One pass more than the clip has frames: the last one converts the source's
+  // own rest pose, which becomes the pose a reset returns to.
+  const reference: NonNullable<Project['referencePose']> = {};
+  for (let frame = 0; frame <= data.end + 1; frame++) {
+    const resting = frame > data.end,
+      sample = resting ? data.bones.map((bone) => bone.rest) : data.frames[frame];
     const solve = (turns?: Map<string, Quaternion>) => {
       const desired = new Map<string, Matrix4>();
       for (const name of names) {
@@ -337,13 +341,12 @@ export function importMotion(
         local = parent.clone().invert().multiply(world),
         q = r.q.clone().invert().multiply(rotation(local)).normalize(),
         value = pose(position(local).sub(r.p).toArray() as V3, q.toArray() as Q4, [0, 0, 0, 0, 0]);
-      p.tracks[id].keys.push({
-        ...(name === 'root'
+      const keyed =
+        name === 'root'
           ? fromMatrix(world.clone().multiply(r.world.clone().invert()), value)
-          : value),
-        frame,
-        interpolation: 'linear',
-      });
+          : value;
+      if (resting) reference[id] = keyed;
+      else p.tracks[id].keys.push({ ...keyed, frame, interpolation: 'linear' });
       p.tracks[id].interpolation = 'linear';
     }
     if (ikLimbs.length) {
@@ -372,23 +375,23 @@ export function importMotion(
             .addScaledVector(bend.normalize(), 0.35)
             .applyMatrix4(carried)
             .applyMatrix4(toRoot);
-        p.tracks[l.target].keys.push({
-          ...fromMatrix(
+        const target = fromMatrix(
             toRoot.clone().multiply(carried).multiply(desired.get(l.bones[2])!),
             pose([0, 0, 0], [0, 0, 0, 1], [0, 0, 0, 0, 0]),
           ),
-          frame,
-          interpolation: 'linear',
-        });
-        p.tracks[l.pole].keys.push({
-          ...pose(pole.toArray() as V3, [0, 0, 0, 1], [0, 0, 0, 0, 0]),
-          frame,
-          interpolation: 'linear',
-        });
+          aim = pose(pole.toArray() as V3, [0, 0, 0, 1], [0, 0, 0, 0, 0]);
+        if (resting) {
+          reference[l.target] = target;
+          reference[l.pole] = aim;
+        } else {
+          p.tracks[l.target].keys.push({ ...target, frame, interpolation: 'linear' });
+          p.tracks[l.pole].keys.push({ ...aim, frame, interpolation: 'linear' });
+        }
         p.tracks[l.target].interpolation = p.tracks[l.pole].interpolation = 'linear';
       }
     }
   }
+  p.referencePose = reference;
   if (reduction !== false)
     for (const id of active)
       Object.assign(p.tracks[id], sparseMotion(p.tracks[id].keys, reduction));

@@ -132,6 +132,12 @@ it('imports sampled humanoid motion with native lengths, root movement and edita
   expect(imported.props).toEqual({});
   // A limb switched to IK later must be solved from the imported pose, not from rest.
   expect(imported.ikReference).toBe('fk');
+  // The source here rests exactly like the target, so its rest pose is every control at zero.
+  for (const id of ['root', 'head', 'upperarm_l', 'thigh_l'] as const) {
+    const rest = imported.referencePose![id]!;
+    expect(new Vector3(...rest.p).length()).toBeLessThan(1e-5);
+    expect(new Quaternion(...rest.q).angleTo(new Quaternion())).toBeLessThan(1e-4);
+  }
   for (const f of [0, 5, 10]) {
     target.apply(evaluate(imported, f), { arm_l: 'fk', arm_r: 'fk', leg_l: 'fk', leg_r: 'fk' });
     for (const name of ['root', 'pelvis', 'head', 'thigh_l', 'foot_l', 'hand_r']) {

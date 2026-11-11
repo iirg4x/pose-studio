@@ -31,10 +31,10 @@ export class RestPoseSampler {
       rig.floating = floating;
       rig.setMotionRig(project.motionRig);
     }
-    const restValues = Object.fromEntries(IDS.map((key) => [key, pose()])) as Record<
-      ControlId,
-      Pose
-    >;
+    // An imported clip rests where its own skeleton does, not where Manny does.
+    const restValues = Object.fromEntries(
+      IDS.map((key) => [key, project.referencePose?.[key] ?? pose()]),
+    ) as Record<ControlId, Pose>;
     restValues.root = values.root;
     this.rest.apply(restValues, { arm_l: 'fk', arm_r: 'fk', leg_l: 'fk', leg_r: 'fk' });
     this.current.apply(

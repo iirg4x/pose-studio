@@ -11,11 +11,13 @@ import {
   editLayerAllowed,
 } from '../layers';
 import { channelsFor, channelValue } from '../curves';
+import { Matrix4 } from 'three';
 import {
   IDS,
   controlParent,
   attachmentRest,
   clone,
+  fromMatrix,
   forLayer,
   overlayPose,
   evaluate,
@@ -23,11 +25,25 @@ import {
   rawForWorld,
   sample,
   switchParent,
+  visibleControls,
+  controlEnabled,
 } from '../model';
-import type { ControlId, ParentId, Pose } from '../model';
+import { CONTROLS } from '../controls';
+import type { ControlId, ParentId, Pose, Track } from '../model';
 import { applyPose, capturePose } from '../library';
 import { LayerStore } from './layers';
 
+/**
+ * The raw value that leaves a control where the thing it follows put it. A prop
+ * held in a hand rests in that hand: sending it to its default would fling it
+ * away from its parent by whatever offset the attachment was captured at.
+ */
+function followingRest(track: Track, frame: number, template: Pose): Pose | undefined {
+  const key = track.following?.filter((k) => k.frame <= frame).at(-1);
+  return key?.target !== undefined && key.target !== 'native'
+    ? fromMatrix(new Matrix4().fromArray(key.local), template)
+    : undefined;
+}
 /** Pose edits: world/raw/layer edits, copy and paste, mirroring and rest reset. */
 export class PosingStore extends LayerStore {
   copyPose(scope: 'control' | 'rig' = 'rig') {
@@ -124,6 +140,33 @@ export class PosingStore extends LayerStore {
     if (!s.project || !this.canEditLayer()) return;
     const ids = this.selectedControls().filter((id) => editLayerAllowed(s.project!, id));
     if (!ids.length) return;
+    // Resetting everything that can be selected is a full pose reset. Some of the
+    // imported skeleton is not shown in this view at all (the spine behind
+    // first-person arms), yet the visible limbs hang from it.
+    const reference = s.project.referencePose;
+    if (reference && kind !== 'location') {
+      const selectable = visibleControls(s.project.editing, s.project).filter(
+        (id) => this.controlVisible(id) && controlEnabled(s.project!, id, s.frame),
+      );
+      if (selectable.length > 1 && selectable.every((id) => ids.includes(id)))
+        for (const id of Object.keys(reference) as ControlId[]) if (!ids.includes(id)) ids.push(id);
+    }
+    // An IK limb of an imported clip is solved from its FK pose underneath. Those
+    // FK controls are switched off and cannot be selected, so resetting the limb's
+    // target takes them along: otherwise the arm would keep the clip's bend and roll.
+    if (s.project.ikReference === 'fk' && s.project.referencePose && kind !== 'location')
+      for (const id of [...ids]) {
+        const control = CONTROLS[id];
+        if (control.kind !== 'target' || !control.limb) continue;
+        for (const other of IDS)
+          if (
+            CONTROLS[other].limb === control.limb &&
+            CONTROLS[other].only === 'fk' &&
+            !ids.includes(other) &&
+            s.project.referencePose[other]
+          )
+            ids.push(other);
+      }
     const next = clone(s.project),
       defaults = forLayer(this.resetProject, s.project.editing),
       drafts = { ...s.drafts };
@@ -149,7 +192,9 @@ export class PosingStore extends LayerStore {
           (activeAnimationLayer(next)?.kind !== 'base' && !!next.layers) ||
           next.tracks[id].basis
             ? overlayPose()
-            : (attachmentRest(next.tracks[id], keyingFrame(next, s.frame), raw) ??
+            : (followingRest(next.tracks[id], keyingFrame(next, s.frame), raw) ??
+              attachmentRest(next.tracks[id], keyingFrame(next, s.frame), raw) ??
+              next.referencePose?.[id] ??
               defaults.tracks[id]?.keys[0] ??
               overlayPose()));
       const location =

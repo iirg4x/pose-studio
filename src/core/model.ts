@@ -96,6 +96,13 @@ export interface Project {
   constraints?: Partial<Record<RigLayer, ControllerConstraints>>;
   motionRig?: MotionRig;
   ikReference?: 'fk';
+  /**
+   * Where each control sits when the skeleton this clip was imported from is in
+   * its own rest pose. That skeleton rarely rests like Manny (a T-pose, straighter
+   * fingers), so resetting to zero would bend its character into Manny's stance.
+   * Reset returns to these values instead.
+   */
+  referencePose?: Partial<Record<ControlId, Pose>>;
   props?: PropBindings;
   layers?: AnimationLayer[];
   activeLayerId?: string;
@@ -771,6 +778,28 @@ function validateOwnedProject(p: Project): Project {
   validateMirrorLinks(p);
   if (p.ikReference !== undefined && p.ikReference !== 'fk')
     throw Error('Invalid IK reference pose.');
+  if (p.referencePose !== undefined) {
+    const numbers = (a: unknown, n: number) =>
+      Array.isArray(a) &&
+      a.length === n &&
+      a.every((v) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) < 1e6);
+    if (
+      !p.referencePose ||
+      typeof p.referencePose !== 'object' ||
+      Array.isArray(p.referencePose) ||
+      Object.entries(p.referencePose).some(
+        ([id, value]) =>
+          !IDS.includes(id as ControlId) ||
+          !value ||
+          !numbers(value.p, 3) ||
+          !numbers(value.q, 4) ||
+          !numbers(value.grip, 5) ||
+          !Number.isFinite(value.fov) ||
+          Math.abs(new Quaternion(...value.q).length() - 1) > 0.01,
+      )
+    )
+      throw Error('Invalid reference pose.');
+  }
   if (
     p.actionType !== undefined &&
     (!['firstPerson', 'body'].includes(p.actionType) || p.actionType !== p.editing)
